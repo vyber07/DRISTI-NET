@@ -1,0 +1,31 @@
+[Unit]
+Description=DRISHTI-NET Docker Compose stack
+Documentation=file:///home/ubuntu/project/DRISTINET/README.md
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+WorkingDirectory=/home/ubuntu/project/DRISTINET
+
+# Load .env so secrets are available to compose without -e flags
+EnvironmentFile=/home/ubuntu/project/DRISTINET/.env
+
+# Pull any updated images, then bring the stack up
+ExecStartPre=/usr/bin/docker compose pull --quiet
+ExecStart=/usr/bin/docker compose up -d --remove-orphans
+ExecStop=/usr/bin/docker compose stop
+ExecReload=/usr/bin/docker compose restart
+
+# Allow up to 5 minutes for the ClamAV container (downloads signatures on first start)
+TimeoutStartSec=300
+TimeoutStopSec=60
+
+# Restart the unit if docker compose up fails (e.g. daemon not yet fully ready)
+Restart=on-failure
+RestartSec=10s
+
+[Install]
+WantedBy=multi-user.target

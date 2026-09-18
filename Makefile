@@ -1,4 +1,4 @@
-.PHONY: setup data seed api web build-web test e2e clean db-upgrade db-revision test-unit test-integration test-infra-local test-stack-infra test-stack
+.PHONY: setup data seed api web build-web test e2e clean db-upgrade db-revision test-unit test-integration test-infra-local test-stack-infra test-stack deploy deploy-down deploy-logs deploy-status deploy-restart
 PY=python3
 # `source scripts/env.sh` first on hosts that need the user-space Node/ClamAV/Chromium libs.
 setup:
@@ -54,3 +54,25 @@ test-stack:
 	docker compose up -d --wait; \
 	docker compose exec -T api bash -c "python3 tests/infrastructure/test_infrastructure.py"; \
 	docker compose exec -T api bash -c "REQUIRE_LIVE_TESTS=1 python3 -m pytest apps/api/app/tests -q"
+
+# --- Production deployment (port 80, no port suffix in URL) ---
+# Requires a .env file (see .env.example). Served by nginx → uvicorn.
+# Containers restart automatically on crash or server reboot (restart: unless-stopped).
+# On first run after a server reboot the systemd unit 'dristinet.service' starts the stack.
+deploy:  ## Start the full production stack (port 80 via nginx). Create .env first.
+	docker compose up -d
+
+deploy-down:  ## Stop the full production stack (preserves data volumes)
+	docker compose stop
+
+deploy-restart:  ## Rolling restart of all services without wiping data
+	docker compose restart
+
+deploy-logs:  ## Tail logs from all containers (Ctrl-C to stop)
+	docker compose logs -f
+
+deploy-status:  ## Show health and port of every service
+	docker compose ps
+	@echo ""
+	@echo "--- Health check (port 80) ---"
+	@curl -s http://localhost/api/v1/health || echo "API not yet ready"

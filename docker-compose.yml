@@ -1,22 +1,41 @@
-# DRISTI-NET reproducible Compose stack.
-# API is the only host-published service.
-# PostgreSQL, Neo4j, Redis, MinIO and ClamAV
-# are internal dependencies.
+# DRISTI-NET production Compose stack.
+# nginx listens on port 80 (no port suffix needed in the URL) and proxies to the API on port 8000.
+# PostgreSQL, Neo4j, Redis, MinIO and ClamAV are internal — not published on the host network.
+# All secrets must be set in a .env file (see .env.example and AGENTS.md §6).
 services:
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./infrastructure/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - api
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 6
+      start_period: 60s
+
   api:
     build: .
-    ports: ["8000:8000"]
+    restart: unless-stopped
+    # 8000 is NOT published to the host — only the nginx service reaches it inside the compose network.
+    expose:
+      - "8000"
     environment:
-      DRISHTI_SECRET_KEY: ${DRISHTI_SECRET_KEY:-real-secret-key-for-testing}
+      DRISHTI_SECRET_KEY: ${DRISHTI_SECRET_KEY:?Set DRISHTI_SECRET_KEY in .env (min 32 chars)}
       DRISHTI_SCANNER_MODE: auto
-      DRISHTI_DATABASE_URL: postgresql+psycopg2://drishti:${POSTGRES_PASSWORD:-drishti}@postgres:5432/drishti
+      DRISHTI_DATABASE_URL: postgresql+psycopg2://drishti:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/drishti
       DRISHTI_NEO4J_URI: bolt://neo4j:7687
-      DRISHTI_NEO4J_PASSWORD: ${NEO4J_PASSWORD:-drishti-neo4j-real}
+      DRISHTI_NEO4J_PASSWORD: ${NEO4J_PASSWORD:?Set NEO4J_PASSWORD in .env}
       DRISHTI_REDIS_URL: redis://redis:6379/0
       DRISHTI_S3_ENDPOINT_URL: http://minio:9000
       DRISHTI_S3_BUCKET: drishti
       DRISHTI_S3_ACCESS_KEY: drishti
-      DRISHTI_S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-drishti-minio-real}
+      DRISHTI_S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in .env}
       DRISHTI_STORAGE_ROOT: /data
     volumes: ["drishti-data:/data"]
     depends_on:
@@ -30,13 +49,16 @@ services:
         condition: service_healthy
       clamav:
         condition: service_healthy
+
   redis:
     image: redis:7-alpine
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 10
+
   postgres:
     image: postgres:16  # Phase 6 (TASK_BOARD.md) evaluated postgres:16-alpine for its smaller trivy footprint
       # (30 HIGH/1 CRITICAL vs. 101/14) and REJECTED it: musl libc cannot report a collation version at all,
@@ -44,9 +66,10 @@ services:
       # against data created under glibc collation -- confirmed live, not assumed. That is a permanent,
       # unresolvable data-integrity risk for any collation-sensitive query, not a cosmetic warning. Trading
       # a CVE count for silent sort-order risk on evidence data fails this project's own data-integrity gate.
+    restart: unless-stopped
     environment:
       POSTGRES_USER: drishti
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-drishti}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: drishti
     volumes: ["drishti-pgdata:/var/lib/postgresql/data"]
     healthcheck:
@@ -54,36 +77,42 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+
   neo4j:
     image: neo4j:5-community
+    restart: unless-stopped
     environment:
-      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:-drishti-neo4j-real}
+      NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:?Set NEO4J_PASSWORD in .env}
     volumes: ["drishti-neo4jdata:/data"]
     healthcheck:
       test: ["CMD-SHELL", "wget -q -O - http://localhost:7474 || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 20
+
   minio:
     image: quay.io/minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e  # docker.io/minio/minio is no longer publicly pullable; quay.io is MinIO's current mirror
+    restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: drishti
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-drishti-minio-real}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in .env}
     volumes: ["drishti-miniodata:/data"]
     healthcheck:
       test: ["CMD", "mc", "ready", "local"]
       interval: 5s
       timeout: 5s
       retries: 10
+
   clamav:
     image: clamav/clamav@sha256:9cb27d7660bdf66e9878c832cb433dd8aa152cfbe16f3c2c0084c80b04ae22b4
-    
+    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "echo PING | nc localhost 3310 || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 20
+
 volumes:
   drishti-data:
   drishti-pgdata:
