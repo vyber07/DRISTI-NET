@@ -1,0 +1,94 @@
+{
+  "communities": {
+    "A": [
+      "P-A1",
+      "P-A2",
+      "P-A3",
+      "P-A4",
+      "P-X1"
+    ],
+    "B": [
+      "P-B1",
+      "P-B2",
+      "P-B3",
+      "P-B4",
+      "P-X2"
+    ],
+    "C": [
+      "P-C1",
+      "P-C2",
+      "P-C3"
+    ]
+  },
+  "bridge_candidate": "P-BR",
+  "identity_pairs": [
+    {
+      "left": "Arjun Malhotra (people.json)",
+      "right": "Arjun Malhotara (fir_001.pdf)",
+      "same_entity": true,
+      "expected_decision": "APPROVE",
+      "reason": "spelling variation, same phone, same organisation"
+    },
+    {
+      "left": "Rahul Verma (P-X1)",
+      "right": "Rahul Verma (P-X2)",
+      "same_entity": false,
+      "expected_decision": "REJECT",
+      "reason": "same name, conflicting DOB, address and district"
+    },
+    {
+      "left": "Tanvi Bhatt (P-B3)",
+      "right": "Imran Shaikh (P-B4)",
+      "same_entity": false,
+      "expected_decision": "DEFER",
+      "reason": "shared phone +91 90000 00203 only; no person-level evidence"
+    }
+  ],
+  "contradictions": [
+    {
+      "subject": "DD01 AB 1234",
+      "attribute": "owner",
+      "source_a": "vehicles.csv \u2192 Kavya Iyer (P-A2)",
+      "source_b": "fir_001.pdf \u2192 Rohan Deshpande (P-A3)"
+    }
+  ],
+  "missing_fields": [
+    {
+      "record": "transactions.csv",
+      "field": "amount_inr",
+      "txn": "TXN with reference 'amount missing in source'"
+    }
+  ],
+  "historical_relationships": [
+    {
+      "pair": [
+        "P-A1",
+        "P-C1"
+      ],
+      "kind": "CALLED",
+      "years": [
+        2019
+      ],
+      "note": "no contact after 2019; should render as historical"
+    }
+  ],
+  "rule_candidates": [
+    {
+      "rule": "communication_burst",
+      "subject": "P-BR \u2192 P-B1",
+      "window": "2025-07-02 21:00\u201323:00",
+      "count": 12
+    },
+    {
+      "rule": "transaction_fan_in",
+      "subject": "ACC-DEMO-0301 (P-C1)",
+      "window": "2025-07-20..2025-07-22",
+      "sources": 5
+    }
+  ],
+  "masked_fields": [
+    "phone",
+    "account"
+  ],
+  "unauthorized_user": "outsider"
+}

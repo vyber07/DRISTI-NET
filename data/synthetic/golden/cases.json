@@ -1,0 +1,482 @@
+[
+  {
+    "case_id": "CASE-0001",
+    "title": "River Bridge Supply Investigation",
+    "jurisdiction": "Demo District A",
+    "purpose": "Retrospective relationship review",
+    "authority_reference": "FIR-DEMO-001",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2025-06-01"
+  },
+  {
+    "case_id": "CASE-0002",
+    "title": "Lakeside Freight Invoice Review",
+    "jurisdiction": "Demo District A",
+    "purpose": "Financial pattern review",
+    "authority_reference": "FIR-DEMO-002",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2025-07-15"
+  },
+  {
+    "case_id": "CASE-0003",
+    "title": "Cross-Group Zero Administration Installation Investigation",
+    "jurisdiction": "District Himachal Pradesh",
+    "purpose": "Financial pattern review",
+    "authority_reference": "FIR-DEMO-003",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2024-10-23"
+  },
+  {
+    "case_id": "CASE-0004",
+    "title": "Automated Homogeneous Monitoring Investigation",
+    "jurisdiction": "District Nagaland",
+    "purpose": "Supply chain audit",
+    "authority_reference": "FIR-DEMO-004",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2024-12-02"
+  },
+  {
+    "case_id": "CASE-0005",
+    "title": "Business-Focused Cohesive Challenge Investigation",
+    "jurisdiction": "District Karnataka",
+    "purpose": "Financial pattern review",
+    "authority_reference": "FIR-DEMO-005",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2025-05-15"
+  },
+  {
+    "case_id": "CASE-0006",
+    "title": "Total Dynamic Complexity Investigation",
+    "jurisdiction": "District Andhra Pradesh",
+    "purpose": "Tax evasion inquiry",
+    "authority_reference": "FIR-DEMO-006",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2025-10-30"
+  },
+  {
+    "case_id": "CASE-0007",
+    "title": "Vision-Oriented Background Policy Investigation",
+    "jurisdiction": "District Madhya Pradesh",
+    "purpose": "Supply chain audit",
+    "authority_reference": "FIR-DEMO-007",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2026-07-09"
+  },
+  {
+    "case_id": "CASE-0008",
+    "title": "Intuitive Upward-Trending Knowledge User Investigation",
+    "jurisdiction": "District Bihar",
+    "purpose": "Financial pattern review",
+    "authority_reference": "FIR-DEMO-008",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2024-11-05"
+  },
+  {
+    "case_id": "CASE-0009",
+    "title": "Cross-Group Static Circuit Investigation",
+    "jurisdiction": "District Chhattisgarh",
+    "purpose": "Financial pattern review",
+    "authority_reference": "FIR-DEMO-009",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2026-07-08"
+  },
+  {
+    "case_id": "CASE-0010",
+    "title": "Ameliorated Explicit Internet Solution Investigation",
+    "jurisdiction": "District Odisha",
+    "purpose": "Tax evasion inquiry",
+    "authority_reference": "FIR-DEMO-010",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2026-04-15"
+  },
+  {
+    "case_id": "CASE-0011",
+    "title": "Phased 5Thgeneration Throughput Investigation",
+    "jurisdiction": "District Jharkhand",
+    "purpose": "Supply chain audit",
+    "authority_reference": "FIR-DEMO-011",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2025-08-29"
+  },
+  {
+    "case_id": "CASE-0012",
+    "title": "Polarized Demand-Driven Portal Investigation",
+    "jurisdiction": "District Rajasthan",
+    "purpose": "Supply chain audit",
+    "authority_reference": "FIR-DEMO-012",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2025-05-24"
+  },
+  {
+    "case_id": "CASE-0013",
+    "title": "Intuitive 24/7 Infrastructure Investigation",
+    "jurisdiction": "District Tripura",
+    "purpose": "Financial pattern review",
+    "authority_reference": "FIR-DEMO-013",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2025-10-05"
+  },
+  {
+    "case_id": "CASE-0014",
+    "title": "Optional Systemic Monitoring Investigation",
+    "jurisdiction": "District Rajasthan",
+    "purpose": "Retrospective relationship review",
+    "authority_reference": "FIR-DEMO-014",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2025-12-31"
+  },
+  {
+    "case_id": "CASE-0015",
+    "title": "Right-Sized Mobile Model Investigation",
+    "jurisdiction": "District Sikkim",
+    "purpose": "Retrospective relationship review",
+    "authority_reference": "FIR-DEMO-015",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2026-04-20"
+  },
+  {
+    "case_id": "CASE-0016",
+    "title": "Profound 5Thgeneration System Engine Investigation",
+    "jurisdiction": "District Rajasthan",
+    "purpose": "Supply chain audit",
+    "authority_reference": "FIR-DEMO-016",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2025-07-18"
+  },
+  {
+    "case_id": "CASE-0017",
+    "title": "Configurable Mobile Protocol Investigation",
+    "jurisdiction": "District Himachal Pradesh",
+    "purpose": "Supply chain audit",
+    "authority_reference": "FIR-DEMO-017",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2025-01-25"
+  },
+  {
+    "case_id": "CASE-0018",
+    "title": "Mandatory Neutral Infrastructure Investigation",
+    "jurisdiction": "District Assam",
+    "purpose": "Retrospective relationship review",
+    "authority_reference": "FIR-DEMO-018",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2025-01-17"
+  },
+  {
+    "case_id": "CASE-0019",
+    "title": "Networked Object-Oriented Time-Frame Investigation",
+    "jurisdiction": "District Karnataka",
+    "purpose": "Retrospective relationship review",
+    "authority_reference": "FIR-DEMO-019",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2026-02-25"
+  },
+  {
+    "case_id": "CASE-0020",
+    "title": "Reverse-Engineered Background Product Investigation",
+    "jurisdiction": "District Kerala",
+    "purpose": "Financial pattern review",
+    "authority_reference": "FIR-DEMO-020",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2024-09-26"
+  },
+  {
+    "case_id": "CASE-0021",
+    "title": "Multi-Channeled Discrete Initiative Investigation",
+    "jurisdiction": "District Nagaland",
+    "purpose": "Tax evasion inquiry",
+    "authority_reference": "FIR-DEMO-021",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2024-09-24"
+  },
+  {
+    "case_id": "CASE-0022",
+    "title": "Centralized Scalable Forecast Investigation",
+    "jurisdiction": "District Meghalaya",
+    "purpose": "Financial pattern review",
+    "authority_reference": "FIR-DEMO-022",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2025-09-16"
+  },
+  {
+    "case_id": "CASE-0023",
+    "title": "Self-Enabling Uniform Emulation Investigation",
+    "jurisdiction": "District Nagaland",
+    "purpose": "Tax evasion inquiry",
+    "authority_reference": "FIR-DEMO-023",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2026-08-20"
+  },
+  {
+    "case_id": "CASE-0024",
+    "title": "Enhanced Coherent Monitoring Investigation",
+    "jurisdiction": "District Manipur",
+    "purpose": "Financial pattern review",
+    "authority_reference": "FIR-DEMO-024",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2025-09-03"
+  },
+  {
+    "case_id": "CASE-0025",
+    "title": "Persistent 6Thgeneration Access Investigation",
+    "jurisdiction": "District Chhattisgarh",
+    "purpose": "Financial pattern review",
+    "authority_reference": "FIR-DEMO-025",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2025-06-18"
+  },
+  {
+    "case_id": "CASE-0026",
+    "title": "Ameliorated Eco-Centric Website Investigation",
+    "jurisdiction": "District Kerala",
+    "purpose": "Supply chain audit",
+    "authority_reference": "FIR-DEMO-026",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2025-08-14"
+  },
+  {
+    "case_id": "CASE-0027",
+    "title": "Optional Scalable Instruction Set Investigation",
+    "jurisdiction": "District Andhra Pradesh",
+    "purpose": "Tax evasion inquiry",
+    "authority_reference": "FIR-DEMO-027",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2026-01-28"
+  },
+  {
+    "case_id": "CASE-0028",
+    "title": "Cloned Multimedia Help-Desk Investigation",
+    "jurisdiction": "District Tamil Nadu",
+    "purpose": "Financial pattern review",
+    "authority_reference": "FIR-DEMO-028",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2024-12-03"
+  },
+  {
+    "case_id": "CASE-0029",
+    "title": "Optional 24/7 Utilization Investigation",
+    "jurisdiction": "District Nagaland",
+    "purpose": "Financial pattern review",
+    "authority_reference": "FIR-DEMO-029",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2024-11-18"
+  },
+  {
+    "case_id": "CASE-0030",
+    "title": "Quality-Focused System-Worthy Productivity Investigation",
+    "jurisdiction": "District Madhya Pradesh",
+    "purpose": "Financial pattern review",
+    "authority_reference": "FIR-DEMO-030",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2025-06-17"
+  },
+  {
+    "case_id": "CASE-0031",
+    "title": "Inverse Empowering Leverage Investigation",
+    "jurisdiction": "District Arunachal Pradesh",
+    "purpose": "Retrospective relationship review",
+    "authority_reference": "FIR-DEMO-031",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2024-10-06"
+  },
+  {
+    "case_id": "CASE-0032",
+    "title": "Managed Intangible Hardware Investigation",
+    "jurisdiction": "District Andhra Pradesh",
+    "purpose": "Retrospective relationship review",
+    "authority_reference": "FIR-DEMO-032",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2026-03-17"
+  },
+  {
+    "case_id": "CASE-0033",
+    "title": "Diverse Intangible Architecture Investigation",
+    "jurisdiction": "District Tamil Nadu",
+    "purpose": "Financial pattern review",
+    "authority_reference": "FIR-DEMO-033",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2025-12-26"
+  },
+  {
+    "case_id": "CASE-0034",
+    "title": "Digitized Holistic Secured Line Investigation",
+    "jurisdiction": "District Haryana",
+    "purpose": "Supply chain audit",
+    "authority_reference": "FIR-DEMO-034",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2026-06-12"
+  },
+  {
+    "case_id": "CASE-0035",
+    "title": "Self-Enabling Analyzing Task-Force Investigation",
+    "jurisdiction": "District Mizoram",
+    "purpose": "Tax evasion inquiry",
+    "authority_reference": "FIR-DEMO-035",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2026-03-12"
+  },
+  {
+    "case_id": "CASE-0036",
+    "title": "Integrated Client-Server Projection Investigation",
+    "jurisdiction": "District Tripura",
+    "purpose": "Tax evasion inquiry",
+    "authority_reference": "FIR-DEMO-036",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2025-06-25"
+  },
+  {
+    "case_id": "CASE-0037",
+    "title": "Vision-Oriented Human-Resource Hub Investigation",
+    "jurisdiction": "District Chhattisgarh",
+    "purpose": "Supply chain audit",
+    "authority_reference": "FIR-DEMO-037",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2026-07-16"
+  },
+  {
+    "case_id": "CASE-0038",
+    "title": "Mandatory Multi-State Capability Investigation",
+    "jurisdiction": "District Rajasthan",
+    "purpose": "Tax evasion inquiry",
+    "authority_reference": "FIR-DEMO-038",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2025-10-11"
+  },
+  {
+    "case_id": "CASE-0039",
+    "title": "Reverse-Engineered Human-Resource Internet Solution Investigation",
+    "jurisdiction": "District Arunachal Pradesh",
+    "purpose": "Financial pattern review",
+    "authority_reference": "FIR-DEMO-039",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2025-01-14"
+  },
+  {
+    "case_id": "CASE-0040",
+    "title": "Persevering Static Adapter Investigation",
+    "jurisdiction": "District Kerala",
+    "purpose": "Supply chain audit",
+    "authority_reference": "FIR-DEMO-040",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2026-03-10"
+  },
+  {
+    "case_id": "CASE-0041",
+    "title": "User-Centric User-Facing Success Investigation",
+    "jurisdiction": "District Tamil Nadu",
+    "purpose": "Supply chain audit",
+    "authority_reference": "FIR-DEMO-041",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2025-08-09"
+  },
+  {
+    "case_id": "CASE-0042",
+    "title": "Innovative Interactive Utilization Investigation",
+    "jurisdiction": "District Tripura",
+    "purpose": "Tax evasion inquiry",
+    "authority_reference": "FIR-DEMO-042",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2026-01-16"
+  },
+  {
+    "case_id": "CASE-0043",
+    "title": "Programmable Fresh-Thinking Model Investigation",
+    "jurisdiction": "District Mizoram",
+    "purpose": "Retrospective relationship review",
+    "authority_reference": "FIR-DEMO-043",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2024-10-05"
+  },
+  {
+    "case_id": "CASE-0044",
+    "title": "Mandatory Motivating Benchmark Investigation",
+    "jurisdiction": "District Nagaland",
+    "purpose": "Supply chain audit",
+    "authority_reference": "FIR-DEMO-044",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2025-10-26"
+  },
+  {
+    "case_id": "CASE-0045",
+    "title": "Face-To-Face Non-Volatile Graphical User Interface Investigation",
+    "jurisdiction": "District Assam",
+    "purpose": "Financial pattern review",
+    "authority_reference": "FIR-DEMO-045",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2026-02-27"
+  },
+  {
+    "case_id": "CASE-0046",
+    "title": "Profit-Focused Dynamic Database Investigation",
+    "jurisdiction": "District Karnataka",
+    "purpose": "Tax evasion inquiry",
+    "authority_reference": "FIR-DEMO-046",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2025-04-01"
+  },
+  {
+    "case_id": "CASE-0047",
+    "title": "Balanced Motivating Artificial Intelligence Investigation",
+    "jurisdiction": "District Gujarat",
+    "purpose": "Tax evasion inquiry",
+    "authority_reference": "FIR-DEMO-047",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2025-03-27"
+  },
+  {
+    "case_id": "CASE-0048",
+    "title": "Virtual 3Rdgeneration Core Investigation",
+    "jurisdiction": "District Himachal Pradesh",
+    "purpose": "Tax evasion inquiry",
+    "authority_reference": "FIR-DEMO-048",
+    "classification": "SYNTHETIC_DEMO",
+    "sensitivity": "RESTRICTED",
+    "opened_at": "2025-09-19"
+  }
+]

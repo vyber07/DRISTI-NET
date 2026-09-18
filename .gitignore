@@ -1,0 +1,14 @@
+__pycache__/
+*.pyc
+.env
+storage/
+*.db
+apps/web/node_modules/
+apps/web/dist/
+
+.pytest_cache/
+.ruff_cache/
+.venv/
+venv/
+releases/
+DRISTINET_export.zip

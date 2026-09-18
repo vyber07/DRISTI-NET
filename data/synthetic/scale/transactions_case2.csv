@@ -1,0 +1,4 @@
+txn_id,from_account,to_account,amount_inr,timestamp,reference
+TXN2-0001,ACC-DEMO-0901,ACC-DEMO-0303,6100,2025-08-03 10:00:00,invoice 2207
+TXN2-0002,ACC-DEMO-0303,ACC-DEMO-0301,5900,2025-08-04 10:00:00,invoice 2207 settlement
+TXN2-0003,ACC-DEMO-0901,ACC-DEMO-0301,14000,2025-08-09 10:00:00,invoice 2231
