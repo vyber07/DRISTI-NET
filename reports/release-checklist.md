@@ -12,5 +12,6 @@
 - [x] Release archive created and its SHA-256 recorded below — built by `scripts/make_release_archive.py` (excludes `.git`, `.claude`, `node_modules`, `storage/`, caches, `*.db`, `.env` — verified by listing the archive's contents and grepping for those patterns, all absent).
 
 **Honest summary**: All technical and end-to-end verification items are complete, including the Playwright `make e2e` UI execution against a running stack which successfully produced visual screenshots in `reports/screenshots/`. The only remaining open item is marked N/A (limitations slide, no deck exists).
-Release hash: `cc8045739ee3ab2a5ecd9f1c7022ab39ed24d233a489adcdcc322675a22fe5a3`
-(archive: `drishti-net-09f6b89-clean-20260918T141305Z.tar.gz`, 18.05 MiB, built 20260918T141305Z from HEAD 09f6b89)
+
+Release hash: `8c53b47ce1670019c849cc29b4f462d1262926ebe407345cf14cc805d711803a` **(working-tree snapshot — uncommitted changes present at build time; not an official tagged release; re-run after committing and reviewing)**
+(archive: `drishti-net-5e82f09-working-tree-snapshot-20260918T150511Z.tar.gz`, 2.28 MiB, built 20260918T150511Z from HEAD 5e82f09)
