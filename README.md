@@ -30,7 +30,49 @@ fictional case → synthetic upload → validated + quarantined → SHA-256 mani
 
 Every step above has an automated test (`make test`, 19 tests) and a UI screen.
 
-## Quick start (clean machine, ~3 minutes)
+## Production deployment (port 80, no port in URL)
+
+The full stack runs via Docker Compose and is served by nginx on **port 80** — no `:8000` in the URL.
+All containers restart automatically on crash or server reboot.
+
+```bash
+# 1. Copy .env.example → .env and fill in secrets (SECRET_KEY ≥ 32 bytes)
+cp .env.example .env && chmod 600 .env
+# Generate secrets:
+#   python3 -c "import secrets; print('DRISHTI_SECRET_KEY=' + secrets.token_hex(32))"
+#   python3 -c "import secrets; print('POSTGRES_PASSWORD=' + secrets.token_hex(16))"
+#   python3 -c "import secrets; print('NEO4J_PASSWORD=drishti-neo4j-' + secrets.token_hex(8))"
+#   python3 -c "import secrets; print('MINIO_ROOT_PASSWORD=drishti-minio-' + secrets.token_hex(8))"
+
+# 2. Start the full stack (nginx → API → Postgres + Neo4j + Redis + MinIO + ClamAV)
+make deploy          # or: docker compose up -d
+
+# 3. Open http://<server-ip>  (no port suffix)
+```
+
+Sign in as `investigator` / `investigator-demo` (all demo users: password = `<name>-demo`).
+
+### Auto-start on server reboot
+
+The systemd unit `infrastructure/dristinet.service` is installed at `/etc/systemd/system/dristinet.service`
+and enabled on boot. On a fresh server:
+
+```bash
+sudo cp infrastructure/dristinet.service /etc/systemd/system/dristinet.service
+sudo systemctl daemon-reload
+sudo systemctl enable --now dristinet.service
+```
+
+### Operator commands
+
+```bash
+make deploy-status   # show running containers + port 80 health check
+make deploy-logs     # tail logs from all containers (Ctrl-C to stop)
+make deploy-restart  # rolling restart without wiping data
+make deploy-down     # stop all containers (data volumes preserved)
+```
+
+## Quick start (local dev, ~3 minutes)
 
 > On this development host run `source scripts/env.sh` first — it puts Node 24, a user-space ClamAV 1.4.3 and the headless-Chromium libraries on the path (all installed without root under `~/.cache/drishti/`). It is also sourced from `~/.bashrc`.
 
@@ -142,33 +184,30 @@ apps/api/app/           FastAPI backend (routes/, services/, models.py, auth.py,
 apps/web/               React + TypeScript UI (Vite)
 data/synthetic/         generate.py + generated fixtures + truth-labels.json
 docs/                   workflow, architecture, API contract, data dictionary, security, demo script, limitations
+infrastructure/         nginx/nginx.conf (reverse proxy), dristinet.service (systemd auto-start)
 storage/                local object store (quarantine/, accepted/) + SQLite DB   [gitignored]
-tests/                  integration / security / e2e placeholders for the team
+tests/                  integration / security / e2e
 reports/                evaluation & release checklists
 ```
-
-`workers/`, `graph/`, `infrastructure/`, `policy/` from the target layout are intentionally *not* populated: the
-prototype runs the pipeline in-process (`services/pipeline.py`) and uses local files for evidence bytes.
-SQLite is the default database; PostgreSQL is a tested swap via `DRISHTI_DATABASE_URL` (see above). The graph
-projection (`services/graph.py`) is likewise in-process by default and a tested swap to real Neo4j via
-`DRISHTI_NEO4J_URI` (see "Using Neo4j instead of the in-process graph" below). MinIO is wired in
-`docker-compose.yml` but unverified on this Docker-less dev host — see `TASK_BOARD.md`.
 
 ## Architecture (prototype)
 
 ```
-React + TS  ──HTTP──▶  FastAPI /api/v1  ──▶  SQLAlchemy (SQLite → PostgreSQL)
-                          │                  cases, users, evidence manifest, jobs, claims, provenance,
-                          │                  match candidates, reviews, audit, snapshots
-                          ├──▶ local object store  (quarantine/ → accepted/)      → MinIO/S3
-                          ├──▶ scan gate            (ClamAV | testgate | unavailable; fail-closed)
-                          ├──▶ extraction           (CSV / JSON / PDF / TXT, locators preserved)
-                          ├──▶ entity resolution    (explainable candidates; never auto-merge)
-                          └──▶ graph projection     (rebuildable from claims + reviews; real Neo4j via
-                                                      DRISHTI_NEO4J_URI, in-process equivalent otherwise)
+Browser
+  ──HTTP:80──▶  nginx (reverse proxy, security headers, gzip)
+                  ──▶  FastAPI /api/v1  (uvicorn, port 8000, internal only)
+                          │               SQLAlchemy → PostgreSQL
+                          │               cases, users, evidence manifest, jobs, claims,
+                          │               provenance, match candidates, reviews, audit, snapshots
+                          ├──▶  MinIO / local object store  (quarantine/ → accepted/)
+                          ├──▶  ClamAV scan gate            (fail-closed)
+                          ├──▶  extraction worker           (CSV / JSON / PDF / TXT)
+                          ├──▶  entity resolution           (explainable candidates; never auto-merge)
+                          └──▶  Neo4j / in-process graph    (rebuildable from claims + reviews)
 ```
 
-The browser never talks to the graph store or the object store — only to the bounded, authorized API.
+The browser never talks to the graph store, object store, or any internal service — only to the
+bounded, authorized API through nginx.
 
 ## Safety boundary (what it is not)
 
@@ -198,6 +237,20 @@ Run from a clean clone of this repository on Linux, Python 3.11.6, Node 24.17:
 | web | `cd apps/web && npm install && npm run build` | 36 packages, build ok |
 | server | `uvicorn apps.api.app.main:app` → `/api/v1/health`, `/ready` | ok |
 | e2e | `pytest tests/e2e` (Playwright) | 5 passed |
+
+### Production deployment verification (2026-09-18)
+
+Full Docker Compose stack on Linux, Docker 27, nginx 1.27:
+
+| step | result |
+|---|---|
+| `docker compose up -d` | all 7 containers healthy (nginx, api, postgres, neo4j, redis, minio, clamav) |
+| `curl http://<ip>/api/v1/health` | `{"status":"ok","database":"postgresql+psycopg2","graph_store":"neo4j"}` |
+| `curl http://<ip>/` | React SPA — `DRISHTI-NET · prototype` |
+| `curl http://<ip>/docs` | HTTP 200 — OpenAPI docs |
+| All containers | `restart=unless-stopped` — survive crash and server reboot |
+| systemd `dristinet.service` | enabled — starts stack on boot |
+| JWT `SECRET_KEY` | 64 bytes — above RFC 7518 minimum of 32 |
 
 ## Docs
 
