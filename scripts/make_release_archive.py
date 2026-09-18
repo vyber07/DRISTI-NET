@@ -24,7 +24,7 @@ RELEASES_DIR = REPO_ROOT / "releases"  # gitignored -- the archive itself is nev
 EXCLUDE_DIR_NAMES = {".git", ".claude", "node_modules", "__pycache__", ".venv", "venv", ".pytest_cache", ".ruff_cache",
                      "storage", "dist", "releases"}
 EXCLUDE_SUFFIXES = {".db", ".pyc"}
-EXCLUDE_EXACT_NAMES = {".env"}
+EXCLUDE_EXACT_NAMES = {".env", "DRISTINET_export.zip"}
 
 
 def should_include(path: Path) -> bool:
@@ -54,6 +54,13 @@ def main() -> None:
     tag = "clean" if clean else "working-tree-snapshot"
     archive_path = RELEASES_DIR / f"drishti-net-{head}-{tag}-{stamp}.tar.gz"
 
+    checklist_path = REPO_ROOT / "reports" / "release-checklist.md"
+    original_text = checklist_path.read_text()
+    marker = "Release hash: `"
+    if marker in original_text:
+        before, _ = original_text.split(marker, 1)
+        checklist_path.write_text(before.rstrip("\n") + "\n")
+    
     with tarfile.open(archive_path, "w:gz") as tar:
         for path in sorted(REPO_ROOT.rglob("*")):
             if path.is_file() and should_include(path):
@@ -74,19 +81,13 @@ def main() -> None:
         print("NOTE: working tree has uncommitted changes -- this is a working-tree snapshot, not an "
               "official tagged release. Commit and review first, then re-run to record the real release hash.")
 
-    checklist_path = REPO_ROOT / "reports" / "release-checklist.md"
     text = checklist_path.read_text()
     note = ("" if clean else
             " **(working-tree snapshot — uncommitted changes present at build time; not an official "
             "tagged release; re-run after committing and reviewing)**")
     new_block = (f"Release hash: `{sha}`{note}\n"
                  f"(archive: `{archive_path.name}`, {size_mb} MiB, built {stamp} from HEAD {head})\n")
-    marker = "Release hash: `"
-    if marker in text:
-        before, _ = text.split(marker, 1)
-        text = before.rstrip("\n") + "\n" + new_block
-    else:
-        text = text.rstrip("\n") + "\n\n" + new_block
+    text = text.rstrip("\n") + "\n\n" + new_block
     checklist_path.write_text(text)
     print(f"Updated {checklist_path.relative_to(REPO_ROOT)}")
 
