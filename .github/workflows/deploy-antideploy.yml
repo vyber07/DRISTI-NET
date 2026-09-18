@@ -1,0 +1,91 @@
+name: Deploy to Antideploy
+
+# Pushes to main auto-deploy the hosted demo at https://dristi-net.antideploy.com (see README.md
+# "Hosted demo (Antideploy)"). Sends the whole repository, same as the documented manual flow --
+# Antideploy's own build is multi-stage (a Node stage builds apps/web, then the Python stage runs the
+# API), so it needs the real apps/web source, not a pre-built dist/.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch: {} # lets you trigger a redeploy by hand from the Actions tab without a new commit
+
+# Only one deploy in flight at a time -- Antideploy itself only allows one concurrent deploy per
+# application (409 deploy_in_progress) and queues/collides otherwise; cancel-in-progress means a rapid
+# second push supersedes an in-flight deploy of an older commit rather than both racing.
+concurrency:
+  group: antideploy-deploy
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Read applicationId
+        id: app
+        run: |
+          id=$(python3 -c 'import json; print(json.load(open(".antideploy.json"))["applicationId"])')
+          echo "id=$id" >> "$GITHUB_OUTPUT"
+
+      - name: Push and deploy
+        env:
+          ANTIDEPLOY_TOKEN: ${{ secrets.ANTIDEPLOY_TOKEN }}
+          APP_ID: ${{ steps.app.outputs.id }}
+        run: |
+          set -euo pipefail
+          if [ -z "${ANTIDEPLOY_TOKEN:-}" ]; then
+            echo "::error::ANTIDEPLOY_TOKEN secret is not set. Add a project-scoped Antideploy deploy key" \
+                 "as a repository secret named ANTIDEPLOY_TOKEN (Settings -> Secrets and variables ->" \
+                 "Actions). Get the key from https://antideploy.com/app/$APP_ID -- a project key is" \
+                 "scoped to this one application, unlike an account token, so it's the right kind for CI."
+            exit 1
+          fi
+
+          resp=$(tar czf - --exclude=.git --exclude=node_modules --exclude=.venv --exclude=__pycache__ \
+                   --exclude=storage --exclude=.env --exclude=.claude --exclude=releases . \
+                 | curl -sS -w '\n%{http_code}' -X POST "https://antideploy.com/api/v1/deploy?applicationId=$APP_ID" \
+                     -H "authorization: Bearer $ANTIDEPLOY_TOKEN" -F "archive=@-")
+          http_code=$(echo "$resp" | tail -n1)
+          body=$(echo "$resp" | sed '$d')
+          echo "$body"
+          if [ "$http_code" -ge 400 ]; then
+            echo "::error::Deploy request failed with HTTP $http_code"
+            exit 1
+          fi
+
+          status=$(echo "$body" | python3 -c "import json,sys; print(json.load(sys.stdin).get('status','unknown'))")
+          if [ "$status" = "unchanged" ]; then
+            echo "Content hash unchanged since the last deploy -- nothing to build."
+            exit 0
+          fi
+
+          task_id=$(echo "$body" | python3 -c "import json,sys; print(json.load(sys.stdin)['taskId'])")
+          echo "Deploying task $task_id ..."
+
+          # Poll for a real terminal state -- "queued" and "running" are both non-terminal, so the
+          # check must be an explicit allow-list of end states, not just "!= running" (that exits on
+          # the very first "queued" poll before the deploy has done anything).
+          for _ in $(seq 1 90); do
+            poll=$(curl -sS "https://antideploy.com/api/v1/deployments/$task_id" -H "authorization: Bearer $ANTIDEPLOY_TOKEN")
+            status=$(echo "$poll" | python3 -c "import json,sys; print(json.load(sys.stdin).get('status','unknown'))")
+            echo "  status: $status"
+            case "$status" in
+              succeeded)
+                url=$(echo "$poll" | python3 -c "import json,sys; d=json.load(sys.stdin); print(d.get('deployment',{}).get('url') or d.get('application',{}).get('url') or '')")
+                echo "Deployed: $url"
+                echo "### Deployed :rocket:" >> "$GITHUB_STEP_SUMMARY"
+                echo "$url" >> "$GITHUB_STEP_SUMMARY"
+                exit 0
+                ;;
+              failed|error)
+                echo "::error::Deploy failed"
+                echo "$poll" | python3 -c "import json,sys; print(json.load(sys.stdin).get('error',''))"
+                exit 1
+                ;;
+            esac
+            sleep 10
+          done
+          echo "::error::Timed out waiting for deploy $task_id to finish"
+          exit 1

@@ -1,0 +1,6 @@
+location_id,name,lat,lon,kind
+TWR-A-01,Ghat Road Tower,18.5201,73.8563,cell_tower
+TWR-A-02,Junction Square Tower,18.529,73.861,cell_tower
+TWR-B-01,Summit Avenue Tower,18.5601,73.901,cell_tower
+TWR-C-01,Shore Drive Tower,18.501,73.82,cell_tower
+LOC-WH-01,River Bridge Warehouse,18.5305,73.865,warehouse

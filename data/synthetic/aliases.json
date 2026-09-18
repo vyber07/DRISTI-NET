@@ -1,0 +1,20 @@
+[
+  {
+    "alias_id": "AL-001",
+    "person_id": "P-A1",
+    "alias": "A. Malhotra",
+    "source": "people.json"
+  },
+  {
+    "alias_id": "AL-002",
+    "person_id": "P-BR",
+    "alias": "M. Tiwari",
+    "source": "people.json"
+  },
+  {
+    "alias_id": "AL-003",
+    "person_id": "P-C1",
+    "alias": "V. Rao",
+    "source": "people.json"
+  }
+]
