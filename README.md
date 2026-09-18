@@ -7,6 +7,17 @@ human decisions. **It does not decide who is a criminal.** Everything in this re
 > The model proposes; the investigator decides. A shared identifier is a candidate relationship, not proof of identity.
 > Temporal decay changes current relevance; it does not rewrite history.
 
+
+## UI Showcase
+
+| Graph Intelligence | Review Workflow |
+|---|---|
+| ![Graph View](reports/screenshots/04-graph.png) | ![Review Workflow](reports/screenshots/03-review-candidate.png) |
+
+| Evidence Timeline | Evidence Quarantine |
+|---|---|
+| ![Timeline](reports/screenshots/06-timeline-historical.png) | ![Quarantine](reports/screenshots/02-evidence-quarantine.png) |
+
 ## What the prototype demonstrates (the one story)
 
 ```

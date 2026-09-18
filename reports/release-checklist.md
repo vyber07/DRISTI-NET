@@ -13,5 +13,5 @@
 
 **Honest summary**: All technical and end-to-end verification items are complete, including the Playwright `make e2e` UI execution against a running stack which successfully produced visual screenshots in `reports/screenshots/`. The only remaining open item is marked N/A (limitations slide, no deck exists).
 
-Release hash: `8c53b47ce1670019c849cc29b4f462d1262926ebe407345cf14cc805d711803a` **(working-tree snapshot — uncommitted changes present at build time; not an official tagged release; re-run after committing and reviewing)**
-(archive: `drishti-net-5e82f09-working-tree-snapshot-20260918T150511Z.tar.gz`, 2.28 MiB, built 20260918T150511Z from HEAD 5e82f09)
+Release hash: `45aaacc4c25dbec84983753c42f9e8897784d84744a47ffb015b46f1df8a2137`
+(archive: `drishti-net-01b22d2-clean-20260918T150528Z.tar.gz`, 2.28 MiB, built 20260918T150528Z from HEAD 01b22d2)
