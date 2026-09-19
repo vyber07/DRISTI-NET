@@ -1,6 +1,6 @@
 # Status against the blueprint (`docs/context.md` §3 vocabulary)
 
-Last audited: 2026-09-12 against `main` (see also `PROJECT_STATUS.md` for day-by-day and in-progress view,
+Last audited: 2026-09-19 against `main` (see also `PROJECT_STATUS.md` for day-by-day and in-progress view,
 and `TASK_BOARD.md` for the live-verification methodology behind each item marked Demonstrated below).
 "Demonstrated" means a test in `apps/api/app/tests` or `tests/e2e` exercises it.
 
@@ -35,7 +35,7 @@ and `TASK_BOARD.md` for the live-verification methodology behind each item marke
 |---|---|---|
 | Order: validate → quarantine → hash → scan → parse | Demonstrated | `evidence_routes.upload` + `pipeline` |
 | Shared state vocabulary (§8.2) | Demonstrated | `models.EVIDENCE_STATES` covers all listed states plus `EXTRACTION_FAILED`, `TOMBSTONED` |
-| Restricted / sandboxed parser worker | **Architecture target** | parsing runs in the API process; `workers/README.md` describes the split |
+| Restricted / sandboxed parser worker; async Kafka event transport | **Demonstrated** | `workers/worker.py` Kafka consumer consumes from `drishti.evidence.jobs`; `services/kafka_bus.py` publisher in pipeline; opt-in (direct in-process path preserved per ADR-004); `test_new_components.py::TestKafkaBus`; `docs/adr/013-kafka-event-bus.md` |
 | ClamAV | Demonstrated (dev host runs ClamAV 1.4.3 via `scripts/env.sh`; seed ingest recorded `scan_engine=clamscan`) | `services/scanner.py`; `testgate` only where no binary exists |
 | Configurable limits (§8.3) | Demonstrated | upload MB, CSV rows, graph bounds, plus `CSV_MAX_ROWS`/`JSON_MAX_RECORDS`/`PDF_MAX_PAGES` enforced in `validate_upload()` (`apps/api/app/tests/test_extraction_failures.py`) |
 
@@ -45,10 +45,11 @@ and `TASK_BOARD.md` for the live-verification methodology behind each item marke
 |---|---|---|
 | IDs (`case_id`, `evidence_id`, `entity_id`, `claim_id`, `provenance_id`, `review_id`, `job_id`, `trace_id`, `snapshot_id`) | Demonstrated | `models.new_id` prefixes; `relationship_id` = aggregated `(source,target,rel_type)` key, `event_id` = `audit_id` |
 | Evidence record fields | Demonstrated | `classification`/`jurisdiction`/`purpose`/`access_class` mirrored onto `Evidence` from its `Case` at upload time (snapshot, not a live join — a later change to the case does not rewrite already-accepted evidence) — `test_evidence_mirrors_case_governance_fields_at_upload_and_is_immutable` |
-| Extraction record with page/row/bbox, engine, version, language | Partial | page/line/char_offset, row/column, json_path, method, method_version ✔; `bbox`, `language`, `dataset_version` **MVP target** (no OCR route yet) |
+| Extraction record with page/row/bbox, engine, version, language | **Partially Demonstrated** | page/line/char_offset, row/column, json_path, method, method_version ✔; `bbox` now populated by PaddleOCR adapter (`services/ocr_adapter.py`) when PaddleOCR is installed — falls back to pypdf (no bbox) when absent; `language`/`dataset_version` remain MVP target |
 | Resolution candidate (signals, positive/counter evidence, missingness, reversible) | Demonstrated | `MatchCandidate` + `Review` |
 | Relationship: observed time, valid interval, relevance, method, version, review state, provenance | Demonstrated | `Claim` + `Provenance`; valid_to is always null in current fixtures |
 | Event/audit record with idempotency key | Demonstrated | `Job.idempotency_key`, `AuditEvent` |
+| Merkle root + ledger anchor (`LedgerAnchor` model) | **Demonstrated** | `services/integrity.py`; `LedgerAnchor` PostgreSQL table; `POST /cases/{id}/integrity/anchor`; Besu EVM adapter (import-guarded, opt-in); `test_new_components.py::TestMerkleTree` (10 tests) + `TestIntegrityRoutes`; `docs/adr/014-merkle-besu-anchor.md` |
 
 ## §10 Graph
 
@@ -69,7 +70,9 @@ and `TASK_BOARD.md` for the live-verification methodology behind each item marke
 | Map view over location entities | Demonstrated — `GET /cases/{case_id}/locations` (bounded, authorized, audited) + `MapView.tsx`: a locally-rendered linear lat/lon projection, deliberately not a tile-server map (no live connector for case coordinates) — `test_locations_endpoint_returns_coordinates_for_map_view`, `test_locations_endpoint_denies_unassigned_user` |
 | Coarse spatial overlap (H3) analytics | **Roadmap** (lat/lon captured; a plain map view of the points is now Demonstrated above — H3 bucketing/overlap analytics is a separate, larger analytical feature, not attempted) |
 | Observed / valid / ingestion time stored separately | Demonstrated (`observed_time`, `valid_from/to`, `created_at`) |
-| LLM / GraphRAG | Not used (by design) |
+| LLM / GraphRAG | Not used (by design, docs/context.md §11.5) |
+| Model-backed NER (IndicBERT) | **Demonstrated (import-guarded)** | `services/nlp_adapter.py`; AI4Bharat IndicBERTv2-MLM-only-NER; PERSON/ORGANIZATION/LOCATION extraction; candidates state=REVIEW_REQUIRED; fallback to empty list when transformers absent; `test_new_components.py::TestNlpAdapter`; `docs/adr/012-nlp-adapter.md` |
+| Court-ready evidence dossier (BSA s.63(4)(c) reference) | **Demonstrated** | `services/court_pdf.py`; `POST /cases/{id}/report/court-pdf`; Part A/Part B reference fields; prominent disclaimer (not a legal certificate); Merkle root + ledger reference included; `test_new_components.py::TestCourtPdfRoute` |
 
 ## §17 Testing
 

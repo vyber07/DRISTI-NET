@@ -19,6 +19,7 @@ class IntegrityMismatch(RuntimeError):
     pass
 from . import extract as extract_svc
 from . import resolution, scanner, storage
+from . import kafka_bus
 from .audit import record_audit
 
 
@@ -113,6 +114,19 @@ def process_evidence(db: Session, evidence_id: str, trace_id: str, actor_id: str
         raise ValueError("unknown evidence")
     if ev.status in BLOCKED_STATES:
         raise ValueError(f"evidence {evidence_id} is {ev.status}; it cannot re-enter processing")
+
+    # When Kafka is configured, publish the job and return immediately.
+    # The worker/worker.py consumer will call process_evidence() again from the
+    # worker process (without Kafka enabled, so it runs the direct path).
+    # The Job table remains the idempotency/status source of truth in both cases.
+    if kafka_bus.kafka_enabled():
+        published = kafka_bus.publish(evidence_id, ev.case_id, trace_id, actor_id)
+        if published:
+            record_audit(db, trace_id, actor_id, "EVIDENCE_QUEUED_KAFKA", "EVIDENCE", evidence_id, ev.case_id,
+                         detail={"topic": kafka_bus.TOPIC})
+            db.commit()
+            return ev  # worker will process asynchronously
+
     if ev.status in ("QUARANTINED", "SCAN_FAILED", "SCAN_TIMEOUT", "SCANNER_UNAVAILABLE"):
         if not run_scan(db, ev, trace_id, actor_id):
             return ev

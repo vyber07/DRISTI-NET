@@ -48,3 +48,8 @@ class ContextRevealIn(BaseModel):
 class ReportIn(BaseModel):
     analyst_comments: str = ""
     format: str = Field(default="json", pattern=r"^(json|html)$")
+
+
+class CourtPdfIn(BaseModel):
+    """Request body for the court-ready PDF dossier endpoint."""
+    analyst_comments: str = ""
