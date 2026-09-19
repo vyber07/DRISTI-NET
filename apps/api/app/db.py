@@ -32,18 +32,9 @@ def get_db():
 
 def init_db() -> None:
     """SQLite (tests, quick local runs): create tables directly — fast, throwaway, no history needed.
-    Any other backend (PostgreSQL in the target architecture): apply real Alembic migrations, never
-    create_all, so schema changes are versioned and reviewable.
+    Any other backend (PostgreSQL in the target architecture): migrations must be run explicitly
+    via `python3 -m apps.api.app.migrations` rather than on API startup.
     """
     if config.DATABASE_URL.startswith("sqlite"):
         Base.metadata.create_all(engine)
-        return
-    from pathlib import Path
 
-    from alembic import command
-    from alembic.config import Config
-
-    api_root = Path(__file__).resolve().parents[1]
-    cfg = Config(str(api_root / "alembic.ini"))
-    cfg.set_main_option("script_location", str(api_root / "migrations"))
-    command.upgrade(cfg, "head")

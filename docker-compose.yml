@@ -37,6 +37,13 @@ services:
       DRISHTI_S3_ACCESS_KEY: drishti
       DRISHTI_S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in .env}
       DRISHTI_STORAGE_ROOT: /data
+      # Kafka: set to enable async evidence processing via the worker service.
+      # When absent, pipeline runs in-process (ADR-004 default, still works without Kafka).
+      DRISHTI_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      # Besu: set to enable Merkle root anchoring to the evaluation ledger.
+      # Production: use a permissioned network + HSM-backed key, NOT the dev signing key.
+      DRISHTI_BESU_ENDPOINT: http://besu:8545
+      # DRISHTI_BESU_SIGNING_KEY: set in .env — NEVER commit a real key
     volumes: ["drishti-data:/data"]
     depends_on:
       postgres:
@@ -48,6 +55,8 @@ services:
       minio:
         condition: service_healthy
       clamav:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
 
   redis:

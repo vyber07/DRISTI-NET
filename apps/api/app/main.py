@@ -10,7 +10,9 @@ from fastapi.staticfiles import StaticFiles
 
 from . import config
 from .db import engine, init_db
-from .routes import audit_routes, auth_routes, case_routes, demo_routes, evidence_routes, graph_routes, report_routes, review_routes
+# Import integrity service before init_db so LedgerAnchor is registered with Base.metadata
+from .services import integrity as _integrity_svc  # noqa: F401 (side-effect: table registration)
+from .routes import audit_routes, auth_routes, case_routes, demo_routes, evidence_routes, graph_routes, integrity_routes, report_routes, review_routes
 from .services import neo4j_store
 
 logger = logging.getLogger("drishti.startup")
@@ -68,7 +70,7 @@ def ready():
     return {"ready": True}
 
 
-routers = [auth_routes, case_routes, evidence_routes, review_routes, graph_routes, audit_routes, report_routes]
+routers = [auth_routes, case_routes, evidence_routes, review_routes, graph_routes, audit_routes, report_routes, integrity_routes]
 if config.DATABASE_URL.startswith("sqlite"):
     routers.append(demo_routes)
 

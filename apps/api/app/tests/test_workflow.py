@@ -80,7 +80,7 @@ def test_evidence_mirrors_case_governance_fields_at_upload_and_is_immutable(clie
         assert refetched["purpose"] == case["purpose"]
 
         # a fresh upload after the change mirrors the case's new values
-        r = upload(client, officer, "CASE-0001", "locations.csv")
+        r = upload(client, officer, "CASE-0001", "transactions_case2.csv")
         assert r.status_code == 201, r.text
         fresh = r.json()
         assert fresh["classification"] == "CHANGED_LATER" and fresh["purpose"] == "Changed purpose"
