@@ -12,6 +12,23 @@ export default function ReportPanel({ caseId }: { caseId: string }) {
     setErr(null)
     try { const html = await post<string>(`/cases/${caseId}/report`, { analyst_comments: comments, format: 'html' }); const w = window.open('', '_blank'); if (w) { w.document.write(html); w.document.close() } } catch (ex) { setErr(ex) }
   }
+  async function exportCourtPdf() {
+    setErr(null)
+    try {
+      const t = localStorage.getItem('drishti.token');
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (t) headers.Authorization = `Bearer ${t}`;
+      const res = await fetch(`/api/v1/cases/${caseId}/report/court-pdf`, { method: 'POST', headers, body: JSON.stringify({ analyst_comments: comments }) });
+      if (!res.ok) throw new Error(`Export failed: ${res.statusText}`);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `drishti-dossier-${caseId}.pdf`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (ex) { setErr(ex); }
+  }
   return (
     <div className="grid2">
       <div className="card">
@@ -21,7 +38,8 @@ export default function ReportPanel({ caseId }: { caseId: string }) {
         <textarea id="report-comments" value={comments} onChange={e => setComments(e.target.value)} placeholder="Analyst comments (included verbatim)…" />
         <div className="row" style={{ marginTop: 8 }}>
           <button className="primary" onClick={exportJson} disabled={!['INVESTIGATOR', 'REVIEWER', 'ANALYST', 'ADMIN'].includes(user?.role || '')}>Export JSON</button>
-          <button onClick={exportHtml} disabled={!['INVESTIGATOR', 'REVIEWER', 'ANALYST', 'ADMIN'].includes(user?.role || '')}>Open HTML report</button>
+          <button onClick={exportHtml} disabled={!['INVESTIGATOR', 'REVIEWER', 'ANALYST', 'ADMIN'].includes(user?.role || '')}>Open HTML</button>
+          <button className="danger" onClick={exportCourtPdf} disabled={!['INVESTIGATOR', 'REVIEWER', 'ANALYST', 'ADMIN'].includes(user?.role || '')}>Court-ready PDF</button>
         </div>
         <ErrorBox e={err} />
       </div>
