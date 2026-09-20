@@ -34,7 +34,7 @@ export const DEMO_ACCOUNTS: Record<string, DemoAccount> = {
     roleLabel: "Lead Analyst / IO",
     clearanceLevel: 2,
     jurisdiction: "CYBER CRIME UNIT / ZONE-1",
-    activeCaseId: "DR-2026-00421",
+    activeCaseId: "CASE-0001",
     department: "Cyber Crime Investigation Wing",
     description: "Primary case investigator, graph exploration, evidence triage & correlation",
   },
@@ -46,7 +46,7 @@ export const DEMO_ACCOUNTS: Record<string, DemoAccount> = {
     roleLabel: "Supervisory Officer",
     clearanceLevel: 3,
     jurisdiction: "CENTRAL INTELLIGENCE CELL",
-    activeCaseId: "DR-2026-00421",
+    activeCaseId: "CASE-0001",
     department: "Executive Supervision & Review",
     description: "Supervisory review, tier elevation approvals, high-clearance audit sign-off",
   },
@@ -58,7 +58,7 @@ export const DEMO_ACCOUNTS: Record<string, DemoAccount> = {
     roleLabel: "Field Operator",
     clearanceLevel: 2,
     jurisdiction: "TACTICAL RESPONSE UNIT",
-    activeCaseId: "DR-2026-00421",
+    activeCaseId: "CASE-0001",
     department: "Special Operations & Field Support",
     description: "Field artifact seizure, hardware triage, on-site corroboration",
   },
@@ -70,7 +70,7 @@ export const DEMO_ACCOUNTS: Record<string, DemoAccount> = {
     roleLabel: "Forensic Auditor",
     clearanceLevel: 4,
     jurisdiction: "DIGITAL FORENSICS LAB",
-    activeCaseId: "DR-2026-00421",
+    activeCaseId: "CASE-0001",
     department: "Digital Evidence & Cryptographic Assurance",
     description: "Cryptographic verification, SHA-256 chain of custody, court compliance",
   },
@@ -165,28 +165,45 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       );
     });
 
-    if (!matchedAccount) {
+    // Attempt backend login first to get real token
+    let realUser: any = null;
+    let realToken: string | null = null;
+    try {
+      // Dynamic import to avoid circular dependency issues if any
+      const { post, setSession } = await import("../services/api/real_client");
+      const loginRes = await post("/auth/login", { username: badgeOrUsername, password: password });
+      if (loginRes && loginRes.token && loginRes.user) {
+        realToken = loginRes.token as string;
+        realUser = loginRes.user;
+        if (realToken) setSession(realToken, realUser);
+      }
+    } catch (e) {
+      console.warn("Backend login failed", e);
+    }
+
+    if (!matchedAccount && !realUser) {
       return {
         success: false,
-        error: "Unrecognized Officer ID. Please select one of the 4 verified demonstration profiles or enter USR-9921.",
+        error: "Unrecognized Officer ID or invalid credentials.",
       };
     }
 
-    if (enteredPassword !== DEMO_PASSWORD) {
+    if (matchedAccount && !realUser && enteredPassword !== DEMO_PASSWORD) {
       return {
         success: false,
         error: `Invalid Station Key. For demonstration access, use password: "${DEMO_PASSWORD}".`,
       };
     }
 
+    // Build session data from either matchedAccount or realUser fallback
     const sessionData = {
-      badgeNumber: matchedAccount.badgeNumber,
-      fullName: matchedAccount.fullName,
-      role: matchedAccount.role,
-      roleLabel: matchedAccount.roleLabel,
-      clearanceLevel: matchedAccount.clearanceLevel,
-      jurisdiction: matchedAccount.jurisdiction,
-      activeCaseId: matchedAccount.activeCaseId,
+      badgeNumber: matchedAccount ? matchedAccount.badgeNumber : realUser.username,
+      fullName: matchedAccount ? matchedAccount.fullName : realUser.display_name,
+      role: matchedAccount ? matchedAccount.role : realUser.role,
+      roleLabel: matchedAccount ? matchedAccount.roleLabel : realUser.role,
+      clearanceLevel: matchedAccount ? matchedAccount.clearanceLevel : 1,
+      jurisdiction: matchedAccount ? matchedAccount.jurisdiction : realUser.jurisdiction,
+      activeCaseId: matchedAccount ? matchedAccount.activeCaseId : "CASE-0001",
       isAuthenticated: true,
       rememberMe,
     };

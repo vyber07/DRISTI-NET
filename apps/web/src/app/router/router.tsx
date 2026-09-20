@@ -8,7 +8,6 @@ import { WorkspaceSkeletonPreview } from "@/features/cases/workspace-skeleton-pr
 import { CaseGraphPage } from "@/features/cases/case-graph-page";
 import { CaseWorkspacePage } from "@/features/cases/case-workspace-page";
 import { HITLWorkspacePage } from "@/features/hitl/hitl-workspace-page";
-import { AlertsPage } from "@/features/alerts/alerts-page";
 import { ReportsPage } from "@/features/reports/reports-page";
 import { SettingsPage } from "@/features/settings/settings-page";
 import MapView from "@/legacy/MapView";
@@ -47,12 +46,11 @@ export const router = createBrowserRouter([
 
       { path: "cases/:caseId/audit", element: <CaseWorkspacePage /> },
       { path: "graph", element: <CaseGraphPage /> },
-      { path: "evidence", element: <Navigate to="/cases/DR-2026-00421/evidence" replace /> },
-      { path: "timeline", element: <Navigate to="/cases/DR-2026-00421/timeline" replace /> },
-      { path: "audit", element: <Navigate to="/cases/DR-2026-00421/audit" replace /> },
+      { path: "evidence", element: <Navigate to="/cases/CASE-0001/evidence" replace /> },
+      { path: "timeline", element: <Navigate to="/cases/CASE-0001/timeline" replace /> },
+      { path: "audit", element: <Navigate to="/cases/CASE-0001/audit" replace /> },
       { path: "hitl", element: <HITLWorkspacePage /> },
       { path: "hitl/:taskId", element: <HITLWorkspacePage /> },
-      { path: "alerts", element: <AlertsPage /> },
       { path: "reports", element: <ReportsPage /> },
       { path: "settings", element: <SettingsPage /> },
       { path: "cases/preview", element: <WorkspaceSkeletonPreview /> },

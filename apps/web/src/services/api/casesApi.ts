@@ -1,58 +1,49 @@
-import { mockFetch, type ApiResponse } from "./client";
 import { get } from "./real_client";
-import {
-  MOCK_CASE_DETAIL,
-  MOCK_CASES_LIST,
-  MOCK_CASE_STATS,
-} from "@/mock/cases";
-import type { CaseDetail, CaseSummary, CaseStats } from "@/types/case";
+import type { ApiResponse } from "./client";
+import type { CaseDetail, CaseSummary } from "@/types/case";
 
-export async function getCaseDetails(
-  caseId: string,
-): Promise<ApiResponse<CaseDetail | null>> {
-  try {
-    const data = await get(`/cases/${caseId}`);
-    return { data, meta: { requestId: '1', timestamp: '', durationMs: 0, securityClassification: '' } };
-  } catch(e) {
-    console.warn('Backend failed, fallback to mock');
+function mapBackendCaseToFrontend(backend: any): CaseDetail {
+  return {
+    id: backend.case_id || "",
+    caseNumber: backend.case_id || "",
+    title: backend.title || "Untitled Case",
+    description: backend.purpose || "",
+    status: "ACTIVE",
+    priority: "HIGH",
+    classification: backend.classification || "RESTRICTED",
+    jurisdiction: backend.jurisdiction || "",
+    leadInvestigator: { 
+      badgeNumber: backend.owner_id || "Unknown", 
+      name: backend.owner_id || "Unknown", 
+      role: "Investigator" 
+    },
+    registeredDate: backend.opened_at || new Date().toISOString(),
+    lastUpdated: backend.opened_at || new Date().toISOString(),
+    stats: {
+       totalEntities: 0,
+       totalRelationships: 0,
+       totalEvidence: backend.evidence_count || 0,
+       contradictionsCount: 0,
+       highestTier: "TIER_4",
+       pendingTasks: backend.pending_reviews || 0
+    },
+    firNumber: backend.authority_reference || "",
+    policeStation: backend.jurisdiction || "",
+    incidentDate: backend.opened_at || new Date().toISOString(),
+    actsAndSections: [],
+    assignedTeam: (backend.assigned || []).map((u: string) => ({ badgeNumber: u, name: u, role: "Assigned" })),
+    summaryNarrative: "",
+    tags: []
+  };
+}
 
-  if (caseId === MOCK_CASE_DETAIL.id) {
-    return mockFetch(MOCK_CASE_DETAIL, 150);
-  }
-  const found = MOCK_CASES_LIST.find((c) => c.id === caseId);
-  if (found) {
-    return mockFetch(
-      {
-        ...found,
-        firNumber: `FIR No. ${found.caseNumber}`,
-        policeStation: "District Cyber Police Station",
-        incidentDate: found.registeredDate,
-        actsAndSections: ["Sec 308(2) BNS 2023"],
-        assignedTeam: [found.leadInvestigator],
-        summaryNarrative: found.description,
-        tags: ["INVESTIGATION"],
-      },
-      150,
-    );
-  }
-  return mockFetch(null, 150);
-  }
+export async function getCaseDetails(caseId: string): Promise<ApiResponse<CaseDetail | null>> {
+  const data = await get(`/cases/${caseId}`);
+  return { data: mapBackendCaseToFrontend(data), meta: { requestId: "req", timestamp: new Date().toISOString(), durationMs: 0, securityClassification: "REAL" } };
 }
 
 export async function listCases(): Promise<ApiResponse<CaseSummary[]>> {
-  try {
-    const data = await get(`/cases`);
-    return { data, meta: { requestId: '1', timestamp: '', durationMs: 0, securityClassification: '' } };
-  } catch(e) {
-    console.warn('Backend failed, fallback to mock');
-
-  return mockFetch(MOCK_CASES_LIST, 180);
-  }
-}
-
-export async function getCaseStats(
-  caseId: string,
-): Promise<ApiResponse<CaseStats>> {
-  void caseId;
-  return mockFetch(MOCK_CASE_STATS, 120);
+  const data = await get(`/cases`);
+  const mapped = Array.isArray(data) ? data.map(mapBackendCaseToFrontend) : [];
+  return { data: mapped, meta: { requestId: "req", timestamp: new Date().toISOString(), durationMs: 0, securityClassification: "REAL" } };
 }

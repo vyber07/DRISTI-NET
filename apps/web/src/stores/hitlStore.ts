@@ -9,8 +9,6 @@ import {
   listHITLTasks,
   getHITLTask,
   submitTaskDecision,
-  assignTask,
-  getHITLStats,
 } from "@/services/api/hitlApi";
 
 interface HITLState {

@@ -27,7 +27,7 @@ export function HITLWorkspacePage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const caseIdFilter = searchParams.get("caseId") || undefined;
+  const caseIdFilter = searchParams.get("caseId") || "CASE-0001";
 
   const {
     tasks,

@@ -19,12 +19,10 @@ import { CaseDetailSidebar } from "./components/case-detail-sidebar";
 import { CasePlaceholderView } from "./components/case-placeholder-view";
 import { CaseTimeline } from "./timeline/case-timeline";
 import { CaseEvidenceView } from "./evidence/case-evidence-view";
-import { CaseNotesView } from "./notes/case-notes-view";
 import { CaseAuditView } from "./audit/case-audit-view";
 import { ProvenanceViewer } from "@/components/evidence/ProvenanceViewer";
 import { getCaseDetails } from "@/services/api/casesApi";
 import { useUIStore } from "@/stores/uiStore";
-import { MOCK_CASE_DETAIL } from "@/mock/cases";
 import { cn } from "@/lib/utils";
 import type { CaseDetail } from "@/types/case";
 
@@ -33,7 +31,6 @@ const CASE_NAV_TABS = [
   { id: "graph", label: "Investigation Map", icon: Network, isRoute: true },
   { id: "evidence", label: "Evidence & Records", icon: FileCheck2 },
   { id: "timeline", label: "Event Timeline", icon: Clock },
-  { id: "notes", label: "Investigator Notes", icon: FileText },
   { id: "hitl", label: "Analyst Review", icon: CheckSquare },
   { id: "audit", label: "Audit Trail", icon: ShieldCheck },
 ];
@@ -59,7 +56,7 @@ export function CaseWorkspacePage() {
     activeTab = searchParams.get("tab") || "overview";
   }
 
-  const [caseData, setCaseData] = useState<CaseDetail>(MOCK_CASE_DETAIL);
+  const [caseData, setCaseData] = useState<CaseDetail | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const { caseInfoPanelExpanded, toggleCaseInfoPanel } = useUIStore();
 
@@ -73,7 +70,7 @@ export function CaseWorkspacePage() {
           setCaseData(res.data);
         }
       } catch {
-        // Fall back to MOCK_CASE_DETAIL
+        // Error loading case
       } finally {
         if (isMounted) setIsLoading(false);
       }
@@ -116,10 +113,14 @@ export function CaseWorkspacePage() {
     setSearchParams({ tab: tabId });
   };
 
+  if (isLoading) { return <div className="flex h-screen items-center justify-center">Loading Workspace...</div>; }
+  if (!caseData) { return <div className="p-8 text-center text-text-muted">Failed to load case data.</div>; }
+
+
   return (
     <>
       <InvestigationShell
-        header={<CaseHeader caseData={caseData} activeTab={activeTab} />}
+        header={<CaseHeader caseData={caseData!} activeTab={activeTab} />}
         caseNav={
           <nav className="p-2 min-w-0">
             <div className="px-2.5 py-1 text-micro font-semibold uppercase tracking-wider text-text-muted truncate">
@@ -179,13 +180,11 @@ export function CaseWorkspacePage() {
               Loading Case Workspace Docket...
             </div>
           ) : activeTab === "overview" ? (
-            <CaseOverviewView caseData={caseData} />
+            <CaseOverviewView caseData={caseData!} />
           ) : activeTab === "timeline" ? (
             <CaseTimeline caseId={caseId} />
           ) : activeTab === "evidence" ? (
             <CaseEvidenceView caseId={caseId} />
-          ) : activeTab === "notes" ? (
-            <CaseNotesView caseId={caseId} />
           ) : activeTab === "audit" ? (
             <CaseAuditView caseId={caseId} />
           ) : (
@@ -198,19 +197,19 @@ export function CaseWorkspacePage() {
         }
         detailPanel={
           <CaseDetailSidebar
-            caseData={caseData}
+            caseData={caseData!}
             isCollapsed={!caseInfoPanelExpanded}
             onToggleCollapse={toggleCaseInfoPanel}
           />
         }
         isDetailPanelCollapsed={!caseInfoPanelExpanded}
         footer={
-          <div className="flex h-10 items-center justify-between px-4 text-xs text-text-muted min-w-0 overflow-hidden">
+          caseData && <div className="flex h-10 items-center justify-between px-4 text-xs text-text-muted min-w-0 overflow-hidden">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               <div className="flex items-center gap-1 text-text-secondary shrink-0">
                 <Lock className="h-3.5 w-3.5 text-amber-400 shrink-0" />
                 <span className="font-mono text-micro font-semibold uppercase">
-                  {caseData.classification.replace(/_/g, " ")}
+                  {caseData!.classification.replace(/_/g, " ")}
                 </span>
               </div>
 
@@ -224,7 +223,7 @@ export function CaseWorkspacePage() {
               <span className="text-border-strong hidden xl:inline shrink-0">|</span>
 
               <span className="hidden xl:inline text-micro truncate">
-                Session: {caseData.leadInvestigator.badgeNumber} ({caseData.leadInvestigator.name})
+                Session: {caseData!.leadInvestigator.badgeNumber} ({caseData!.leadInvestigator.name})
               </span>
             </div>
 

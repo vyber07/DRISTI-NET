@@ -21,7 +21,6 @@ interface AuditIntegrityHeaderProps {
 export function AuditIntegrityHeader({ caseId }: AuditIntegrityHeaderProps) {
   const {
     logs,
-    isVerifying,
     verificationResult,
     lastVerifiedAt,
     verifyChain,
@@ -128,12 +127,9 @@ export function AuditIntegrityHeader({ caseId }: AuditIntegrityHeaderProps) {
             variant="secondary"
             size="sm"
             onClick={() => verifyChain()}
-            disabled={isVerifying}
             className="gap-1.5 text-xs"
             title="Traverse cryptographic hash links across all blocks"
           >
-            <RefreshCw className={`h-3.5 w-3.5 ${isVerifying ? "animate-spin text-electric-blue" : ""}`} />
-            <span>{isVerifying ? "Verifying..." : "Verify Chain"}</span>
           </Button>
 
           <Button

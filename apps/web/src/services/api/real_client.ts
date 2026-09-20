@@ -17,7 +17,7 @@ export async function api<T = any>(path: string, init: RequestInit = {}): Promis
   const t = token()
   if (t) headers.Authorization = `Bearer ${t}`
   if (init.body && !(init.body instanceof FormData)) headers['Content-Type'] = 'application/json'
-  const res = await fetch(`/api/v1${path}`, { ...init, headers })
+  const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || "/api/v1"}${path}`, { ...init, headers })
   const trace = res.headers.get('X-Trace-Id') || undefined
   if (!res.ok) {
     let detail = res.statusText

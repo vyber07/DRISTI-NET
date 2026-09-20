@@ -358,10 +358,6 @@ export function CommandCenterPage() {
                 Important Clues &amp; Items Requiring Review
               </h3>
             </div>
-            <Link to="/alerts" className="text-xs text-electric-blue hover:underline flex items-center gap-1 font-medium">
-              <span>View All Alerts</span>
-              <ArrowRight className="h-3 w-3" />
-            </Link>
           </div>
 
           <div className="divide-y divide-border-subtle rounded-lg border border-border-subtle bg-surface-2 text-xs">

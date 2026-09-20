@@ -1,6 +1,6 @@
 import { create } from "zustand";
+import { requestPiiReveal } from "@/services/api/revealApi";
 import type { RevealResult } from "@/types/reveal";
-import { requestPiiReveal, revokePiiReveal } from "@/services/api/revealApi";
 
 interface RevealModalTarget {
   entityId: string;
@@ -11,39 +11,34 @@ interface RevealModalTarget {
 }
 
 interface RevealState {
-  activeReveals: Record<string, RevealResult>; // key: `${entityId}:${identifierType}`
-  officerClearance: number; // 1: Constable/Observer, 2: Investigator, 3: Supervisory DySP
+  activeReveals: Record<string, RevealResult>;
+  officerClearance: number;
   officerBadge: string;
   officerName: string;
   officerRole: string;
 
-  // Modal State
   isModalOpen: boolean;
   modalTarget: RevealModalTarget | null;
   isSubmitting: boolean;
   submissionError: string | null;
   lastResult: RevealResult | null;
 
-  // Actions
   openRevealModal: (target: RevealModalTarget) => void;
   closeRevealModal: () => void;
   setOfficerClearance: (level: number) => void;
   submitRevealRequest: (justification: string, emergencyBypass?: boolean) => Promise<RevealResult>;
-  revokeReveal: (entityId: string, identifierType: string) => Promise<void>;
   isRevealed: (entityId: string, identifierType: string) => boolean;
   getRevealedValue: (entityId: string, identifierType: string) => string | null;
 }
 
-function buildKey(entityId: string, identifierType: string): string {
-  return `${entityId}:${identifierType}`;
-}
+const buildKey = (entityId: string, identifierType: string) => `${entityId}:${identifierType}`;
 
 export const useRevealStore = create<RevealState>((set, get) => ({
   activeReveals: {},
-  officerClearance: 2, // Default: Level 2 (Investigator)
-  officerBadge: "USR-9921",
-  officerName: "Insp. V. Rathore",
-  officerRole: "Lead Investigating Officer",
+  officerClearance: 3,
+  officerBadge: "RJ-SOG-0442",
+  officerName: "Insp. Vikram Singh",
+  officerRole: "Lead Investigator",
 
   isModalOpen: false,
   modalTarget: null,
@@ -51,81 +46,58 @@ export const useRevealStore = create<RevealState>((set, get) => ({
   submissionError: null,
   lastResult: null,
 
-  openRevealModal: (target) =>
+  openRevealModal: (target) => {
     set({
       isModalOpen: true,
       modalTarget: target,
       submissionError: null,
       lastResult: null,
-    }),
+    });
+  },
 
-  closeRevealModal: () =>
-    set({
-      isModalOpen: false,
-      modalTarget: null,
-      submissionError: null,
-      lastResult: null,
-    }),
+  closeRevealModal: () => {
+    set({ isModalOpen: false });
+    setTimeout(() => {
+      set({ modalTarget: null, isSubmitting: false, submissionError: null });
+    }, 200);
+  },
 
-  setOfficerClearance: (officerClearance) => set({ officerClearance }),
+  setOfficerClearance: (level) => {
+    set({ officerClearance: level });
+  },
 
   submitRevealRequest: async (justification: string, emergencyBypass = false) => {
-    const { modalTarget, officerClearance, officerBadge, officerName, officerRole } = get();
-    if (!modalTarget) {
-      throw new Error("No target selected for identity reveal");
-    }
+    const state = get();
+    if (!state.modalTarget) throw new Error("No target selected");
 
     set({ isSubmitting: true, submissionError: null });
 
     try {
       const res = await requestPiiReveal({
-        caseId: "DR-2026-00421",
-        entityId: modalTarget.entityId,
-        identifierType: modalTarget.identifierType as import("@/types/entity").EntityIdentifier["type"],
-        maskedValue: modalTarget.maskedValue,
-        justification: justification.trim(),
-        requesterBadge: officerBadge,
-        requesterName: officerName,
-        requesterRole: officerRole,
-        officerClearance,
+        entityId: state.modalTarget.entityId,
+        identifierType: state.modalTarget.identifierType,
+        officerBadge: state.officerBadge,
+        justification,
         emergencyBypass,
+        requestedAt: new Date().toISOString()
       });
-
       const result = res.data;
-      set({ isSubmitting: false, lastResult: result });
-
-      if (result.status === "APPROVED" && result.unmaskedValue) {
-        const key = buildKey(modalTarget.entityId, modalTarget.identifierType);
-        set((state) => ({
+      if (result.status === "APPROVED") {
+        const key = buildKey(state.modalTarget.entityId, state.modalTarget.identifierType);
+        set((s) => ({
           activeReveals: {
-            ...state.activeReveals,
+            ...s.activeReveals,
             [key]: result,
           },
         }));
-      } else if (result.status === "DENIED") {
-        set({
-          submissionError: result.denialReason || "Requisition denied: Insufficient legal authorization.",
-        });
       }
 
+      set({ lastResult: result, isSubmitting: false });
       return result;
-    } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Failed to process identity requisition";
-      set({ isSubmitting: false, submissionError: msg });
-      throw err;
+    } catch (e: any) {
+      set({ submissionError: e.message, isSubmitting: false });
+      throw e;
     }
-  },
-
-  revokeReveal: async (entityId: string, identifierType: string) => {
-    const key = buildKey(entityId, identifierType);
-    const { officerBadge } = get();
-    await revokePiiReveal(entityId, identifierType, officerBadge);
-
-    set((state) => {
-      const updated = { ...state.activeReveals };
-      delete updated[key];
-      return { activeReveals: updated };
-    });
   },
 
   isRevealed: (entityId: string, identifierType: string) => {
@@ -142,5 +114,5 @@ export const useRevealStore = create<RevealState>((set, get) => ({
     if (!reveal || !reveal.expiresAt) return null;
     const isNotExpired = new Date(reveal.expiresAt).getTime() > Date.now();
     return isNotExpired ? reveal.unmaskedValue : null;
-  },
+  }
 }));
