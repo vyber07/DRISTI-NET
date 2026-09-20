@@ -33,14 +33,14 @@ convention (no update/delete endpoints exist).
 | Relational store | SQLite | PostgreSQL | [ADR-001](adr/001-relational-database.md) |
 | Graph projection | NetworkX (in-process) | Neo4j | [ADR-002](adr/002-graph-store.md) |
 | Evidence bytes | local filesystem | MinIO/S3 | [ADR-003](adr/003-object-storage.md) |
-| Async pipeline | in-process function calls | *(no queue — deliberately not adopted)* | [ADR-004](adr/004-async-queue.md) |
+| Async pipeline | in-process fallback | Kafka Event Bus & Worker | [ADR-013](adr/013-kafka-event-bus.md) |
 | Login-throttle cache | disabled (empty `DRISHTI_REDIS_URL`) | Redis | [ADR-005](adr/005-redis-scope.md) |
 | Malware scan | `testgate` (EICAR-aware substitute) | ClamAV | `docs/security.md` |
 | Deployment | single process, `scripts/env.sh` user-space fallback | Docker Compose | [ADR-011](adr/011-deployment-model.md) |
 
 Not yet built, and deliberately not started without a justified need (directive §64,
-`TASK_BOARD.md`'s "Explicitly NOT started" list): Kafka/Redpanda, Kubernetes, MFA/WebAuthn,
-OpenTelemetry/Prometheus/Grafana, PaddleOCR/PP-Structure, break-glass access, six-tier evidence
+`TASK_BOARD.md`'s "Explicitly NOT started" list): Kubernetes, MFA/WebAuthn,
+OpenTelemetry/Prometheus/Grafana, break-glass access, six-tier evidence
 governance UI, OPA policy engine (role/assignment checks stay in `auth.py`).
 
 ## Bounds enforced on the server

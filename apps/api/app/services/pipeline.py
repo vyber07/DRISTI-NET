@@ -25,10 +25,17 @@ from .audit import record_audit
 
 def _job(db: Session, ev: Evidence, kind: str, trace_id: str) -> Job:
     key = f"{ev.evidence_id}:{kind}"
-    job = db.query(Job).filter_by(idempotency_key=key).first()
+    # Use with_for_update to serialize concurrent worker attempts
+    job = db.query(Job).filter_by(idempotency_key=key).with_for_update().first()
     if job is None:
         job = Job(evidence_id=ev.evidence_id, case_id=ev.case_id, kind=kind, trace_id=trace_id, idempotency_key=key, attempts=0, metrics={})
         db.add(job)
+    elif job.status == "SUCCEEDED":
+        raise ValueError(f"Job {key} already succeeded")
+    elif job.status == "RUNNING":
+        # In a real deployment we'd check lock timeouts, but for now we reject
+        raise ValueError(f"Job {key} is already running in another worker")
+        
     job.attempts += 1
     job.status = "RUNNING"
     job.error = None
@@ -82,11 +89,13 @@ def run_extract(db: Session, ev: Evidence, trace_id: str, actor_id: str | None) 
         return True
     except Exception as exc:  # parser failure must be visible, never silent
         db.rollback()
-        job = _job(db, ev, "EXTRACT", trace_id)
-        job.attempts -= 1
-        job.status = "FAILED"
-        job.error = f"{type(exc).__name__}: {exc}\n{traceback.format_exc()[-800:]}"
+        job = db.query(Job).filter_by(idempotency_key=f"{ev.evidence_id}:EXTRACT").first()
+        if job:
+            job.status = "FAILED"
+            job.error = f"{type(exc).__name__}: {exc}\n{traceback.format_exc()[-800:]}"
+        
         mismatch = isinstance(exc, IntegrityMismatch)
+        ev = db.get(Evidence, ev.evidence_id) # reload evidence after rollback
         ev.status = "INTEGRITY_MISMATCH" if mismatch else "EXTRACTION_FAILED"
         ev.error = f"{type(exc).__name__}: {exc}"
         record_audit(db, trace_id, actor_id, "INTEGRITY_MISMATCH" if mismatch else "EXTRACTION_FAILED", "EVIDENCE", ev.evidence_id, ev.case_id, outcome="ERROR", detail={"error": str(exc)})

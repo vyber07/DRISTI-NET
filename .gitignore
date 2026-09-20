@@ -12,3 +12,5 @@ apps/web/dist/
 venv/
 releases/
 DRISTINET_export.zip
+*.zip
+*.zip

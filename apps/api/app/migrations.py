@@ -29,7 +29,7 @@ def run_migrations() -> None:
 
     logger.info("Applying Alembic migrations to %s", config.DATABASE_URL.split("://")[0])
     try:
-        api_root = Path(__file__).resolve().parents[2]
+        api_root = Path(__file__).resolve().parents[1]
         cfg = Config(str(api_root / "alembic.ini"))
         cfg.set_main_option("script_location", str(api_root / "migrations"))
         command.upgrade(cfg, "head")

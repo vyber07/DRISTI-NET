@@ -1,8 +1,18 @@
-import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vite'
+import path from "node:path";
+import react from "@vitejs/plugin-react";
+import tailwindcss from "@tailwindcss/vite";
+import { defineConfig } from "vite";
 
-// The browser only ever talks to the FastAPI server. Never to the graph store or object store.
+// https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
-  server: { host: '0.0.0.0', port: 3000, proxy: { '/api': 'http://3.7.46.50:8000' } },
-})
+  plugins: [react(), tailwindcss()],
+  resolve: {
+    alias: {
+      "@": path.resolve(import.meta.dirname, "./src"),
+    },
+  },
+  server: {
+    host: true,
+    port: 5173,
+  },
+});

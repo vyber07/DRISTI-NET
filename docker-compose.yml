@@ -1,34 +1,32 @@
-# DRISTI-NET production Compose stack.
-# nginx listens on port 80 (no port suffix needed in the URL) and proxies to the API on port 8000.
-# PostgreSQL, Neo4j, Redis, MinIO and ClamAV are internal — not published on the host network.
-# All secrets must be set in a .env file (see .env.example and AGENTS.md §6).
 services:
   nginx:
     image: nginx:1.27-alpine
     restart: unless-stopped
     ports:
-      - "80:80"
+    - 80:80
     volumes:
-      - ./infrastructure/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+    - ./infrastructure/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
-      - api
+    - api
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O /dev/null http://localhost/ || exit 1"]
+      test:
+      - CMD-SHELL
+      - wget -q -O /dev/null http://localhost/ || exit 1
       interval: 15s
       timeout: 5s
       retries: 6
       start_period: 60s
-
   api:
     build: .
     restart: unless-stopped
-    # 8000 is NOT published to the host — only the nginx service reaches it inside the compose network.
     expose:
-      - "8000"
+    - '8000'
     environment:
-      DRISHTI_SECRET_KEY: ${DRISHTI_SECRET_KEY:?Set DRISHTI_SECRET_KEY in .env (min 32 chars)}
+      DRISHTI_SECRET_KEY: ${DRISHTI_SECRET_KEY:?Set DRISHTI_SECRET_KEY in .env (min
+        32 chars)}
       DRISHTI_SCANNER_MODE: auto
-      DRISHTI_DATABASE_URL: postgresql+psycopg2://drishti:${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}@postgres:5432/drishti
+      DRISHTI_DATABASE_URL: postgresql+psycopg2://drishti:${POSTGRES_PASSWORD:?Set
+        POSTGRES_PASSWORD in .env}@postgres:5432/drishti
       DRISHTI_NEO4J_URI: bolt://neo4j:7687
       DRISHTI_NEO4J_PASSWORD: ${NEO4J_PASSWORD:?Set NEO4J_PASSWORD in .env}
       DRISHTI_REDIS_URL: redis://redis:6379/0
@@ -37,14 +35,10 @@ services:
       DRISHTI_S3_ACCESS_KEY: drishti
       DRISHTI_S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in .env}
       DRISHTI_STORAGE_ROOT: /data
-      # Kafka: set to enable async evidence processing via the worker service.
-      # When absent, pipeline runs in-process (ADR-004 default, still works without Kafka).
       DRISHTI_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      # Besu: set to enable Merkle root anchoring to the evaluation ledger.
-      # Production: use a permissioned network + HSM-backed key, NOT the dev signing key.
       DRISHTI_BESU_ENDPOINT: http://besu:8545
-      # DRISHTI_BESU_SIGNING_KEY: set in .env — NEVER commit a real key
-    volumes: ["drishti-data:/data"]
+    volumes:
+    - drishti-data:/data
     depends_on:
       postgres:
         condition: service_healthy
@@ -58,72 +52,160 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
-
+      migrations:
+        condition: service_completed_successfully
   redis:
     image: redis:7-alpine
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test:
+      - CMD
+      - redis-cli
+      - ping
       interval: 5s
       timeout: 3s
       retries: 10
-
   postgres:
-    image: postgres:16  # Phase 6 (TASK_BOARD.md) evaluated postgres:16-alpine for its smaller trivy footprint
-      # (30 HIGH/1 CRITICAL vs. 101/14) and REJECTED it: musl libc cannot report a collation version at all,
-      # so `ALTER DATABASE ... REFRESH COLLATION VERSION` fails outright ("invalid collation version change")
-      # against data created under glibc collation -- confirmed live, not assumed. That is a permanent,
-      # unresolvable data-integrity risk for any collation-sensitive query, not a cosmetic warning. Trading
-      # a CVE count for silent sort-order risk on evidence data fails this project's own data-integrity gate.
+    image: postgres:16
     restart: unless-stopped
     environment:
       POSTGRES_USER: drishti
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
       POSTGRES_DB: drishti
-    volumes: ["drishti-pgdata:/var/lib/postgresql/data"]
+    volumes:
+    - drishti-pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U drishti -d drishti"]
+      test:
+      - CMD-SHELL
+      - pg_isready -U drishti -d drishti
       interval: 5s
       timeout: 5s
       retries: 10
-
   neo4j:
     image: neo4j:5-community
     restart: unless-stopped
     environment:
       NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:?Set NEO4J_PASSWORD in .env}
-    volumes: ["drishti-neo4jdata:/data"]
+    volumes:
+    - drishti-neo4jdata:/data
     healthcheck:
-      test: ["CMD-SHELL", "wget -q -O - http://localhost:7474 || exit 1"]
+      test:
+      - CMD-SHELL
+      - wget -q -O - http://localhost:7474 || exit 1
       interval: 5s
       timeout: 5s
       retries: 20
-
   minio:
-    image: quay.io/minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e  # docker.io/minio/minio is no longer publicly pullable; quay.io is MinIO's current mirror
+    image: quay.io/minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: drishti
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in .env}
-    volumes: ["drishti-miniodata:/data"]
+    volumes:
+    - drishti-miniodata:/data
     healthcheck:
-      test: ["CMD", "mc", "ready", "local"]
+      test:
+      - CMD
+      - mc
+      - ready
+      - local
       interval: 5s
       timeout: 5s
       retries: 10
-
   clamav:
     image: clamav/clamav@sha256:9cb27d7660bdf66e9878c832cb433dd8aa152cfbe16f3c2c0084c80b04ae22b4
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "echo PING | nc localhost 3310 || exit 1"]
+      test:
+      - CMD-SHELL
+      - echo PING | nc localhost 3310 || exit 1
       interval: 10s
       timeout: 5s
       retries: 20
-
+  migrations:
+    build: .
+    restart: 'no'
+    command:
+    - python3
+    - -m
+    - apps.api.app.migrations
+    environment:
+      DRISHTI_DATABASE_URL: postgresql+psycopg2://drishti:${POSTGRES_PASSWORD:?Set
+        POSTGRES_PASSWORD in .env}@postgres:5432/drishti
+    depends_on:
+      postgres:
+        condition: service_healthy
+  kafka:
+    image: bitnami/kafka:3.7.0
+    restart: unless-stopped
+    environment:
+    - KAFKA_CFG_NODE_ID=1
+    - KAFKA_CFG_PROCESS_ROLES=broker,controller
+    - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
+    - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+    - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@localhost:9093
+    - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
+    - KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR=1
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - kafka-topics.sh --bootstrap-server localhost:9092 --list
+      interval: 10s
+      timeout: 5s
+      retries: 10
+  besu:
+    image: hyperledger/besu:24.1
+    restart: unless-stopped
+    command:
+    - --network=dev
+    - --rpc-http-enabled
+    - --rpc-http-host=0.0.0.0
+    - --rpc-http-cors-origins=all
+    - --host-allowlist=*
+    ports:
+    - 8545:8545
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - 'curl -f -X POST -H ''Content-Type: application/json'' --data ''{"jsonrpc":"2.0","method":"eth_syncing","params":[],"id":1}''
+        http://localhost:8545 || exit 1'
+      interval: 10s
+      timeout: 5s
+      retries: 10
+  worker:
+    build: .
+    restart: unless-stopped
+    command:
+    - python3
+    - -m
+    - workers.worker
+    environment:
+      DRISHTI_SECRET_KEY: ${DRISHTI_SECRET_KEY:?Set DRISHTI_SECRET_KEY in .env}
+      DRISHTI_DATABASE_URL: postgresql+psycopg2://drishti:${POSTGRES_PASSWORD:?Set
+        POSTGRES_PASSWORD in .env}@postgres:5432/drishti
+      DRISHTI_NEO4J_URI: bolt://neo4j:7687
+      DRISHTI_NEO4J_PASSWORD: ${NEO4J_PASSWORD:?Set NEO4J_PASSWORD in .env}
+      DRISHTI_S3_ENDPOINT_URL: http://minio:9000
+      DRISHTI_S3_BUCKET: drishti
+      DRISHTI_S3_ACCESS_KEY: drishti
+      DRISHTI_S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in .env}
+      DRISHTI_STORAGE_ROOT: /data
+      DRISHTI_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      DRISHTI_BESU_ENDPOINT: http://besu:8545
+    volumes:
+    - drishti-data:/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      neo4j:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
 volumes:
-  drishti-data:
-  drishti-pgdata:
-  drishti-neo4jdata:
-  drishti-miniodata:
+  drishti-data: null
+  drishti-pgdata: null
+  drishti-neo4jdata: null
+  drishti-miniodata: null

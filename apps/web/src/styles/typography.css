@@ -1,0 +1,33 @@
+/* ==========================================================================
+   DRISTI-NET TYPOGRAPHY
+   Inter (primary) + Noto Sans Devanagari (vernacular / Hindi text)
+   Typography carries hierarchy, never decoration.
+   ========================================================================== */
+
+html {
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  font-size: var(--text-body);
+  line-height: 1.5;
+  color: var(--text-primary);
+  background-color: var(--background);
+}
+
+/* Devanagari-bearing content (aliases, OCR-extracted narrative text) should
+   use the vernacular stack so mixed-script strings render legibly. */
+[lang="hi"],
+.font-devanagari {
+  font-family: var(--font-devanagari);
+}
+
+h1,
+h2,
+h3 {
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--text-primary);
+}

@@ -1,0 +1,156 @@
+/* ==========================================================================
+   DRISTI-NET DESIGN TOKENS
+   Dark Cinematic + Technical Intelligence Workstation
+
+   Single source of truth for color, spacing, radius, shadow, and type.
+   Components must reference these tokens (via Tailwind theme mapping)
+   and must never hardcode raw hex values.
+   ========================================================================== */
+
+:root {
+  /* ---------------------------------------------------------------------
+     Base surfaces (Professional Public Sector Intelligence Palette)
+     --------------------------------------------------------------------- */
+  --background: #F6F7F5;
+  --surface-1: #FFFFFF;
+  --surface-2: #EEF2F3;
+  --surface-3: #E2E7E9;
+  --surface-raised: #FFFFFF;
+
+  --border-subtle: #D8DFE2;
+  --border-strong: #BCC7CC;
+
+  --text-primary: #17324D;
+  --text-secondary: #526273;
+  --text-muted: #788896;
+  --text-disabled: #9BA8B3;
+
+  /* ---------------------------------------------------------------------
+     Accent / semantic colors
+     --------------------------------------------------------------------- */
+  --electric-blue: #287C7A;
+  --electric-blue-soft: #389B99;
+  --electric-blue-dim: #1D5857;
+
+  --amber: #B9822B;
+  --amber-dim: #845B18;
+
+  --orange: #C96827;
+  --orange-dim: #8D4111;
+
+  --critical-red: #B94A48;
+  --critical-red-dim: #7F2B2A;
+
+  --verified-emerald: #3F7D5A;
+  --verified-emerald-dim: #254F38;
+
+  --court-purple: #6B5B95;
+  --court-purple-dim: #453669;
+
+  --inactive-gray: #788896;
+
+  /* ---------------------------------------------------------------------
+     Evidence tier semantic mapping (Tier 1 has no visual — not renderable)
+     Each tier is color + line-style + width + opacity, never color alone.
+     Consumed identically by EvidenceTierBadge and GraphEngine.
+     --------------------------------------------------------------------- */
+  --tier-2-color: var(--amber);
+  --tier-2-style: dotted;
+  --tier-2-width: 1px;
+  --tier-2-opacity: 0.5;
+
+  --tier-3-color: var(--orange);
+  --tier-3-style: dashed;
+  --tier-3-width: 2px;
+  --tier-3-opacity: 0.8;
+
+  --tier-4-color: var(--electric-blue);
+  --tier-4-style: solid;
+  --tier-4-width: 2px;
+  --tier-4-opacity: 0.9;
+
+  --tier-5-color: var(--verified-emerald);
+  --tier-5-style: solid;
+  --tier-5-width: 3px;
+  --tier-5-opacity: 1;
+
+  --tier-6-color: var(--court-purple);
+  --tier-6-style: solid;
+  --tier-6-width: 3.5px;
+  --tier-6-opacity: 1;
+
+  /* ---------------------------------------------------------------------
+     Status colors
+     --------------------------------------------------------------------- */
+  --status-verified: var(--verified-emerald);
+  --status-processing: var(--electric-blue-soft);
+  --status-review-required: var(--amber);
+  --status-restricted: var(--critical-red);
+  --status-failed: var(--critical-red);
+  --status-quarantined: var(--court-purple);
+  --status-historical: var(--inactive-gray);
+
+  /* ---------------------------------------------------------------------
+     Spacing (4px base unit)
+     Reference only — NOT registered as Tailwind theme keys (see index.css
+     for why). Components use Tailwind's default numeric spacing scale
+     directly, which already steps in 4px multiples: p-1=4px, p-2=8px,
+     p-3=12px, p-4=16px, p-5=20px, p-6=24px, p-8=32px, p-10=40px, p-12=48px.
+     --------------------------------------------------------------------- */
+  --space-xs: 4px; /* = Tailwind p-1 */
+  --space-sm: 8px; /* = Tailwind p-2 */
+  --space-md: 12px; /* = Tailwind p-3 */
+  --space-lg: 16px; /* = Tailwind p-4 */
+  --space-xl: 20px; /* = Tailwind p-5 */
+  --space-2xl: 24px; /* = Tailwind p-6 */
+  --space-3xl: 32px; /* = Tailwind p-8 */
+  --space-4xl: 40px; /* = Tailwind p-10 */
+  --space-5xl: 48px; /* = Tailwind p-12 */
+
+  /* ---------------------------------------------------------------------
+     Radius (restrained — no pill-everything)
+     --------------------------------------------------------------------- */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+  --radius-xl: 10px;
+  --radius-pill: 999px;
+
+  /* ---------------------------------------------------------------------
+     Shadow (subtle elevation only — no neon halos)
+     --------------------------------------------------------------------- */
+  --shadow-panel: 0 1px 3px rgba(0, 0, 0, 0.05), 0 4px 12px rgba(0, 0, 0, 0.04);
+  --shadow-drawer: -4px 0 20px rgba(0, 0, 0, 0.08);
+  --shadow-focus-ring: 0 0 0 2px var(--electric-blue-soft);
+
+  /* ---------------------------------------------------------------------
+     Typography
+     --------------------------------------------------------------------- */
+  --font-sans: "Inter", "Noto Sans Devanagari", system-ui, sans-serif;
+  --font-devanagari: "Noto Sans Devanagari", "Inter", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --text-display: 30px;
+  --text-h1: 24px;
+  --text-h2: 20px;
+  --text-h3: 16px;
+  --text-body: 14px;
+  --text-small: 12px;
+  --text-micro: 11px;
+
+  /* ---------------------------------------------------------------------
+     Motion (deliberate, non-decorative)
+     --------------------------------------------------------------------- */
+  --motion-fast: 120ms;
+  --motion-base: 200ms;
+  --motion-slow: 320ms;
+  --motion-ease: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --motion-fast: 0ms;
+    --motion-base: 0ms;
+    --motion-slow: 0ms;
+  }
+}

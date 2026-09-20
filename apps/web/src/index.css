@@ -1,0 +1,142 @@
+/* Self-hosted fonts (no external CDN) — DRISTI-NET's sovereignty requirement
+   means an analyst workstation must render correctly fully air-gapped. */
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+@import "@fontsource/inter/700.css";
+@import "@fontsource/noto-sans-devanagari/400.css";
+@import "@fontsource/noto-sans-devanagari/500.css";
+@import "@fontsource/noto-sans-devanagari/600.css";
+@import "@fontsource/jetbrains-mono/400.css";
+@import "@fontsource/jetbrains-mono/500.css";
+@import "tailwindcss";
+@import "./styles/tokens.css";
+@import "./styles/typography.css";
+
+/* ==========================================================================
+   Tailwind v4 theme mapping.
+   Every Tailwind color/spacing/radius utility below resolves to a
+   DRISTI-NET design token (see styles/tokens.css) — never a raw hex value.
+   ========================================================================== */
+@theme inline {
+  --color-background: var(--background);
+  --color-surface-1: var(--surface-1);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-surface-raised: var(--surface-raised);
+
+  --color-border-subtle: var(--border-subtle);
+  --color-border-strong: var(--border-strong);
+
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  --color-text-disabled: var(--text-disabled);
+
+  --color-electric-blue: var(--electric-blue);
+  --color-electric-blue-soft: var(--electric-blue-soft);
+  --color-electric-blue-dim: var(--electric-blue-dim);
+
+  --color-amber: var(--amber);
+  --color-amber-dim: var(--amber-dim);
+  --color-orange: var(--orange);
+  --color-orange-dim: var(--orange-dim);
+  --color-critical-red: var(--critical-red);
+  --color-critical-red-dim: var(--critical-red-dim);
+  --color-verified-emerald: var(--verified-emerald);
+  --color-verified-emerald-dim: var(--verified-emerald-dim);
+  --color-court-purple: var(--court-purple);
+  --color-court-purple-dim: var(--court-purple-dim);
+  --color-inactive-gray: var(--inactive-gray);
+
+  --color-tier-2: var(--tier-2-color);
+  --color-tier-3: var(--tier-3-color);
+  --color-tier-4: var(--tier-4-color);
+  --color-tier-5: var(--tier-5-color);
+  --color-tier-6: var(--tier-6-color);
+
+  --color-status-verified: var(--status-verified);
+  --color-status-processing: var(--status-processing);
+  --color-status-review-required: var(--status-review-required);
+  --color-status-restricted: var(--status-restricted);
+  --color-status-failed: var(--status-failed);
+  --color-status-quarantined: var(--status-quarantined);
+  --color-status-historical: var(--status-historical);
+
+  --font-sans: var(--font-sans);
+  --font-devanagari: var(--font-devanagari);
+  --font-mono: var(--font-mono);
+
+  --text-display: var(--text-display);
+  --text-h1: var(--text-h1);
+  --text-h2: var(--text-h2);
+  --text-h3: var(--text-h3);
+  --text-body: var(--text-body);
+  --text-small: var(--text-small);
+  --text-micro: var(--text-micro);
+
+  /*
+   * Spacing is deliberately NOT re-registered here as named --spacing-xs/sm/...
+   * theme keys. Tailwind's own named max-width scale (max-w-xs, max-w-sm,
+   * max-w-2xl, max-w-5xl, ...) shares those exact T-shirt-size names, and
+   * Tailwind v4 resolves named size utilities against the spacing namespace
+   * when a matching key exists there — so defining --spacing-5xl silently
+   * hijacked max-w-5xl (and every other max-w-<size> utility) down to a few
+   * pixels. Tailwind's default spacing scale (--spacing: 0.25rem, i.e. 4px
+   * per step) already IS the spec's "4px base unit" system: p-1=4px, p-2=8px,
+   * p-3=12px, p-4=16px, p-5=20px, p-6=24px, p-8=32px, p-10=40px, p-12=48px.
+   * Components use those numeric utilities directly; styles/tokens.css's
+   * --space-* variables remain as documentation/reference only.
+   */
+
+  --radius-sm: var(--radius-sm);
+  --radius-md: var(--radius-md);
+  --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+  --radius-pill: var(--radius-pill);
+
+  --shadow-panel: var(--shadow-panel);
+  --shadow-drawer: var(--shadow-drawer);
+}
+
+* {
+  border-color: var(--border-subtle);
+}
+
+html,
+body,
+#root {
+  height: 100%;
+  width: 100%;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+::selection {
+  background-color: rgba(40, 124, 122, 0.2);
+  color: var(--text-primary);
+}
+
+/* Visible focus state — required for keyboard navigation (spec §34) */
+:focus-visible {
+  outline: 2px solid var(--electric-blue-soft);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm);
+}
+
+/* Scrollbars styled to match the workstation aesthetic instead of default OS chrome */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--surface-2);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: var(--radius-pill);
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
