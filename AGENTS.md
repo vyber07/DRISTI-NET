@@ -14,6 +14,6 @@
 6. Never commit credentials, real personal data, or `storage/`. Demo passwords are `<username>-demo` by convention only.
 7. Report on completion (constitution §20): files read, files changed, contract decisions, tests run + results, demonstrated
    behaviour, remaining targets, limitations, next step.
-8. Strict rule: Never generate scripts to perform tasks. If a script is absolutely required to perform a task, it must be        created, used, and then immediately deleted.
+8. Strict rule: Never generate scripts to perform tasks. If a script is absolutely required to perform a task, it must be created, used, and then immediately deleted.
 
 Environment notes for this machine are in the README (Node 24 via nvm for the web build; Python 3.11).

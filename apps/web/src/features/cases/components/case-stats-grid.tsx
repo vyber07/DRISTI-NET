@@ -4,6 +4,7 @@ import {
   Landmark,
   MapPin,
   FileCheck2,
+  Network
 } from "lucide-react";
 import type { CaseStats } from "@/types/case";
 
@@ -11,47 +12,48 @@ interface CaseStatsGridProps {
   stats?: CaseStats;
 }
 
-export function CaseStatsGrid({ stats: _stats }: CaseStatsGridProps) {
+export function CaseStatsGrid({ stats }: CaseStatsGridProps) {
+  if (!stats) {
+    return (
+      <div className="p-4 rounded-xl border border-border-subtle bg-surface-1 text-center text-text-secondary text-sm">
+        Case statistics are currently unavailable or not implemented by the backend.
+      </div>
+    );
+  }
+
   const cards = [
     {
-      label: "People",
-      value: "4",
-      description: "Suspects, victims & associates",
+      label: "Entities",
+      value: stats.totalEntities ?? "-",
+      description: "Total recognized entities",
       icon: Users,
       accent: "text-electric-blue bg-electric-blue/10",
     },
     {
-      label: "Phone Numbers",
-      value: "2",
-      description: "Threat & extortion handsets",
-      icon: Smartphone,
+      label: "Relationships",
+      value: stats.totalRelationships ?? "-",
+      description: "Extracted relationships",
+      icon: Network,
       accent: "text-amber bg-amber/10",
     },
     {
-      label: "Financial Accounts",
-      value: "1",
-      description: "Mule account used for cash",
-      icon: Landmark,
-      accent: "text-verified-emerald bg-verified-emerald/10",
-    },
-    {
-      label: "Locations",
-      value: "3",
-      description: "Cell tower & safehouse sites",
-      icon: MapPin,
-      accent: "text-text-secondary bg-surface-3",
-    },
-    {
       label: "Evidence Records",
-      value: "4",
+      value: stats.totalEvidence ?? "-",
       description: "Original source documents",
       icon: FileCheck2,
       accent: "text-court-purple bg-court-purple/10",
     },
+    {
+      label: "Contradictions",
+      value: stats.contradictionsCount ?? "-",
+      description: "Flagged conflicts",
+      icon: MapPin,
+      accent: "text-text-secondary bg-surface-3",
+    }
   ];
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-5 gap-3.5 min-w-0 w-full max-w-full">
+    <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 gap-3.5 min-w-0 w-full max-w-full">
       {cards.map((c) => {
         const Icon = c.icon;
         return (

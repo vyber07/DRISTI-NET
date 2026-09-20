@@ -29,7 +29,6 @@ export const PRIMARY_NAV_ITEMS: NavItem[] = [
   { label: "Investigation Map", path: "/graph", icon: Network, tooltip: "Visual map of connected clues & people" },
   { label: "Evidence", path: "/evidence", icon: FileCheck2, tooltip: "Original case documents and verified proof" },
   { label: "Timeline", path: "/timeline", icon: Clock, tooltip: "Chronological story of case events" },
-  { label: "Alerts", path: "/alerts", icon: AlertCircle, tooltip: "Items needing investigator attention" },
   { label: "Reports", path: "/reports", icon: FileText, tooltip: "Case summary and official dossier" },
 ];
 

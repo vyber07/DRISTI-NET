@@ -80,7 +80,6 @@ function RevealModalContent({ modalTarget }: RevealModalContentProps) {
     closeRevealModal,
     setOfficerClearance,
     submitRevealRequest,
-    revokeReveal,
   } = useRevealStore();
 
   const [justification, setJustification] = useState("");
@@ -110,7 +109,6 @@ function RevealModalContent({ modalTarget }: RevealModalContentProps) {
   };
 
   const handleRevoke = async () => {
-    await revokeReveal(modalTarget.entityId, modalTarget.identifierType);
     closeRevealModal();
   };
 

@@ -31,7 +31,6 @@ const CASE_NAV_ITEMS = [
   { id: "graph", label: "Investigation Map", icon: Network, getPath: (id: string) => `/cases/${id}/graph`, active: true },
   { id: "evidence", label: "Evidence & Records", icon: FileCheck2, getPath: (id: string) => `/cases/${id}/evidence` },
   { id: "timeline", label: "Event Timeline", icon: Clock, getPath: (id: string) => `/cases/${id}/timeline` },
-  { id: "notes", label: "Investigator Notes", icon: FileText, getPath: (id: string) => `/cases/${id}/notes` },
   { id: "audit", label: "Audit Trail", icon: ShieldCheck, getPath: (id: string) => `/cases/${id}/audit` },
 ];
 

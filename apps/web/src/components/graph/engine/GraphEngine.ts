@@ -144,6 +144,9 @@ export class GraphEngine {
   }
 
   private initSigma(): void {
+    // Expose for E2E testing
+    (window as any).__graph = this.graph;
+
     const SigmaConstructor = (Sigma as unknown as { default?: typeof Sigma }).default || Sigma;
 
     this.sigma = new SigmaConstructor(this.graph, this.container, {
@@ -163,6 +166,7 @@ export class GraphEngine {
       zIndex: true,
 
       nodeReducer: (node, data) => {
+
         const entityType = data.entityType as EntityType;
         const search = this.filters.searchTerm.toLowerCase();
 
@@ -260,6 +264,8 @@ export class GraphEngine {
         };
       },
     });
+
+    (window as any).__sigma = this.sigma;
 
     // Event listeners
     this.sigma.on("clickNode", (e) => {

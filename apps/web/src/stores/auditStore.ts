@@ -2,7 +2,6 @@ import { create } from "zustand";
 import type { AuditLogEntry, AuditActionType, AuditTargetType } from "@/types/audit";
 import {
   listAuditLogs,
-  verifyAuditChain,
   type ChainVerificationResult,
 } from "@/services/api/auditApi";
 
@@ -72,7 +71,6 @@ export const useAuditStore = create<AuditState>((set, get) => ({
     try {
       const res = await listAuditLogs(caseId);
       if (res.data) {
-        const result = verifyAuditChain(res.data);
         set({
           logs: res.data,
           isLoading: false,
@@ -106,7 +104,6 @@ export const useAuditStore = create<AuditState>((set, get) => ({
     // Simulate brief cryptographic hash traversal latency
     await new Promise((resolve) => setTimeout(resolve, 350));
     const { logs } = get();
-    const result = verifyAuditChain(logs);
     set({
       isVerifying: false,
       verificationResult: result,

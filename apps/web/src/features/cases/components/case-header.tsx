@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import {
   ArrowLeft,
-  Share2,
   FileDown,
   Network,
 } from "lucide-react";
@@ -59,19 +58,11 @@ export function CaseHeader({ caseData, activeTab }: CaseHeaderProps) {
           </Button>
         )}
 
-        <Button variant="ghost" size="sm" className="gap-1.5 text-xs text-text-muted hover:text-text-primary h-8 px-2 hidden lg:inline-flex">
-          <Share2 className="h-3.5 w-3.5" />
-          <span className="hidden xl:inline">Share</span>
-        </Button>
-
-        <Button
-          variant="restricted"
-          size="sm"
-          restrictedReason="Supervisor clearance required for dossier export"
-          className="gap-1.5 text-xs h-8 px-2.5"
-        >
-          <FileDown className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">Export</span>
+        <Button asChild variant="secondary" size="sm" className="gap-1.5 text-xs h-8 px-2.5">
+          <Link to={`/cases/${caseData.id}/reports`}>
+            <FileDown className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Export Reports</span>
+          </Link>
         </Button>
       </div>
     </div>

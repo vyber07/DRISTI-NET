@@ -37,7 +37,6 @@ export function EntityDrawer({ onFocusNode }: EntityDrawerProps) {
     clearSelection,
     edges,
     selectEdge,
-    expandNeighbors,
     caseId,
   } = useGraphStore();
 
@@ -58,7 +57,6 @@ export function EntityDrawer({ onFocusNode }: EntityDrawerProps) {
     setIsExpanding(true);
     setExpansionResult(null);
     try {
-      const result = await expandNeighbors(entityId);
       if (result.addedNodes > 0 || result.addedEdges > 0) {
         setExpansionResult(`+${result.addedNodes} clues, +${result.addedEdges} connections added to map`);
       } else {
@@ -279,7 +277,6 @@ export function EntityDrawer({ onFocusNode }: EntityDrawerProps) {
                           rawValue: ident.value,
                         })
                       }
-                      onRevokeReveal={() => revokeReveal(entity.id, ident.type)}
                     />
                   </div>
                 );

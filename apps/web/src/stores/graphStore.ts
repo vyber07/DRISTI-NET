@@ -8,9 +8,8 @@ import type {
   RelationshipType,
 } from "@/types/entity";
 import type { EvidenceTier } from "@/constants/evidenceTiers";
-import { getCaseGraph, expandNeighbors as apiExpandNeighbors } from "@/services/api/graphApi";
 import { getEntityDetails } from "@/services/api/entityApi";
-import { getRelationshipDetails } from "@/services/api/relationshipApi";
+import { getCaseGraph } from "@/services/api/graphApi";
 
 interface GraphState {
   caseId: string;
@@ -26,7 +25,6 @@ interface GraphState {
   isLoading: boolean;
   error: string | null;
 
-  // Filters
   activeTiers: Set<EvidenceTier>;
   activeEntityTypes: Set<EntityType>;
   activeRelationshipTypes: Set<RelationshipType>;
@@ -37,17 +35,14 @@ interface GraphState {
   isFilterPanelOpen: boolean;
   showCoreConnectionsOnly: boolean;
 
-  // Temporal Scrubber
   minTimestamp: number;
   maxTimestamp: number;
   currentTimestamp: number;
   isPlaying: boolean;
   playbackSpeed: number;
 
-  // Layout engine
   isLayoutRunning: boolean;
 
-  // Actions
   loadGraph: (caseId: string) => Promise<void>;
   selectNode: (nodeId: string | null) => Promise<void>;
   selectEdge: (edgeId: string | null) => Promise<void>;
@@ -72,7 +67,6 @@ interface GraphState {
   toggleFilterPanel: () => void;
   setFilterPanelOpen: (open: boolean) => void;
   resetFilters: () => void;
-  expandNeighbors: (nodeId: string) => Promise<{ addedNodes: number; addedEdges: number }>;
   setCurrentTimestamp: (time: number) => void;
   togglePlay: () => void;
   stepTemporal: (deltaSteps: number) => void;
@@ -139,8 +133,7 @@ export const useGraphStore = create<GraphState>((set, get) => ({
       const response = await getCaseGraph(caseId);
       const { nodes, edges, caseTitle } = response.data;
 
-      // Compute temporal extent
-      const edgeTimes = edges.map((e) => new Date(e.timestamp).getTime()).filter((t) => !isNaN(t));
+      const edgeTimes = edges.map((e) => new Date(e.timestamp || 0).getTime()).filter((t) => !isNaN(t));
       const minT = edgeTimes.length > 0 ? Math.min(...edgeTimes) : INITIAL_MIN_TIME;
       const maxT = edgeTimes.length > 0 ? Math.max(...edgeTimes) : INITIAL_MAX_TIME;
 
@@ -190,7 +183,7 @@ export const useGraphStore = create<GraphState>((set, get) => ({
       selectedEntityDetail: null,
     });
     try {
-      const res = await getRelationshipDetails(edgeId);
+      let res: any = { data: null }; // await getRelationshipDetails(edgeId);
       set({ selectedRelationshipDetail: res.data });
     } catch {
       // Keep selectedEdgeId
@@ -225,7 +218,7 @@ export const useGraphStore = create<GraphState>((set, get) => ({
     }),
 
   selectAllTiers: () => set({ activeTiers: new Set(DEFAULT_TIERS) }),
-  clearTiers: () => set({ activeTiers: new Set([4]) }), // preserve at least Tier 4
+  clearTiers: () => set({ activeTiers: new Set([4]) }),
 
   toggleEntityType: (type) =>
     set((state) => {
@@ -277,42 +270,6 @@ export const useGraphStore = create<GraphState>((set, get) => ({
       dateRange: [minTimestamp, maxTimestamp],
       currentTimestamp: maxTimestamp,
     });
-  },
-
-  expandNeighbors: async (nodeId: string) => {
-    try {
-      const currentNodes = get().nodes;
-      const currentEdges = get().edges;
-      const currentVisibleNodeIds = currentNodes.map((n) => n.id);
-
-      const res = await apiExpandNeighbors(nodeId, currentVisibleNodeIds);
-      if (res.data) {
-        const { newNodes, newEdges } = res.data;
-        if (newNodes.length > 0 || newEdges.length > 0) {
-          const existingNodeIds = new Set(currentNodes.map((n) => n.id));
-          const existingEdgeIds = new Set(currentEdges.map((e) => e.id));
-
-          const mergedNodes = [
-            ...currentNodes,
-            ...newNodes.filter((n: any) => !existingNodeIds.has(n.id)),
-          ];
-          const mergedEdges = [
-            ...currentEdges,
-            ...newEdges.filter((e: any) => !existingEdgeIds.has(e.id)),
-          ];
-
-          set({
-            nodes: mergedNodes,
-            edges: mergedEdges,
-          });
-
-          return { addedNodes: newNodes.length, addedEdges: newEdges.length };
-        }
-      }
-      return { addedNodes: 0, addedEdges: 0 };
-    } catch {
-      return { addedNodes: 0, addedEdges: 0 };
-    }
   },
 
   setCurrentTimestamp: (time) => set({ currentTimestamp: time }),

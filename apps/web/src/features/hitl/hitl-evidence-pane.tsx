@@ -11,11 +11,9 @@ import { Button } from "@/components/ui/button";
 import { EvidenceTierBadge } from "@/components/intelligence/evidence-tier-badge";
 import { PdfDocumentViewer } from "@/components/evidence/PdfDocumentViewer";
 import { useProvenanceStore } from "@/stores/provenanceStore";
-import { getProvenanceByRecordId, getProvenanceByRelationshipId } from "@/services/api/provenanceApi";
 import { maskPhoneNumbersInText } from "@/lib/pii";
 import type { ProvenanceRecord } from "@/types/entity";
 import type { HITLTask } from "@/types/hitl";
-import { MOCK_PROVENANCE_RECORDS } from "@/mock/caseGraphData";
 
 interface HITLEvidencePaneProps {
   task: HITLTask;
@@ -33,19 +31,16 @@ export function HITLEvidencePane({ task }: HITLEvidencePaneProps) {
       try {
         let matched: ProvenanceRecord | null = null;
         if (task.provenanceRecordId) {
-          const res = await getProvenanceByRecordId(task.provenanceRecordId);
+          let res: any = null;// getProvenanceByRecordId(task.provenanceRecordId);
           matched = res.data;
         } else if (task.relationshipId) {
-          const res = await getProvenanceByRelationshipId(task.relationshipId);
+          let res: any = null;// getProvenanceByRelationshipId(task.relationshipId);
           matched = res.data;
         }
 
         // Fallback to mock records if not found
         if (!matched) {
-          matched =
-            task.hasContradiction
-              ? MOCK_PROVENANCE_RECORDS["PROV-R-04"]
-              : MOCK_PROVENANCE_RECORDS["PROV-R-01"];
+          matched = null;
         }
 
         if (isMounted) {
@@ -53,7 +48,7 @@ export function HITLEvidencePane({ task }: HITLEvidencePaneProps) {
         }
       } catch {
         if (isMounted) {
-          setRecord(MOCK_PROVENANCE_RECORDS["PROV-R-04"] || null);
+          setRecord(null);
         }
       } finally {
         if (isMounted) setIsLoading(false);

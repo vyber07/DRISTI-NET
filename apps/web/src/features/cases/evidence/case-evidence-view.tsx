@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
   FileCheck2,
@@ -23,6 +23,11 @@ interface CaseEvidenceViewProps {
 
 export function CaseEvidenceView({ caseId }: CaseEvidenceViewProps) {
   const [searchParams, setSearchParams] = useSearchParams();
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadMsg, setUploadMsg] = useState('');
+  // We actually already have React imported above as `import { useEffect, useState } from "react";`
+  // I will just use React.useState
+
   const entityIdFromUrl = searchParams.get("entityId");
 
   const {
@@ -117,6 +122,33 @@ export function CaseEvidenceView({ caseId }: CaseEvidenceViewProps) {
               <Lock className="h-3 w-3 text-verified-emerald" />
               <span>Tamper-Proof (Hashed)</span>
             </div>
+          </div>
+          <div className="flex items-center gap-2 mt-4 w-full">
+            <input type="file" onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} className="text-sm border border-border-subtle p-1 rounded" />
+            <Button onClick={async () => {
+              if (!selectedFile) return;
+              const fd = new FormData();
+              fd.append("file", selectedFile);
+              fd.append("source_label", "manual");
+              const tok = localStorage.getItem("drishti.token");
+              const res = await fetch(`/api/v1/cases/${caseId}/evidence`, {
+                method: "POST",
+                headers: tok ? { Authorization: `Bearer ${tok}` } : {},
+                body: fd
+              });
+              if (!res.ok) {
+                 const text = await res.text();
+                 if (text.includes("quarantine") || text.includes("virus") || text.includes("malware")) {
+                    setUploadMsg("File is in quarantine");
+                 } else {
+                    setUploadMsg("Upload failed");
+                 }
+              } else {
+                 setUploadMsg("Uploaded");
+              }
+              loadEvidence(caseId, entityScope);
+            }}>Upload</Button>
+            {uploadMsg && <span className="text-critical-red font-bold text-xs">{uploadMsg}</span>}
           </div>
         </div>
 
