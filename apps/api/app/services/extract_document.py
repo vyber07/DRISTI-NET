@@ -8,9 +8,13 @@ from ..models import Evidence
 class DocumentExtractor(StructuredExtractor):
     def _pages(self, data: bytes, ext: str) -> list[list[str]]:
         if ext == ".pdf":
-            from pypdf import PdfReader
-            reader = PdfReader(io.BytesIO(data))
-            return [(page.extract_text() or "").splitlines() for page in reader.pages]
+            from .ocr_adapter import extract_text_from_pdf_bytes, pages_to_line_lists
+            ocr_pages = extract_text_from_pdf_bytes(data)
+            self._ocr_locators = [p.locators for p in ocr_pages]
+            self._ocr_engine = ocr_pages[0].engine if ocr_pages else "pypdf-fallback"
+            return pages_to_line_lists(ocr_pages)
+        self._ocr_locators = []
+        self._ocr_engine = "text-parser"
         return [data.decode("utf-8", "replace").splitlines()]
 
     def extract_document(self, data: bytes, ext: str):
@@ -87,8 +91,33 @@ class DocumentExtractor(StructuredExtractor):
                                confidence=0.9, observed_time=doc_date, locator=loc(m), snippet=stripped)
                 offset += len(line) + 1
         if not any(pages):
-            self.stats.warnings.append("no text extracted from document (OCR route not available in prototype)")
+            self.stats.warnings.append("no text extracted from document")
+            return
 
+        # ── Model-backed NER pass (IndicBERT) ────────────────────────────────────
+        try:
+            from .nlp_adapter import extract_entities as _ner
+            full_text = "\n".join(l for pg in pages for l in pg)
+            if full_text.strip():
+                ner_candidates = _ner(full_text, evidence_id=self.ev.evidence_id, page=1, line_start=1)
+                for nc in ner_candidates:
+                    ent = self.entity(nc.kind, f"ner:{norm_name(nc.normalized_text)}@{self.ev.evidence_id}",
+                                      nc.original_text, {"ner_source": "indic-bert"})
+                    self.claim(
+                        "MENTION", ent,
+                        original=nc.original_text, normalized=nc.normalized_text,
+                        method="indic-bert-ner", method_version=nc.method_version,
+                        confidence=nc.confidence,
+                        locator={**nc.locator, "engine": "indic-bert-ner"},
+                        snippet=nc.original_text,
+                        state="REVIEW_REQUIRED"
+                    )
+                if ner_candidates:
+                    self.stats.warnings.append(
+                        f"indic-bert-ner produced {len(ner_candidates)} candidate(s) requiring human review"
+                    )
+        except Exception as exc:
+            self.stats.warnings.append(f"indic-bert-ner pass skipped: {exc}")
     # ---------------------------------------------------------------- ZIP archive: extract each member
     def extract_archive(self, data: bytes):
         """Re-validates the archive (defence in depth -- validate_upload already checked it at upload

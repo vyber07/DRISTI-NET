@@ -35,7 +35,7 @@ and `TASK_BOARD.md` for the live-verification methodology behind each item marke
 |---|---|---|
 | Order: validate → quarantine → hash → scan → parse | Demonstrated | `evidence_routes.upload` + `pipeline` |
 | Shared state vocabulary (§8.2) | Demonstrated | `models.EVIDENCE_STATES` covers all listed states plus `EXTRACTION_FAILED`, `TOMBSTONED` |
-| Restricted / sandboxed parser worker; async Kafka event transport | **Demonstrated** | `workers/worker.py` Kafka consumer consumes from `drishti.evidence.jobs`; `services/kafka_bus.py` publisher in pipeline; opt-in (direct in-process path preserved per ADR-004); `test_new_components.py::TestKafkaBus`; `docs/adr/013-kafka-event-bus.md` |
+| Restricted / sandboxed parser worker; async Kafka event transport | **Implemented (Validation Pending)** | `workers/worker.py` Kafka consumer consumes from `drishti.evidence.jobs`; `services/kafka_bus.py` publisher in pipeline; opt-in (direct in-process path preserved per ADR-004); `test_new_components.py::TestKafkaBus`; `docs/adr/013-kafka-event-bus.md` |
 | ClamAV | Demonstrated (dev host runs ClamAV 1.4.3 via `scripts/env.sh`; seed ingest recorded `scan_engine=clamscan`) | `services/scanner.py`; `testgate` only where no binary exists |
 | Configurable limits (§8.3) | Demonstrated | upload MB, CSV rows, graph bounds, plus `CSV_MAX_ROWS`/`JSON_MAX_RECORDS`/`PDF_MAX_PAGES` enforced in `validate_upload()` (`apps/api/app/tests/test_extraction_failures.py`) |
 
@@ -71,7 +71,7 @@ and `TASK_BOARD.md` for the live-verification methodology behind each item marke
 | Coarse spatial overlap (H3) analytics | **Roadmap** (lat/lon captured; a plain map view of the points is now Demonstrated above — H3 bucketing/overlap analytics is a separate, larger analytical feature, not attempted) |
 | Observed / valid / ingestion time stored separately | Demonstrated (`observed_time`, `valid_from/to`, `created_at`) |
 | LLM / GraphRAG | Not used (by design, docs/context.md §11.5) |
-| Model-backed NER (IndicBERT) | **Demonstrated (import-guarded)** | `services/nlp_adapter.py`; AI4Bharat IndicBERTv2-MLM-only-NER; PERSON/ORGANIZATION/LOCATION extraction; candidates state=REVIEW_REQUIRED; fallback to empty list when transformers absent; `test_new_components.py::TestNlpAdapter`; `docs/adr/012-nlp-adapter.md` |
+| Model-backed NER (IndicBERT) | **Implemented (Evaluation Pending)** | `services/nlp_adapter.py`; AI4Bharat IndicBERTv2-MLM-only-NER; PERSON/ORGANIZATION/LOCATION extraction; candidates state=REVIEW_REQUIRED; fallback to empty list when transformers absent; `test_new_components.py::TestNlpAdapter`; `docs/adr/012-nlp-adapter.md` |
 | Court-ready evidence dossier (BSA s.63(4)(c) reference) | **Demonstrated** | `services/court_pdf.py`; `POST /cases/{id}/report/court-pdf`; Part A/Part B reference fields; prominent disclaimer (not a legal certificate); Merkle root + ledger reference included; `test_new_components.py::TestCourtPdfRoute` |
 
 ## §17 Testing

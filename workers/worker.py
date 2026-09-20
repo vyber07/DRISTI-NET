@@ -48,10 +48,14 @@ signal.signal(signal.SIGINT, _handle_signal)
 signal.signal(signal.SIGTERM, _handle_signal)
 
 
-def _process_message(msg_value: dict) -> None:
-    """Run the pipeline for one evidence job message.  Idempotent via Job table."""
+def _process_message(msg_value: dict) -> bool:
+    """Run the pipeline for one evidence job message.
+    Returns True if the message should be committed (success or permanent failure).
+    Returns False if it's a transient failure (e.g., DB lock timeout) to trigger a retry.
+    """
     from apps.api.app.db import SessionLocal
     from apps.api.app.services import pipeline
+    import sqlalchemy.exc
 
     evidence_id: str = msg_value.get("evidence_id", "")
     trace_id: str = msg_value.get("trace_id", "WORKER")
@@ -59,14 +63,28 @@ def _process_message(msg_value: dict) -> None:
 
     if not evidence_id:
         logger.warning("Worker received message with no evidence_id: %s", msg_value)
-        return
+        return True  # Permanent failure, don't retry
 
     db = SessionLocal()
     try:
         ev = pipeline.process_evidence(db, evidence_id, trace_id, actor_id)
         logger.info("Worker processed %s → status=%s", evidence_id, ev.status)
+        return True
+    except sqlalchemy.exc.OperationalError as exc:
+        logger.warning("Worker transient DB error for %s: %s", evidence_id, exc)
+        return False
+    except ValueError as exc:
+        if "already running" in str(exc):
+            logger.warning("Worker concurrent execution skipped for %s: %s", evidence_id, exc)
+            return False  # Could be transient if other worker dies, retry later
+        elif "already succeeded" in str(exc):
+            logger.info("Worker skipped duplicate successful job for %s", evidence_id)
+            return True
+        logger.error("Worker pipeline logic error for %s: %s", evidence_id, exc, exc_info=True)
+        return True  # Permanent logic error
     except Exception as exc:
-        logger.error("Worker pipeline error for %s: %s", evidence_id, exc, exc_info=True)
+        logger.error("Worker permanent pipeline error for %s: %s", evidence_id, exc, exc_info=True)
+        return True  # Other errors treated as permanent for now to prevent poison pills
     finally:
         db.close()
 
@@ -99,9 +117,17 @@ def run_worker() -> None:
         try:
             batch = consumer.poll(timeout_ms=1000)
             for tp, messages in batch.items():
+                batch_success = True
                 for msg in messages:
-                    _process_message(msg.value)
-                consumer.commit()
+                    success = _process_message(msg.value)
+                    if not success:
+                        batch_success = False
+                        break
+                if batch_success:
+                    consumer.commit()
+                else:
+                    # Seek back to the first offset of the failed partition to retry later
+                    consumer.seek(tp, messages[0].offset)
         except Exception as exc:
             logger.error("Worker consumer error: %s", exc, exc_info=True)
 

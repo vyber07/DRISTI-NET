@@ -49,8 +49,8 @@ audit and `TASK_BOARD.md` for the live-verification methodology behind each Demo
 
 | Area | Status |
 |------|--------|
-| Real OCR / NER | FIR extraction is regex-based on a prepared fixture; PaddleOCR + spaCy/GLiNER are roadmap. Extraction-record `bbox`, `language`, `dataset_version` fields (docs/context.md §9.3) are blocked on this — no real layout/OCR pipeline exists to populate them honestly |
-| Restricted / sandboxed parser worker; async job/worker model for reads | parsing and graph queries run in the API process (`docs/adr/004-async-queue.md` — deliberate non-adoption, not an oversight, given no measured throughput need). Real client-initiated graph-query **cancellation** specifically needs this model and was evaluated and rejected as an unsafe point-patch otherwise (see `task.md`'s appended note) |
+| OCR / NER Domain Tuning | PaddleOCR and IndicBERT adapters are implemented and connected, but currently lack deep language-specific fine-tuning (e.g. for noisy Hindi/Devanagari texts) and require formal CER/WER evaluation. |
+| Production Kubernetes Deployment | Kafka and Besu are implemented in Docker Compose, but the system is not yet scaled to Kubernetes. |
 | Additional POLE+ node kinds (`Alias`, `Device`, `SIM`, `H3Cell`, `Communication`, `FinancialEvent`) | 9 of the blueprint's node/edge kinds are implemented; these six remain roadmap |
 | Coarse spatial overlap (H3) analytics | lat/lon is captured and a plain map view of the points now exists (see Demonstrated above) — H3 bucketing/overlap *analytics* is a separate, larger feature, not attempted |
 | Retention / legal hold / tombstones | fields exist on `Evidence`; no enforcement job |
