@@ -15,8 +15,7 @@ human decisions. **It does not decide who is a criminal.** Everything in this re
 | ![Graph View](reports/screenshots/04-graph.png) | ![Review Workflow](reports/screenshots/03-review-candidate.png) |
 
 | Evidence Timeline | Evidence Quarantine |
-|---|---|
-| ![Timeline](reports/screenshots/06-timeline-historical.png) | ![Quarantine](reports/screenshots/02-evidence-quarantine.png) |
+|---|---| | ![Quarantine](reports/screenshots/02-evidence-quarantine.png) |
 
 ## What the prototype demonstrates (the one story)
 
