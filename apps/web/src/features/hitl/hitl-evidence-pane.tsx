@@ -30,10 +30,10 @@ export function HITLEvidencePane({ task }: HITLEvidencePaneProps) {
       setIsLoading(true);
       try {
         let matched: ProvenanceRecord | null = null;
-        if (task.provenanceRecordId) {
-          let res: any = null;// getProvenanceByRecordId(task.provenanceRecordId);
+        if (task.primaryEvidenceId) {
+          let res: any = null;// getProvenanceByRecordId(task.primaryEvidenceId);
           matched = res.data;
-        } else if (task.relationshipId) {
+        } else if (false) {
           let res: any = null;// getProvenanceByRelationshipId(task.relationshipId);
           matched = res.data;
         }

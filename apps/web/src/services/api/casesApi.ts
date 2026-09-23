@@ -1,39 +1,20 @@
-import { get } from "./real_client";
-import type { ApiResponse } from "./client";
+import { get, type ApiResponse } from "./real_client";
+
 import type { CaseDetail, CaseSummary } from "@/types/case";
 
 function mapBackendCaseToFrontend(backend: any): CaseDetail {
   return {
     id: backend.case_id || "",
-    caseNumber: backend.case_id || "",
     title: backend.title || "Untitled Case",
-    description: backend.purpose || "",
-    status: "ACTIVE",
-    priority: "HIGH",
+    purpose: backend.purpose || "",
     classification: backend.classification || "RESTRICTED",
     jurisdiction: backend.jurisdiction || "",
-    leadInvestigator: { 
-      badgeNumber: backend.owner_id || "Unknown", 
-      name: backend.owner_id || "Unknown", 
-      role: "Investigator" 
-    },
-    registeredDate: backend.opened_at || new Date().toISOString(),
-    lastUpdated: backend.opened_at || new Date().toISOString(),
-    stats: {
-       totalEntities: 0,
-       totalRelationships: 0,
-       totalEvidence: backend.evidence_count || 0,
-       contradictionsCount: 0,
-       highestTier: "TIER_4",
-       pendingTasks: backend.pending_reviews || 0
-    },
-    firNumber: backend.authority_reference || "",
-    policeStation: backend.jurisdiction || "",
-    incidentDate: backend.opened_at || new Date().toISOString(),
-    actsAndSections: [],
-    assignedTeam: (backend.assigned || []).map((u: string) => ({ badgeNumber: u, name: u, role: "Assigned" })),
-    summaryNarrative: "",
-    tags: []
+    authority_reference: backend.authority_reference || "",
+    owner_id: backend.owner_id || "",
+    opened_at: backend.opened_at || new Date().toISOString(),
+    evidence_count: backend.evidence_count || 0,
+    pending_reviews: backend.pending_reviews || 0,
+    assigned: backend.assigned || []
   };
 }
 

@@ -131,9 +131,9 @@ export const useGraphStore = create<GraphState>((set, get) => ({
     set({ isLoading: true, error: null });
     try {
       const response = await getCaseGraph(caseId);
-      const { nodes, edges, caseTitle } = response.data;
+      const {  nodes, edges, caseTitle } = response.data;
 
-      const edgeTimes = edges.map((e) => new Date(e.timestamp || 0).getTime()).filter((t) => !isNaN(t));
+      const edgeTimes = edges.map((e) => new Date(e.firstSeen || e.lastSeen || 0).getTime()).filter((t) => !isNaN(t));
       const minT = edgeTimes.length > 0 ? Math.min(...edgeTimes) : INITIAL_MIN_TIME;
       const maxT = edgeTimes.length > 0 ? Math.max(...edgeTimes) : INITIAL_MAX_TIME;
 
@@ -182,11 +182,31 @@ export const useGraphStore = create<GraphState>((set, get) => ({
       selectedNodeId: null,
       selectedEntityDetail: null,
     });
-    try {
-      let res: any = { data: null }; // await getRelationshipDetails(edgeId);
-      set({ selectedRelationshipDetail: res.data });
-    } catch {
-      // Keep selectedEdgeId
+    
+    // Simulate fetching edge details by looking up the edge in the graph
+    const edge = get().edges.find(e => e.id === edgeId);
+    if (edge) {
+      const sourceNode = get().nodes.find(n => n.id === edge.source);
+      const targetNode = get().nodes.find(n => n.id === edge.target);
+      set({ 
+        selectedRelationshipDetail: {
+          id: edge.id,
+          type: edge.relationshipType,
+          label: edge.label,
+          sourceId: edge.source,
+          targetId: edge.target,
+          sourceLabel: sourceNode?.label || edge.source,
+          targetLabel: targetNode?.label || edge.target,
+          count: edge.count,
+          weight: edge.weight,
+          minConfidence: edge.minConfidence,
+          evidenceIds: edge.evidenceIds,
+          claimIds: edge.claimIds,
+          firstSeen: edge.firstSeen,
+          lastSeen: edge.lastSeen,
+          relevance: edge.relevance
+        } as any 
+      });
     }
   },
 
@@ -259,7 +279,7 @@ export const useGraphStore = create<GraphState>((set, get) => ({
   setFilterPanelOpen: (open) => set({ isFilterPanelOpen: open }),
 
   resetFilters: () => {
-    const { minTimestamp, maxTimestamp } = get();
+    const {  minTimestamp, maxTimestamp } = get();
     set({
       activeTiers: new Set(DEFAULT_TIERS),
       activeEntityTypes: new Set(ALL_ENTITY_TYPES),
@@ -277,7 +297,7 @@ export const useGraphStore = create<GraphState>((set, get) => ({
   togglePlay: () => set((state) => ({ isPlaying: !state.isPlaying })),
 
   stepTemporal: (deltaSteps) => {
-    const { minTimestamp, maxTimestamp, currentTimestamp } = get();
+    const {  minTimestamp, maxTimestamp, currentTimestamp } = get();
     const stepSizeMs = (maxTimestamp - minTimestamp) / 20;
     const nextTime = Math.min(
       maxTimestamp,

@@ -9,13 +9,13 @@ const CONFIDENCE_PRESETS = [
 ];
 
 export function ConfidenceRangeFilter() {
-  const { minConfidence, setMinConfidence, nodes, edges } = useGraphStore();
+  const {  minConfidence, setMinConfidence, nodes, edges } = useGraphStore();
 
   const passingNodes = nodes.filter(
-    (n) => (n.confidence ?? 1) >= minConfidence,
+    (n) => (1) >= minConfidence,
   ).length;
   const passingEdges = edges.filter(
-    (e) => (e.confidence ?? 1) >= minConfidence,
+    (e) => (e.minConfidence ?? 1) >= minConfidence,
   ).length;
 
   const percentage = Math.round(minConfidence * 100);

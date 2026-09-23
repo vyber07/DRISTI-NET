@@ -1,307 +1,247 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-  DialogFooter,
-} from "@/components/ui/dialog";
+  X,
+  FileText,
+  Network,
+  Filter,
+  GitBranch,
+  FileCheck,
+  Award,
+  FilePlus,
+  FileEdit,
+  Trash2,
+  ShieldCheck,
+  ShieldAlert,
+  Scale,
+  Eye,
+  Download,
+  Copy,
+  Check,
+  ExternalLink,
+  ChevronRight,
+  Database,
+  User,
+  MapPin,
+  Clock,
+  Code,
+  Link2,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuditStore } from "@/stores/auditStore";
-import { maskIpAddress, maskPhoneNumbersInText } from "@/lib/pii";
-import {
-  ShieldCheck,
-  Copy,
-  Check,
-  Hash,
-  Link2,
-  Lock,
-  FileCode,
-  Layers,
-} from "lucide-react";
+import { cn } from "@/lib/utils";
+
+function maskIpAddress(ip: string): string {
+  if (!ip || ip.includes("No IP")) return "(No IP Logged)";
+  const parts = ip.split(".");
+  if (parts.length === 4) {
+    return `${parts[0]}.${parts[1]}.***.***`;
+  }
+  return "***.***.***.***";
+}
+
+function maskPhoneNumbersInText(text: string): string {
+  if (!text) return text;
+  return text.replace(/\b(\+?91[\s-]?)?([6-9]\d{2})[\s-]?(\d{3})[\s-]?(\d{4})\b/g, "$1$2-***-****");
+}
+
+function formatDetailedTimestamp(isoStr: string) {
+  const d = new Date(isoStr);
+  return (
+    d.toLocaleDateString("en-IN", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    }) +
+    " " +
+    d.toLocaleTimeString("en-IN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+    }) +
+    " IST"
+  );
+}
 
 export function AuditDetailDrawer() {
   const { selectedLog, isDrawerOpen, closeDrawer } = useAuditStore();
-  const [copiedField, setCopiedField] = useState<string | null>(null);
-  const [viewMode, setViewMode] = useState<"DETAILS" | "JSON">("DETAILS");
+  const [copiedState, setCopiedState] = useState<Record<string, boolean>>({});
 
   if (!selectedLog) return null;
 
-  const handleCopy = (text: string, fieldKey: string) => {
-    navigator.clipboard.writeText(text);
-    setCopiedField(fieldKey);
-    setTimeout(() => setCopiedField(null), 2000);
-  };
-
   const actionDescription =
-    (selectedLog.details.actionDescription as string) ||
-    `Recorded ${selectedLog.action} action on target ${selectedLog.targetId || selectedLog.targetType || "SYSTEM"}`;
+    (selectedLog.detail?.actionDescription as string) ||
+    `Recorded ${selectedLog.action} action on target ${selectedLog.target_id || selectedLog.target_kind || "SYSTEM"}`;
 
   const maskedDescription = maskPhoneNumbersInText(actionDescription);
 
-  return (
-    <Dialog open={isDrawerOpen} onOpenChange={(open) => !open && closeDrawer()}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto font-sans">
-        <DialogHeader>
-          <div className="flex items-center justify-between gap-3 pr-6">
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-sm font-bold text-electric-blue bg-electric-blue/10 border border-electric-blue/20 rounded px-2 py-0.5">
-                {selectedLog.id}
-              </span>
-              <Badge tone="blue" className="text-xs uppercase font-mono tracking-wider">
-                {selectedLog.action}
-              </Badge>
-            </div>
-            <div className="flex items-center gap-1.5 text-xs text-emerald-400 font-mono">
-              <ShieldCheck className="h-4 w-4 text-emerald-400" />
-              <span>SEALED RECORD</span>
-            </div>
-          </div>
-          <DialogTitle className="text-base text-text-primary mt-1">
-            Statutory Audit Block Inspection
-          </DialogTitle>
-          <DialogDescription className="text-xs text-text-muted">
-            Tamper-evident record captured under BSA §63 digital evidence procedures (Demo Policy Mapping). Immutable system entry.
-          </DialogDescription>
-        </DialogHeader>
+  const handleCopy = (text: string, id: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedState((prev) => ({ ...prev, [id]: true }));
+    setTimeout(() => {
+      setCopiedState((prev) => ({ ...prev, [id]: false }));
+    }, 2000);
+  };
 
-        {/* View mode toggle */}
-        <div className="flex items-center gap-2 border-b border-border-subtle pb-2 pt-1 text-xs">
-          <button
-            type="button"
-            onClick={() => setViewMode("DETAILS")}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded transition-colors ${
-              viewMode === "DETAILS"
-                ? "bg-surface-3 text-text-primary font-semibold"
-                : "text-text-muted hover:text-text-secondary"
-            }`}
+  const actorName = selectedLog.actor_id || "System";
+  const actorRole = selectedLog.actor_id ? "USER" : "SYSTEM";
+  const ipAddress = "(No IP Logged)";
+
+  return (
+    <>
+      {isDrawerOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-background/50 backdrop-blur-sm transition-opacity"
+          onClick={closeDrawer}
+        />
+      )}
+
+      <div
+        className={cn(
+          "fixed inset-y-0 right-0 z-50 w-full max-w-md bg-surface-1 shadow-2xl transition-transform duration-300 ease-in-out border-l border-border-subtle flex flex-col font-sans",
+          isDrawerOpen ? "translate-x-0" : "translate-x-full",
+        )}
+      >
+        <div className="flex items-center justify-between border-b border-border-subtle px-4 py-3 shrink-0 bg-surface-2/50">
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4 text-emerald-400" />
+            <h2 className="text-sm font-semibold text-text-primary tracking-tight">
+              Audit Record Inspection
+            </h2>
+          </div>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={closeDrawer}
+            className="h-8 w-8 p-0 text-text-muted hover:text-text-primary rounded-full hover:bg-surface-3"
           >
-            <Layers className="h-3.5 w-3.5" />
-            <span>Forensic Properties</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => setViewMode("JSON")}
-            className={`flex items-center gap-1.5 px-2.5 py-1 rounded transition-colors ${
-              viewMode === "JSON"
-                ? "bg-surface-3 text-text-primary font-semibold"
-                : "text-text-muted hover:text-text-secondary"
-            }`}
-          >
-            <FileCode className="h-3.5 w-3.5" />
-            <span>Canonical JSON Record</span>
-          </button>
+            <X className="h-4 w-4" />
+          </Button>
         </div>
 
-        {viewMode === "DETAILS" ? (
-          <div className="space-y-4 text-xs">
-            {/* Action Summary */}
-            <div className="rounded-lg border border-border-subtle bg-surface-2/60 p-3 space-y-1">
-              <span className="text-micro font-semibold uppercase tracking-wider text-text-muted block">
-                Recorded Action Context
-              </span>
-              <p className="text-xs text-text-primary leading-relaxed">
-                {maskedDescription}
-              </p>
-            </div>
-
-            {/* Officer & Workstation Properties */}
-            <div className="rounded-lg border border-border-subtle bg-surface-2/40 p-3 space-y-2">
-              <span className="text-micro font-semibold uppercase tracking-wider text-text-muted block">
-                Officer &amp; Session Attestation
-              </span>
-              <div className="grid grid-cols-2 gap-3 font-mono">
-                <div>
-                  <span className="text-text-muted block text-micro">Officer / Actor:</span>
-                  <span className="text-text-primary font-sans font-medium">
-                    {selectedLog.actorName}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-text-muted block text-micro">Badge Identifier:</span>
-                  <span className="text-text-primary">{selectedLog.actorBadgeNumber}</span>
-                </div>
-                <div>
-                  <span className="text-text-muted block text-micro">Authorized Role:</span>
-                  <span className="text-text-primary font-sans">{selectedLog.actorRole}</span>
-                </div>
-                <div>
-                  <span className="text-text-muted block text-micro">Source IP Address:</span>
-                  <span className="text-text-primary">{maskIpAddress(selectedLog.ipAddress)}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Target & Docket Properties */}
-            <div className="rounded-lg border border-border-subtle bg-surface-2/40 p-3 space-y-2">
-              <span className="text-micro font-semibold uppercase tracking-wider text-text-muted block">
-                Docket &amp; Scope Identifiers
-              </span>
-              <div className="grid grid-cols-3 gap-3 font-mono">
-                <div>
-                  <span className="text-text-muted block text-micro">Case ID:</span>
-                  <span className="text-text-primary">{selectedLog.caseId}</span>
-                </div>
-                <div>
-                  <span className="text-text-muted block text-micro">Target Scope:</span>
-                  <span className="text-text-primary">{selectedLog.targetType || "SYSTEM"}</span>
-                </div>
-                <div>
-                  <span className="text-text-muted block text-micro">Target Identifier:</span>
-                  <span className="text-text-primary">{selectedLog.targetId || "N/A"}</span>
-                </div>
-              </div>
-            </div>
-
-            {/* Dynamic Event Details */}
-            {Object.keys(selectedLog.details).length > 1 && (
-              <div className="rounded-lg border border-border-subtle bg-surface-2/40 p-3 space-y-2">
-                <span className="text-micro font-semibold uppercase tracking-wider text-text-muted block">
-                  Structured Payload Attributes
-                </span>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-micro">
-                  {Object.entries(selectedLog.details)
-                    .filter(([k]) => k !== "actionDescription")
-                    .map(([key, value]) => (
-                      <div key={key} className="rounded bg-surface-1/80 border border-border-subtle p-2">
-                        <span className="font-mono text-text-muted block uppercase text-[10px]">{key}</span>
-                        <span className="font-mono text-text-primary break-all">
-                          {typeof value === "object" ? JSON.stringify(value) : String(value)}
-                        </span>
-                      </div>
-                    ))}
-                </div>
-              </div>
-            )}
-
-            {/* Cryptographic Linkage Block */}
-            <div className="rounded-lg border border-electric-blue/30 bg-electric-blue/5 p-3.5 space-y-2.5 font-mono">
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-4 space-y-6">
+            <div className="space-y-4 border-b border-border-subtle pb-6">
               <div className="flex items-center justify-between">
-                <div className="flex items-center gap-1.5 text-electric-blue text-xs font-semibold">
-                  <Hash className="h-4 w-4" />
-                  <span>Cryptographic Hash Linkage</span>
-                </div>
-                <div className="flex items-center gap-1 text-[11px] text-emerald-400">
-                  <Lock className="h-3 w-3" />
-                  <span>SHA-256 Validated</span>
+                <Badge tone="neutral" className="text-xs font-mono uppercase px-2 py-0.5">
+                  {selectedLog.action}
+                </Badge>
+                <div className="flex items-center gap-1.5 text-text-muted text-xs font-mono bg-surface-2 px-2 py-0.5 rounded border border-border-subtle">
+                  <Clock className="h-3 w-3" />
+                  {formatDetailedTimestamp(selectedLog.created_at)}
                 </div>
               </div>
 
-              {/* Current Block Digest */}
-              <div className="space-y-1">
-                <div className="flex items-center justify-between text-[11px] text-text-muted">
-                  <span>Current Block Digest (64 hex characters):</span>
-                  <button
-                    type="button"
-                    onClick={() => handleCopy(selectedLog.hash, "hash")}
-                    className="flex items-center gap-1 text-electric-blue hover:underline"
-                  >
-                    {copiedField === "hash" ? (
-                      <>
-                        <Check className="h-3 w-3 text-emerald-400" />
-                        <span className="text-emerald-400">Copied</span>
-                      </>
-                    ) : (
-                      <>
-                        <Copy className="h-3 w-3" />
-                        <span>Copy</span>
-                      </>
-                    )}
-                  </button>
+              <div className="space-y-1.5">
+                <h3 className="text-lg font-semibold text-text-primary leading-tight">
+                  {maskedDescription}
+                </h3>
+                <div className="flex items-center gap-2 text-xs font-mono text-text-muted">
+                  <span>Record ID:</span>
+                  <code className="text-text-secondary">{selectedLog.audit_id}</code>
                 </div>
-                <code className="block bg-surface-1 border border-border-subtle p-2 rounded text-[11px] text-text-primary break-all leading-tight select-all">
-                  {selectedLog.hash}
-                </code>
-              </div>
-
-              {/* Previous Block Digest */}
-              <div className="space-y-1">
-                <div className="flex items-center justify-between text-[11px] text-text-muted">
-                  <span className="flex items-center gap-1">
-                    <Link2 className="h-3 w-3 text-emerald-400" />
-                    <span>Previous Block Linked Digest:</span>
-                  </span>
-                  {selectedLog.previousHash && (
-                    <button
-                      type="button"
-                      onClick={() => handleCopy(selectedLog.previousHash!, "prevHash")}
-                      className="flex items-center gap-1 text-electric-blue hover:underline"
-                    >
-                      {copiedField === "prevHash" ? (
-                        <>
-                          <Check className="h-3 w-3 text-emerald-400" />
-                          <span className="text-emerald-400">Copied</span>
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="h-3 w-3" />
-                          <span>Copy</span>
-                        </>
-                      )}
-                    </button>
-                  )}
-                </div>
-                <code className="block bg-surface-1 border border-border-subtle p-2 rounded text-[11px] text-text-muted break-all leading-tight select-all">
-                  {selectedLog.previousHash || "0000000000000000000000000000000000000000000000000000000000000000 (GENESIS)"}
-                </code>
               </div>
             </div>
-          </div>
-        ) : (
-          /* JSON Viewer Mode */
-          <div className="space-y-2">
-            <div className="flex items-center justify-between text-xs text-text-muted">
-              <span>Canonical JSON Document</span>
-              <button
-                type="button"
-                onClick={() => handleCopy(JSON.stringify(selectedLog, null, 2), "json")}
-                className="flex items-center gap-1 text-electric-blue hover:underline text-xs"
-              >
-                {copiedField === "json" ? (
-                  <>
-                    <Check className="h-3 w-3 text-emerald-400" />
-                    <span className="text-emerald-400">JSON Copied</span>
-                  </>
-                ) : (
-                  <>
-                    <Copy className="h-3 w-3" />
-                    <span>Copy JSON</span>
-                  </>
-                )}
-              </button>
-            </div>
-            <pre className="bg-surface-2 border border-border-subtle p-3 rounded-md text-[11px] font-mono text-text-primary overflow-x-auto max-h-[50vh] leading-relaxed select-all">
-              {JSON.stringify(selectedLog, null, 2)}
-            </pre>
-          </div>
-        )}
 
-        <DialogFooter className="border-t border-border-subtle/80 pt-3">
-          <Button variant="ghost" onClick={closeDrawer} size="sm">
-            Close Record
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => handleCopy(JSON.stringify(selectedLog, null, 2), "json-footer")}
-            className="gap-1.5"
-          >
-            {copiedField === "json-footer" ? (
-              <>
-                <Check className="h-3.5 w-3.5 text-emerald-400" />
-                <span>Copied to Clipboard</span>
-              </>
-            ) : (
-              <>
-                <Copy className="h-3.5 w-3.5 text-text-muted" />
-                <span>Copy Canonical JSON</span>
-              </>
+            <div className="space-y-3">
+              <h4 className="text-xs font-semibold text-text-primary uppercase tracking-wider flex items-center gap-2">
+                <User className="h-3.5 w-3.5 text-electric-blue" />
+                Actor Identity Context
+              </h4>
+              <div className="bg-surface-2 rounded-md border border-border-subtle p-3 space-y-2 text-xs">
+                <div className="grid grid-cols-[100px_1fr] gap-2 items-center">
+                  <span className="text-text-muted font-mono uppercase tracking-wider">Name:</span>
+                  <span className="text-text-primary font-medium">{actorName}</span>
+                </div>
+                <div className="grid grid-cols-[100px_1fr] gap-2 items-center">
+                  <span className="text-text-muted font-mono uppercase tracking-wider">Badge/ID:</span>
+                  <span className="text-text-primary font-mono">{actorName}</span>
+                </div>
+                <div className="grid grid-cols-[100px_1fr] gap-2 items-center">
+                  <span className="text-text-muted font-mono uppercase tracking-wider">Role Assumed:</span>
+                  <span className="text-text-primary font-sans">{actorRole}</span>
+                </div>
+                <div className="grid grid-cols-[100px_1fr] gap-2 items-center">
+                  <span className="text-text-muted font-mono uppercase tracking-wider">Source IP:</span>
+                  <span className="text-text-primary font-mono">{ipAddress}</span>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <h4 className="text-xs font-semibold text-text-primary uppercase tracking-wider flex items-center gap-2">
+                <Database className="h-3.5 w-3.5 text-amber" />
+                Target Resource Scope
+              </h4>
+              <div className="bg-surface-2 rounded-md border border-border-subtle p-3 space-y-2 text-xs">
+                <div className="grid grid-cols-[100px_1fr] gap-2 items-center">
+                  <span className="text-text-muted font-mono uppercase tracking-wider">Case Docket:</span>
+                  <span className="text-text-primary font-mono">{selectedLog.case_id}</span>
+                </div>
+                <div className="grid grid-cols-[100px_1fr] gap-2 items-center">
+                  <span className="text-text-muted font-mono uppercase tracking-wider">Target Domain:</span>
+                  <span className="text-text-primary font-mono">{selectedLog.target_kind || "SYSTEM"}</span>
+                </div>
+                <div className="grid grid-cols-[100px_1fr] gap-2 items-center">
+                  <span className="text-text-muted font-mono uppercase tracking-wider">Target ID:</span>
+                  <span className="text-text-primary font-mono">{selectedLog.target_id || "N/A"}</span>
+                </div>
+                <div className="grid grid-cols-[100px_1fr] gap-2 items-center">
+                  <span className="text-text-muted font-mono uppercase tracking-wider">Outcome:</span>
+                  <span className="text-text-primary font-mono">{selectedLog.outcome}</span>
+                </div>
+              </div>
+            </div>
+
+            {selectedLog.detail && Object.keys(selectedLog.detail).length > 0 && (
+              <div className="space-y-3">
+                <h4 className="text-xs font-semibold text-text-primary uppercase tracking-wider flex items-center gap-2">
+                  <Code className="h-3.5 w-3.5 text-purple-400" />
+                  Telemetry &amp; State Diff
+                </h4>
+                <div className="bg-surface-2 rounded-md border border-border-subtle p-3 text-xs overflow-x-auto">
+                  <pre className="font-mono text-[10px] text-text-secondary leading-relaxed">
+                    {JSON.stringify(selectedLog.detail, null, 2)}
+                  </pre>
+                </div>
+              </div>
             )}
+
+            <div className="space-y-3">
+              <h4 className="text-xs font-semibold text-text-primary uppercase tracking-wider flex items-center gap-2">
+                <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
+                Trace Reference
+              </h4>
+              <div className="bg-surface-2 rounded-md border border-emerald-500/30 p-3 space-y-3 shadow-[0_0_10px_rgba(16,185,129,0.05)_inset]">
+                <div className="space-y-1">
+                  <span className="text-micro font-mono text-text-muted uppercase tracking-wider">
+                    Trace ID (Session/Context)
+                  </span>
+                  <div className="flex items-center justify-between gap-2 bg-background border border-border-subtle rounded px-2 py-1.5">
+                    <code className="text-[10px] font-mono text-text-secondary truncate">
+                      {selectedLog.trace_id}
+                    </code>
+                    <button
+                      onClick={() => handleCopy(selectedLog.trace_id, "trace")}
+                      className="text-text-muted hover:text-electric-blue shrink-0"
+                    >
+                      {copiedState["trace"] ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="border-t border-border-subtle p-4 bg-surface-1 shrink-0 flex justify-end">
+          <Button variant="secondary" onClick={closeDrawer} className="text-xs">
+            Close Inspection
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </div>
+    </>
   );
 }

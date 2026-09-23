@@ -1,5 +1,5 @@
-import { get } from "./real_client";
-import type { ApiResponse } from "./client";
+import { get, type ApiResponse } from "./real_client";
+
 
 export async function getEntityDetails(entityId: string): Promise<ApiResponse<any | null>> {
   const data = await get(`/entities/${entityId}`);

@@ -1,36 +1,8 @@
-import { Search, X, ArrowDownUp, RotateCcw, Filter } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { useMemo } from "react";
+import { Search, FilterX, Clock, ShieldCheck, Database, SlidersHorizontal, User } from "lucide-react";
 import { useAuditStore } from "@/stores/auditStore";
-import type { AuditActionType, AuditTargetType } from "@/types/audit";
-
-const ACTION_OPTIONS: { value: AuditActionType | "ALL"; label: string }[] = [
-  { value: "ALL", label: "All Actions" },
-  { value: "VIEW_CASE", label: "Docket Opened" },
-  { value: "VIEW_GRAPH", label: "Graph Loaded" },
-  { value: "FILTER_GRAPH", label: "Graph Filtered" },
-  { value: "EXPAND_NODE", label: "Node Expanded" },
-  { value: "VIEW_EVIDENCE", label: "Evidence Inspected" },
-  { value: "UPDATE_TIER", label: "Tier Elevated" },
-  { value: "CREATE_NOTE", label: "Note Created" },
-  { value: "UPDATE_NOTE", label: "Note Updated" },
-  { value: "DELETE_NOTE", label: "Note Deleted" },
-  { value: "REVEAL_PII_REQUESTED", label: "PII Requested" },
-  { value: "REVEAL_PII_APPROVED", label: "PII Approved" },
-  { value: "REVEAL_PII_DENIED", label: "PII Denied" },
-  { value: "ARBITRATE_CONTRADICTION", label: "Contradiction Reviewed" },
-  { value: "EXPORT_DOSSIER", label: "Dossier Exported" },
-];
-
-const TARGET_TYPE_OPTIONS: { value: AuditTargetType | "ALL"; label: string }[] = [
-  { value: "ALL", label: "All Scopes" },
-  { value: "CASE", label: "Case" },
-  { value: "ENTITY", label: "Entity" },
-  { value: "RELATIONSHIP", label: "Relationship" },
-  { value: "EVIDENCE", label: "Evidence" },
-  { value: "NOTE", label: "Note" },
-  { value: "PII", label: "PII / Identity" },
-  { value: "GRAPH", label: "Graph" },
-];
+import type { AuditActionType } from "@/types/audit";
+import { Badge } from "@/components/ui/badge";
 
 export function AuditFilterBar() {
   const {
@@ -39,141 +11,109 @@ export function AuditFilterBar() {
     selectedAction,
     selectedTargetType,
     selectedActor,
-    selectedTargetId,
     sortOrder,
     setSearchQuery,
     setActionFilter,
     setTargetTypeFilter,
     setActorFilter,
-    setTargetIdFilter,
     setSortOrder,
     resetFilters,
   } = useAuditStore();
 
-  // Extract unique actors from current logs for officer filter
-  const uniqueActors = Array.from(
-    new Map(
-      logs.map((l) => [l.actorBadgeNumber, { badge: l.actorBadgeNumber, name: l.actorName }]),
-    ).values(),
-  );
+  const uniqueActions = useMemo(() => Array.from(new Set(logs.map((l) => l.action))).sort(), [logs]);
+  const uniqueTargetTypes = useMemo(() => Array.from(new Set(logs.map((l) => l.target_kind).filter(Boolean))).sort(), [logs]);
+  const uniqueActors = useMemo(() => Array.from(new Set(logs.map((l) => l.actor_id).filter(Boolean))).sort(), [logs]);
 
-  const hasActiveFilters =
-    searchQuery.trim().length > 0 ||
-    selectedAction !== "ALL" ||
-    selectedTargetType !== "ALL" ||
-    selectedActor !== "ALL" ||
-    selectedTargetId !== null;
+  const activeFilterCount =
+    (selectedAction !== "ALL" ? 1 : 0) +
+    (selectedTargetType !== "ALL" ? 1 : 0) +
+    (selectedActor !== "ALL" ? 1 : 0) +
+    (searchQuery ? 1 : 0);
 
   return (
-    <div className="space-y-3 rounded-lg border border-border-subtle bg-surface-1 p-3 shadow-sm">
-      <div className="flex flex-col md:flex-row items-stretch md:items-center gap-2.5">
-        {/* Search Query Input */}
-        <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-muted" />
+    <div className="flex flex-col space-y-3 p-4 bg-surface-1 border border-border-subtle rounded-lg shadow-sm">
+      <div className="flex flex-col md:flex-row gap-3 items-start md:items-center justify-between">
+        <div className="relative flex-1 w-full max-w-md">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
           <input
             type="text"
+            placeholder="Search audit trail..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search by block ID, officer name, badge, SHA-256 hash, or action description..."
-            className="w-full rounded-md border border-border-subtle bg-surface-2 pl-8 pr-8 py-1.5 text-xs text-text-primary placeholder:text-text-muted focus:border-electric-blue focus:outline-none"
+            className="w-full pl-9 pr-4 py-2 text-sm bg-surface-2 border border-border-subtle rounded-md focus:outline-none focus:ring-1 focus:ring-electric-blue text-text-primary placeholder:text-text-muted transition-shadow"
           />
-          {searchQuery && (
-            <button
-              type="button"
-              onClick={() => setSearchQuery("")}
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary"
-            >
-              <X className="h-3.5 w-3.5" />
-            </button>
-          )}
         </div>
 
-        {/* Action Type Dropdown */}
-        <div className="flex items-center gap-1.5">
-          <Filter className="h-3.5 w-3.5 text-text-muted shrink-0" />
+        {activeFilterCount > 0 && (
+          <button
+            type="button"
+            onClick={resetFilters}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-text-secondary hover:text-text-primary hover:bg-surface-2 rounded-md transition-colors"
+          >
+            <FilterX className="h-4 w-4" />
+            Clear Filters
+            <Badge tone="neutral" className="ml-1 text-[10px] font-mono px-1.5 py-0 h-4">
+              {activeFilterCount}
+            </Badge>
+          </button>
+        )}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="flex items-center gap-2">
+          <Database className="h-3.5 w-3.5 text-text-muted shrink-0" />
           <select
             value={selectedAction}
             onChange={(e) => setActionFilter(e.target.value as AuditActionType | "ALL")}
-            className="rounded-md border border-border-subtle bg-surface-2 px-2.5 py-1.5 text-xs text-text-primary focus:border-electric-blue focus:outline-none"
+            className="text-xs bg-surface-2 border border-border-subtle rounded px-2 py-1.5 text-text-primary focus:outline-none focus:ring-1 focus:ring-electric-blue max-w-[160px] truncate"
           >
-            {ACTION_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>
-                {opt.label}
-              </option>
+            <option value="ALL">All Actions</option>
+            {uniqueActions.map((action) => (
+              <option key={action} value={action}>{action}</option>
             ))}
           </select>
         </div>
 
-        {/* Target Scope Dropdown */}
-        <select
-          value={selectedTargetType}
-          onChange={(e) => setTargetTypeFilter(e.target.value as AuditTargetType | "ALL")}
-          className="rounded-md border border-border-subtle bg-surface-2 px-2.5 py-1.5 text-xs text-text-primary focus:border-electric-blue focus:outline-none"
-        >
-          {TARGET_TYPE_OPTIONS.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              Scope: {opt.label}
-            </option>
-          ))}
-        </select>
-
-        {/* Officer Filter Dropdown */}
-        <select
-          value={selectedActor}
-          onChange={(e) => setActorFilter(e.target.value)}
-          className="rounded-md border border-border-subtle bg-surface-2 px-2.5 py-1.5 text-xs text-text-primary focus:border-electric-blue focus:outline-none"
-        >
-          <option value="ALL">All Officers</option>
-          {uniqueActors.map((actor) => (
-            <option key={actor.badge} value={actor.badge}>
-              {actor.name} ({actor.badge})
-            </option>
-          ))}
-        </select>
-
-        {/* Sort Order Toggle */}
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={() => setSortOrder(sortOrder === "DESC" ? "ASC" : "DESC")}
-          className="gap-1.5 text-xs shrink-0"
-          title={sortOrder === "DESC" ? "Showing newest events first" : "Showing chronological block order"}
-        >
-          <ArrowDownUp className="h-3.5 w-3.5 text-text-muted" />
-          <span>{sortOrder === "DESC" ? "Newest First" : "Block Sequence"}</span>
-        </Button>
-
-        {/* Clear Filters Button */}
-        {hasActiveFilters && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={resetFilters}
-            className="gap-1 text-xs text-text-muted hover:text-text-primary shrink-0"
+        <div className="flex items-center gap-2">
+          <SlidersHorizontal className="h-3.5 w-3.5 text-text-muted shrink-0" />
+          <select
+            value={selectedTargetType}
+            onChange={(e) => setTargetTypeFilter(e.target.value)}
+            className="text-xs bg-surface-2 border border-border-subtle rounded px-2 py-1.5 text-text-primary focus:outline-none focus:ring-1 focus:ring-electric-blue max-w-[140px] truncate"
           >
-            <RotateCcw className="h-3 w-3" />
-            <span>Reset</span>
-          </Button>
-        )}
-      </div>
-
-      {/* Deep-link target scope active pill */}
-      {selectedTargetId && (
-        <div className="flex items-center gap-2 pt-1 border-t border-border-subtle/40">
-          <span className="text-micro text-text-muted uppercase font-semibold">Active Filter Scope:</span>
-          <div className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-electric-blue/10 border border-electric-blue/30 text-xs font-mono text-electric-blue">
-            <span>Target: {selectedTargetId}</span>
-            <button
-              type="button"
-              onClick={() => setTargetIdFilter(null)}
-              className="text-text-muted hover:text-critical-red ml-0.5"
-              title="Clear target filter"
-            >
-              <X className="h-3 w-3" />
-            </button>
-          </div>
+            <option value="ALL">All Domains</option>
+            {uniqueTargetTypes.map((type) => (
+              <option key={type} value={type as string}>{type}</option>
+            ))}
+          </select>
         </div>
-      )}
+
+        <div className="flex items-center gap-2">
+          <User className="h-3.5 w-3.5 text-text-muted shrink-0" />
+          <select
+            value={selectedActor}
+            onChange={(e) => setActorFilter(e.target.value)}
+            className="text-xs bg-surface-2 border border-border-subtle rounded px-2 py-1.5 text-text-primary focus:outline-none focus:ring-1 focus:ring-electric-blue max-w-[160px] truncate"
+          >
+            <option value="ALL">All Actors</option>
+            {uniqueActors.map((actor) => (
+              <option key={actor} value={actor as string}>{actor}</option>
+            ))}
+          </select>
+        </div>
+
+        <div className="flex items-center gap-2 ml-auto">
+          <Clock className="h-3.5 w-3.5 text-text-muted shrink-0" />
+          <select
+            value={sortOrder}
+            onChange={(e) => setSortOrder(e.target.value as "DESC" | "ASC")}
+            className="text-xs bg-surface-2 border border-border-subtle rounded px-2 py-1.5 text-text-primary focus:outline-none focus:ring-1 focus:ring-electric-blue"
+          >
+            <option value="DESC">Newest First</option>
+            <option value="ASC">Oldest First (Genesis)</option>
+          </select>
+        </div>
+      </div>
     </div>
   );
 }

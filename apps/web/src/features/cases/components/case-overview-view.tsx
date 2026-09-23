@@ -2,7 +2,7 @@ import React from "react";
 import type { CaseDetail } from "@/types/case";
 import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Network, FileCheck2, ShieldCheck, Calendar, Activity } from "lucide-react";
+import { Network, FileCheck2, ShieldCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 
 interface CaseOverviewViewProps {
@@ -27,16 +27,16 @@ export function CaseOverviewView({ caseData }: CaseOverviewViewProps) {
             <Badge tone="neutral" className="text-xs uppercase">{caseData.classification.replace(/_/g, " ")}</Badge>
           </div>
           <div className="space-y-1">
-            <span className="text-xs text-text-secondary block">Assigned Unit</span>
-            <span className="text-sm font-medium text-text-primary">{caseData.assignedUnit}</span>
+            <span className="text-xs text-text-secondary block">Jurisdiction</span>
+            <span className="text-sm font-medium text-text-primary">{caseData.jurisdiction}</span>
           </div>
           <div className="space-y-1">
-            <span className="text-xs text-text-secondary block">Lead Investigator</span>
-            <span className="text-sm font-medium text-text-primary">{caseData.leadInvestigator.name} ({caseData.leadInvestigator.badgeNumber})</span>
+            <span className="text-xs text-text-secondary block">Case Owner</span>
+            <span className="text-sm font-medium text-text-primary">{caseData.owner_id}</span>
           </div>
           <div className="space-y-1">
-            <span className="text-xs text-text-secondary block">Status</span>
-            <span className="text-sm font-medium text-text-primary">{caseData.status}</span>
+            <span className="text-xs text-text-secondary block">Authority Ref</span>
+            <span className="text-sm font-medium text-text-primary">{caseData.authority_reference}</span>
           </div>
         </div>
       </section>

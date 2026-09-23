@@ -13,7 +13,6 @@ interface RevealModalTarget {
 interface RevealState {
   activeReveals: Record<string, RevealResult>;
   officerClearance: number;
-  officerBadge: string;
   officerName: string;
   officerRole: string;
 
@@ -36,9 +35,8 @@ const buildKey = (entityId: string, identifierType: string) => `${entityId}:${id
 export const useRevealStore = create<RevealState>((set, get) => ({
   activeReveals: {},
   officerClearance: 3,
-  officerBadge: "RJ-SOG-0442",
-  officerName: "Insp. Vikram Singh",
-  officerRole: "Lead Investigator",
+  officerName: "",
+  officerRole: "",
 
   isModalOpen: false,
   modalTarget: null,
@@ -74,12 +72,11 @@ export const useRevealStore = create<RevealState>((set, get) => ({
 
     try {
       const res = await requestPiiReveal({
+        caseId: "unknown", maskedValue: "unknown", requesterBadge: "unknown", requesterName: "unknown", requesterRole: "unknown", officerClearance: 3,
         entityId: state.modalTarget.entityId,
-        identifierType: state.modalTarget.identifierType,
-        officerBadge: state.officerBadge,
+        identifierType: state.modalTarget.identifierType as any,
         justification,
         emergencyBypass,
-        requestedAt: new Date().toISOString()
       });
       const result = res.data;
       if (result.status === "APPROVED") {

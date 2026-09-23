@@ -7,7 +7,7 @@ import {
 import { useGraphStore } from "@/stores/graphStore";
 
 export function TierFilter() {
-  const { activeTiers, toggleTier, selectAllTiers, clearTiers, edges } =
+  const {  activeTiers, toggleTier, selectAllTiers, clearTiers, edges } =
     useGraphStore();
 
   const getEdgeCountByTier = (tier: EvidenceTier) => {

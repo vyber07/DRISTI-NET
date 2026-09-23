@@ -1,9 +1,6 @@
 import { create } from "zustand";
-import type { AuditLogEntry, AuditActionType, AuditTargetType } from "@/types/audit";
-import {
-  listAuditLogs,
-  type ChainVerificationResult,
-} from "@/services/api/auditApi";
+import type { AuditLogEntry, AuditActionType } from "@/types/audit";
+import { listAuditLogs } from "@/services/api/auditApi";
 
 export interface AuditState {
   logs: AuditLogEntry[];
@@ -14,7 +11,7 @@ export interface AuditState {
   // Filters
   searchQuery: string;
   selectedAction: AuditActionType | "ALL";
-  selectedTargetType: AuditTargetType | "ALL";
+  selectedTargetType: string | "ALL";
   selectedActor: string | "ALL";
   selectedTargetId: string | null;
   sortOrder: "DESC" | "ASC";
@@ -23,23 +20,17 @@ export interface AuditState {
   selectedLog: AuditLogEntry | null;
   isDrawerOpen: boolean;
 
-  // Verification
-  isVerifying: boolean;
-  verificationResult: ChainVerificationResult | null;
-  lastVerifiedAt: string | null;
-
   // Actions
   loadLogs: (caseId?: string) => Promise<void>;
   setSearchQuery: (q: string) => void;
   setActionFilter: (action: AuditActionType | "ALL") => void;
-  setTargetTypeFilter: (targetType: AuditTargetType | "ALL") => void;
+  setTargetTypeFilter: (targetType: string | "ALL") => void;
   setActorFilter: (actor: string | "ALL") => void;
   setTargetIdFilter: (targetId: string | null) => void;
   setSortOrder: (order: "DESC" | "ASC") => void;
   selectLog: (log: AuditLogEntry | null) => void;
   openDrawer: (log: AuditLogEntry) => void;
   closeDrawer: () => void;
-  verifyChain: () => Promise<ChainVerificationResult>;
   resetFilters: () => void;
 
   // Selector
@@ -62,10 +53,6 @@ export const useAuditStore = create<AuditState>((set, get) => ({
   selectedLog: null,
   isDrawerOpen: false,
 
-  isVerifying: false,
-  verificationResult: null,
-  lastVerifiedAt: null,
-
   loadLogs: async (caseId = "DR-2026-00421") => {
     set({ isLoading: true, error: null, caseId });
     try {
@@ -74,8 +61,6 @@ export const useAuditStore = create<AuditState>((set, get) => ({
         set({
           logs: res.data,
           isLoading: false,
-          verificationResult: result,
-          lastVerifiedAt: result.verifiedAt,
         });
       } else {
         set({ isLoading: false });
@@ -83,7 +68,7 @@ export const useAuditStore = create<AuditState>((set, get) => ({
     } catch {
       set({
         isLoading: false,
-        error: "Failed to retrieve statutory audit logs from judicial ledger.",
+        error: "Failed to retrieve audit logs.",
       });
     }
   },
@@ -99,19 +84,6 @@ export const useAuditStore = create<AuditState>((set, get) => ({
   openDrawer: (log) => set({ selectedLog: log, isDrawerOpen: true }),
   closeDrawer: () => set({ isDrawerOpen: false, selectedLog: null }),
 
-  verifyChain: async () => {
-    set({ isVerifying: true });
-    // Simulate brief cryptographic hash traversal latency
-    await new Promise((resolve) => setTimeout(resolve, 350));
-    const { logs } = get();
-    set({
-      isVerifying: false,
-      verificationResult: result,
-      lastVerifiedAt: result.verifiedAt,
-    });
-    return result;
-  },
-
   resetFilters: () =>
     set({
       searchQuery: "",
@@ -119,7 +91,6 @@ export const useAuditStore = create<AuditState>((set, get) => ({
       selectedTargetType: "ALL",
       selectedActor: "ALL",
       selectedTargetId: null,
-      sortOrder: "DESC",
     }),
 
   getFilteredLogs: () => {
@@ -135,68 +106,41 @@ export const useAuditStore = create<AuditState>((set, get) => ({
 
     let result = [...logs];
 
-    // Filter by action
     if (selectedAction !== "ALL") {
       result = result.filter((l) => l.action === selectedAction);
     }
-
-    // Filter by target type
     if (selectedTargetType !== "ALL") {
-      result = result.filter((l) => l.targetType === selectedTargetType);
+      result = result.filter((l) => l.target_kind === selectedTargetType);
     }
-
-    // Filter by actor
     if (selectedActor !== "ALL") {
+      result = result.filter((l) => l.actor_id === selectedActor);
+    }
+    if (selectedTargetId) {
+      result = result.filter((l) => l.target_id === selectedTargetId);
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
       result = result.filter(
         (l) =>
-          l.actorBadgeNumber === selectedActor ||
-          l.actorName.toLowerCase().includes(selectedActor.toLowerCase()),
+          l.action.toLowerCase().includes(q) ||
+          (l.actor_id || "").toLowerCase().includes(q) ||
+          (l.target_id || "").toLowerCase().includes(q) ||
+          (l.target_kind || "").toLowerCase().includes(q) ||
+          (l.outcome || "").toLowerCase().includes(q)
       );
     }
 
-    // Filter by target ID (deep-link scope)
-    if (selectedTargetId) {
-      const tid = selectedTargetId.toLowerCase();
-      result = result.filter(
-        (l) => l.targetId && l.targetId.toLowerCase().includes(tid),
+    if (sortOrder === "ASC") {
+      result.sort(
+        (a, b) =>
+          new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      );
+    } else {
+      result.sort(
+        (a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
       );
     }
-
-    // Filter by search query
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
-      result = result.filter((l) => {
-        const idMatch = l.id.toLowerCase().includes(q);
-        const actionMatch = l.action.toLowerCase().includes(q);
-        const actorMatch =
-          l.actorName.toLowerCase().includes(q) ||
-          l.actorBadgeNumber.toLowerCase().includes(q) ||
-          l.actorRole.toLowerCase().includes(q);
-        const targetMatch =
-          (l.targetId && l.targetId.toLowerCase().includes(q)) ||
-          (l.targetType && l.targetType.toLowerCase().includes(q));
-        const hashMatch =
-          l.hash.toLowerCase().includes(q) ||
-          (l.previousHash && l.previousHash.toLowerCase().includes(q));
-        const detailsMatch = JSON.stringify(l.details).toLowerCase().includes(q);
-
-        return (
-          idMatch ||
-          actionMatch ||
-          actorMatch ||
-          targetMatch ||
-          hashMatch ||
-          detailsMatch
-        );
-      });
-    }
-
-    // Sort order
-    result.sort((a, b) => {
-      const diff =
-        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
-      return sortOrder === "DESC" ? diff : -diff;
-    });
 
     return result;
   },

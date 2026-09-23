@@ -29,14 +29,11 @@ services:
         POSTGRES_PASSWORD in .env}@postgres:5432/drishti
       DRISHTI_NEO4J_URI: bolt://neo4j:7687
       DRISHTI_NEO4J_PASSWORD: ${NEO4J_PASSWORD:?Set NEO4J_PASSWORD in .env}
-      DRISHTI_REDIS_URL: redis://redis:6379/0
       DRISHTI_S3_ENDPOINT_URL: http://minio:9000
       DRISHTI_S3_BUCKET: drishti
       DRISHTI_S3_ACCESS_KEY: drishti
       DRISHTI_S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in .env}
       DRISHTI_STORAGE_ROOT: /data
-      DRISHTI_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      DRISHTI_BESU_ENDPOINT: http://besu:8545
     volumes:
     - drishti-data:/data
     depends_on:
@@ -44,27 +41,12 @@ services:
         condition: service_healthy
       neo4j:
         condition: service_healthy
-      redis:
-        condition: service_healthy
       minio:
         condition: service_healthy
       clamav:
         condition: service_healthy
-      kafka:
-        condition: service_healthy
       migrations:
         condition: service_completed_successfully
-  redis:
-    image: redis:7-alpine
-    restart: unless-stopped
-    healthcheck:
-      test:
-      - CMD
-      - redis-cli
-      - ping
-      interval: 5s
-      timeout: 3s
-      retries: 10
   postgres:
     image: postgres:16
     restart: unless-stopped
@@ -136,43 +118,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-  kafka:
-    image: bitnami/kafka:3.7.0
-    restart: unless-stopped
-    environment:
-    - KAFKA_CFG_NODE_ID=1
-    - KAFKA_CFG_PROCESS_ROLES=broker,controller
-    - KAFKA_CFG_LISTENERS=PLAINTEXT://:9092,CONTROLLER://:9093
-    - KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP=CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
-    - KAFKA_CFG_CONTROLLER_QUORUM_VOTERS=1@localhost:9093
-    - KAFKA_CFG_CONTROLLER_LISTENER_NAMES=CONTROLLER
-    - KAFKA_CFG_OFFSETS_TOPIC_REPLICATION_FACTOR=1
-    healthcheck:
-      test:
-      - CMD-SHELL
-      - kafka-topics.sh --bootstrap-server localhost:9092 --list
-      interval: 10s
-      timeout: 5s
-      retries: 10
-  besu:
-    image: hyperledger/besu:24.1
-    restart: unless-stopped
-    command:
-    - --network=dev
-    - --rpc-http-enabled
-    - --rpc-http-host=0.0.0.0
-    - --rpc-http-cors-origins=all
-    - --host-allowlist=*
-    ports:
-    - 8545:8545
-    healthcheck:
-      test:
-      - CMD-SHELL
-      - 'curl -f -X POST -H ''Content-Type: application/json'' --data ''{"jsonrpc":"2.0","method":"eth_syncing","params":[],"id":1}''
-        http://localhost:8545 || exit 1'
-      interval: 10s
-      timeout: 5s
-      retries: 10
   worker:
     build: .
     restart: unless-stopped
@@ -191,8 +136,6 @@ services:
       DRISHTI_S3_ACCESS_KEY: drishti
       DRISHTI_S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in .env}
       DRISHTI_STORAGE_ROOT: /data
-      DRISHTI_KAFKA_BOOTSTRAP_SERVERS: kafka:9092
-      DRISHTI_BESU_ENDPOINT: http://besu:8545
     volumes:
     - drishti-data:/data
     depends_on:
@@ -201,8 +144,6 @@ services:
       neo4j:
         condition: service_healthy
       minio:
-        condition: service_healthy
-      kafka:
         condition: service_healthy
 volumes:
   drishti-data: null

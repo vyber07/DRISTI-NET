@@ -50,7 +50,7 @@ export function GraphToolbar({
   isLayoutRunning,
   className,
 }: GraphToolbarProps) {
-  const {
+  const { 
     activeTiers,
     activeEntityTypes,
     activeRelationshipTypes,
@@ -85,8 +85,8 @@ export function GraphToolbar({
     ? nodes
         .filter(
           (n) =>
-            n.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            n.maskedLabel.toLowerCase().includes(searchTerm.toLowerCase()),
+            (n.label as string).toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (n.label as string).toLowerCase().includes(searchTerm.toLowerCase()),
         )
         .slice(0, 5)
     : [];
@@ -372,8 +372,8 @@ export function GraphToolbar({
               >
                 <span className="font-medium text-text-primary truncate">
                   {n.entityType === "PERSON"
-                    ? maskPersonName(n.maskedLabel || n.label)
-                    : maskSensitiveText(n.maskedLabel || n.label)}
+                    ? maskPersonName((n.label || "") as string)
+                    : maskSensitiveText((n.label || "") as string)}
                 </span>
                 <span className="text-micro font-mono text-text-muted ml-2 shrink-0">
                   {n.entityType}

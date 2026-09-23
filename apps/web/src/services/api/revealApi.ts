@@ -1,5 +1,5 @@
-import { post } from "./real_client";
-import type { ApiResponse } from "./client";
+import { post, type ApiResponse } from "./real_client";
+
 import type { RevealRequest, RevealResult } from "@/types/reveal";
 
 export async function requestPiiReveal(request: RevealRequest): Promise<ApiResponse<RevealResult>> {

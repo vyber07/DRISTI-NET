@@ -1,3 +1,15 @@
+
+export interface ApiResponse<T> {
+  data: T;
+  error?: string;
+  meta: {
+    requestId: string;
+    timestamp: string;
+    durationMs: number;
+    securityClassification: string;
+  };
+}
+
 // Thin API client. Token lives in localStorage for the demo only.
 export const TOKEN_KEY = 'drishti.token'
 export const USER_KEY = 'drishti.user'

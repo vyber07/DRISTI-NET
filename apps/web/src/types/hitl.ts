@@ -1,10 +1,6 @@
-﻿import type { EvidenceTier } from "@/constants/evidenceTiers";
+import type { EvidenceTier } from "@/constants/evidenceTiers";
 
-export type HITLTaskType =
-  | "ENTITY_MERGE"
-  | "RELATIONSHIP_ARBITRATION"
-  | "CONTRADICTION_RESOLUTION"
-  | "TIER_ELEVATION";
+export type HITLTaskType = "ENTITY_MERGE";
 
 export type HITLTaskStatus =
   | "PENDING"
@@ -15,63 +11,25 @@ export type HITLTaskStatus =
 
 export type HITLTaskPriority = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
 
-export type HITLContradictionType =
-  | "SPATIAL_TEMPORAL"
-  | "IDENTITY_CONFLICT"
-  | "SOURCE_DISCREPANCY"
-  | "TIMELINE_SEQUENCE";
-
 export type HITLDecisionAction =
   | "APPROVE_MERGE"
   | "REJECT_MERGE"
-  | "ACCEPT_CLAIM_A"
-  | "ACCEPT_CLAIM_B"
-  | "ARBITRATE"
-  | "ESCALATE"
-  | "FLAG_CONTRADICTION";
-
-export interface SimilarityMetric {
-  metric: string;
-  score: number;
-  method: string;
-  notes?: string;
-}
+  | "DEFER"
+  | "ESCALATE";
 
 export interface MatchedEntitySummary {
   id: string;
   name: string;
   type: string;
   attributes: Record<string, string>;
-  piiMasked?: boolean;
 }
 
 export interface HITLProposedMatch {
   entityA: MatchedEntitySummary;
   entityB: MatchedEntitySummary;
   similarityScore: number;
-  similarityMetrics: SimilarityMetric[];
+  similarityMetrics: any[];
   candidateReason: string;
-}
-
-export interface ContradictionClaimItem {
-  sourceId: string;
-  title: string;
-  agency: string;
-  timestamp: string;
-  location?: string;
-  evidenceId: string;
-  rawArtifactId?: string;
-  snippet: string;
-  confidence: number;
-}
-
-export interface HITLContradictionClaim {
-  contradictionType: HITLContradictionType;
-  claimA: ContradictionClaimItem;
-  claimB: ContradictionClaimItem;
-  deltaExplanation: string;
-  spatialDeltaKm?: number;
-  temporalDeltaMinutes?: number;
 }
 
 export interface HITLTaskDecision {
@@ -80,8 +38,6 @@ export interface HITLTaskDecision {
   officerBadge: string;
   justification: string;
   arbitratedAt: string;
-  newTier?: EvidenceTier;
-  notes?: string;
 }
 
 export interface HITLTask {
@@ -99,20 +55,10 @@ export interface HITLTask {
   entityAName: string;
   entityBId?: string;
   entityBName?: string;
-  relationshipId?: string;
-  relationshipType?: string;
   evidenceIds: string[];
   primaryEvidenceId: string;
-  provenanceRecordId?: string;
   hasContradiction: boolean;
-  contradictionType?: HITLContradictionType;
   proposedMatch?: HITLProposedMatch;
-  contradictionData?: HITLContradictionClaim;
-  proposedTierElevation?: {
-    currentTier: EvidenceTier;
-    proposedTier: EvidenceTier;
-    elevationJustification: string;
-  };
   assignedAnalyst?: {
     name: string;
     badge: string;

@@ -20,40 +20,29 @@ function StatusSegment({ icon, children, className }: StatusSegmentProps) {
   );
 }
 
-/**
- * Always-visible session/security context (frontend spec §4 "Persistent system bar").
- * This bar exists so an analyst can never lose track of who they are acting as,
- * what jurisdiction/case they're bound to, and whether PII is currently exposed.
- *
- * Split into two independent groups rather than one flex row with a single
- * spacer: identity/jurisdiction/case context can scroll horizontally on
- * narrow screens, but PII-exposure and Zero-Trust status — the two things
- * this bar exists to make impossible to miss — are pinned in a `shrink-0`
- * group so they can never be scrolled off-screen at any viewport width.
- */
 function SecurityStatusBar() {
   const navigate = useNavigate();
-  const {
-    roleLabel,
-    clearanceLevel,
-    jurisdiction,
-    activeCaseId,
+  const { 
+    user,
     piiMasked,
-    zeroTrustActive,
     logout,
   } = useAuthStore();
+
+  const zeroTrustActive = true;
+
+  if (!user) return null;
 
   return (
     <header className="flex h-10 items-center border-b border-border-subtle bg-surface-1 px-4 w-full min-w-0 shrink-0 overflow-hidden select-none">
       <div className="flex min-w-0 flex-1 items-center gap-2.5 overflow-hidden text-xs">
         <StatusSegment icon={<UserRound className="h-3.5 w-3.5 text-text-muted shrink-0" />}>
-          <span className="font-semibold text-text-primary">{roleLabel}</span>
+          <span className="font-semibold text-text-primary">{user.display_name} ({user.role})</span>
         </StatusSegment>
 
         <Separator orientation="vertical" className="h-3.5" />
 
         <StatusSegment icon={<ShieldCheck className="h-3.5 w-3.5 text-text-muted shrink-0" />}>
-          <span>Clearance Level {clearanceLevel}</span>
+          <span>{user.role}</span>
         </StatusSegment>
 
         <Separator orientation="vertical" className="h-3.5 hidden md:block" />
@@ -62,25 +51,11 @@ function SecurityStatusBar() {
           icon={<MapPin className="h-3.5 w-3.5 text-text-muted shrink-0" />}
           className="hidden md:flex"
         >
-          <span>{jurisdiction}</span>
+          <span>{user.jurisdiction}</span>
         </StatusSegment>
-
-        {activeCaseId && (
-          <>
-            <Separator orientation="vertical" className="h-3.5" />
-            <StatusSegment icon={<Lock className="h-3.5 w-3.5 text-electric-blue shrink-0" />}>
-              <span className="font-semibold text-electric-blue">Case {activeCaseId}</span>
-            </StatusSegment>
-          </>
-        )}
       </div>
 
       <div className="flex shrink-0 items-center gap-2.5 pl-3">
-        {/* Mock Data Demo Notice */}
-        <span className="hidden xl:inline-flex items-center gap-1 rounded bg-surface-2 px-2 py-0.5 text-[10.5px] font-medium text-text-muted border border-border-subtle">
-          Simulated Investigation Data
-        </span>
-
         <Separator orientation="vertical" className="h-3.5" />
 
         <StatusSegment

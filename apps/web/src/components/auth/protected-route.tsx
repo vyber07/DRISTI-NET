@@ -11,7 +11,7 @@ interface ProtectedRouteProps {
  * preserved in location.state.from so post-login deep navigation works seamlessly.
  */
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
-  const { isAuthenticated } = useAuthStore();
+  const {  isAuthenticated } = useAuthStore();
   const location = useLocation();
 
   if (!isAuthenticated) {

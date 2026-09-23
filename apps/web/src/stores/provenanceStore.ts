@@ -1,46 +1,57 @@
 import { create } from "zustand";
-import type { ProvenanceRecord } from "@/types/entity";
+import type { ContextResponse } from "@/types/entity";
+import { get, post } from "@/services/api/real_client";
 
 interface ProvenanceState {
   isModalOpen: boolean;
   activeRecordId: string | null;
-  activeRelationshipId: string | null;
   isLoading: boolean;
   error: string | null;
-  record: ProvenanceRecord | null;
+  record: ContextResponse | null;
+  
+  isRevealing: boolean;
+  revealError: string | null;
 
-  openProvenanceForRecord: (recordId: string) => Promise<void>;
-  openProvenanceForRelationship: (relationshipId: string) => Promise<void>;
+  openProvenanceForRecord: (evidenceId: string) => Promise<void>;
+  revealContext: (reason: string) => Promise<void>;
   closeModal: () => void;
 }
 
-export const useProvenanceStore = create<ProvenanceState>((set) => ({
+export const useProvenanceStore = create<ProvenanceState>((set, getStore) => ({
   isModalOpen: false,
   activeRecordId: null,
-  activeRelationshipId: null,
   isLoading: false,
   error: null,
   record: null,
+  isRevealing: false,
+  revealError: null,
 
-  openProvenanceForRecord: async (recordId: string) => {
-    set({ isModalOpen: true, activeRecordId: recordId, isLoading: true, error: null });
+  openProvenanceForRecord: async (evidenceId: string) => {
+    set({ isModalOpen: true, activeRecordId: evidenceId, isLoading: true, error: null, revealError: null });
     try {
-      let res: any = null; // await getProvenanceByRecordId(recordId);
-      set({ record: res?.data || null, isLoading: false });
+      const res = await get(`/evidence/${evidenceId}/context`);
+      set({ record: res || null, isLoading: false });
     } catch (err: unknown) {
       set({ error: (err as Error).message, isLoading: false, record: null });
     }
   },
 
-  openProvenanceForRelationship: async (relId: string) => {
-    set({ isModalOpen: true, activeRelationshipId: relId, isLoading: true, error: null });
-    try {
-      let res: any = null; // await getProvenanceByRelationshipId(relId);
-      set({ record: res?.data || null, isLoading: false });
-    } catch (err: unknown) {
-      set({ error: (err as Error).message, isLoading: false, record: null });
-    }
+  revealContext: async (reason: string) => {
+     const { activeRecordId, record } = getStore();
+     if (!activeRecordId || !record) return;
+     set({ isRevealing: true, revealError: null });
+     try {
+        const body = {
+           reason,
+           ...record.locator,
+           window: 2
+        };
+        const res = await post(`/evidence/${activeRecordId}/context/reveal`, body);
+        set({ record: res, isRevealing: false });
+     } catch (err: any) {
+        set({ revealError: err.message || "Failed to reveal", isRevealing: false });
+     }
   },
 
-  closeModal: () => set({ isModalOpen: false }),
+  closeModal: () => set({ isModalOpen: false, record: null }),
 }));

@@ -10,11 +10,9 @@ import type { EvidenceTier } from "@/constants/evidenceTiers";
 import { maskPersonName, maskSensitiveText } from "@/lib/pii";
 
 export interface GraphEngineFilters {
-  activeTiers: Set<EvidenceTier>;
   activeEntityTypes: Set<EntityType>;
   activeRelationshipTypes?: Set<RelationshipType>;
   onlyContradictions: boolean;
-  minConfidence?: number;
   dateRange?: [number, number];
   searchTerm: string;
   currentTimestamp: number;
@@ -100,7 +98,6 @@ export class GraphEngine {
   private hoveredEdgeId: string | null = null;
 
   private filters: GraphEngineFilters = {
-    activeTiers: new Set([2, 3, 4, 5, 6]),
     activeEntityTypes: new Set([
       "PERSON",
       "ORGANIZATION",
@@ -172,7 +169,7 @@ export class GraphEngine {
 
         // PII Masking: Ensure node label on WebGL canvas is always masked
         const rawLabel = ((data.maskedLabel || data.label || "") as string);
-        const safeLabel = entityType === "PERSON" ? maskPersonName(rawLabel) : maskSensitiveText(rawLabel);
+        const safeLabel = entityType === "PERSON" ? maskPersonName(rawLabel as string) : maskSensitiveText(rawLabel as string);
 
         const isVisible = this.isNodeVisible(node);
         const isSelected = this.selectedNodeId === node;
@@ -352,7 +349,7 @@ export class GraphEngine {
     nodes.forEach((n) => {
       const entityType = n.entityType as EntityType;
       const rawLabel = (n.maskedLabel || n.label || "");
-      const safeLabel = entityType === "PERSON" ? maskPersonName(rawLabel) : maskSensitiveText(rawLabel);
+      const safeLabel = entityType === "PERSON" ? maskPersonName(rawLabel as string) : maskSensitiveText(rawLabel as string);
 
       const canonical = CANONICAL_NODE_POSITIONS[n.id];
       const posX = canonical ? canonical.x : n.x;
@@ -369,10 +366,6 @@ export class GraphEngine {
 
     edges.forEach((e) => {
       // Tier 1 Raw Artifact must NEVER be added as an active graph edge!
-      if (e.evidenceTier === (1 as unknown as EvidenceTier)) {
-        console.warn(`[DRISTI-NET] Excluded Tier 1 raw artifact edge: ${e.id}`);
-        return;
-      }
 
       if (this.graph.hasNode(e.source) && this.graph.hasNode(e.target)) {
         this.graph.addEdgeWithKey(e.id, e.source, e.target, {
@@ -451,11 +444,6 @@ export class GraphEngine {
     // Filter by entity type
     if (!this.filters.activeEntityTypes.has(entityType)) return false;
 
-    // Filter by confidence
-    const confidence = (attr.confidence as number) || 1.0;
-    if (this.filters.minConfidence !== undefined && confidence < this.filters.minConfidence) {
-      return false;
-    }
 
     // Filter by search term
     const search = this.filters.searchTerm.trim().toLowerCase();
@@ -494,9 +482,6 @@ export class GraphEngine {
       return false;
     }
 
-    // Filter by tier
-    const tier = attr.evidenceTier as EvidenceTier;
-    if (!this.filters.activeTiers.has(tier)) return false;
 
     // Filter by relationship type
     const relType = attr.relationshipType as RelationshipType;
@@ -504,11 +489,6 @@ export class GraphEngine {
       return false;
     }
 
-    // Filter by confidence
-    const confidence = (attr.confidence as number) || 1.0;
-    if (this.filters.minConfidence !== undefined && confidence < this.filters.minConfidence) {
-      return false;
-    }
 
     // Filter by date range
     const timestamp = new Date(attr.timestamp as string).getTime();
@@ -832,7 +812,7 @@ export class GraphEngine {
       const entityType = (attr.entityType as EntityType) || "PERSON";
       const p = this.sigma!.graphToViewport({ x: attr.x as number, y: attr.y as number });
       const size = (attr.size as number) || 16;
-      const confidence = Math.round(((attr.confidence as number) || 0.9) * 100);
+      const confidence = 100;
       const rawLabel = ((attr.maskedLabel || attr.label || "") as string);
       const fullLabel = entityType === "PERSON" ? maskPersonName(rawLabel) : maskSensitiveText(rawLabel);
 

@@ -1,197 +1,91 @@
-﻿import {
-  AlertTriangle,
-  GitMerge,
-  ShieldAlert,
-  ArrowUpRight,
-  Clock,
-  UserCheck,
-  FileCheck2,
-  ChevronRight,
-} from "lucide-react";
+import { GitMerge, UserCheck, CheckCircle2, ShieldCheck, Flag } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { ConfidenceMeter } from "@/components/intelligence/confidence-meter";
-import { maskPhoneNumbersInText } from "@/lib/pii";
-import type { HITLTask } from "@/types/hitl";
 import { cn } from "@/lib/utils";
+import type { HITLTask } from "@/types/hitl";
 
 interface HITLTaskCardProps {
   task: HITLTask;
-  isSelected?: boolean;
-  onSelect: (taskId: string) => void;
-  compact?: boolean;
+  isActive: boolean;
+  onClick: () => void;
 }
 
-export function HITLTaskCard({
-  task,
-  isSelected = false,
-  onSelect,
-  compact = false,
-}: HITLTaskCardProps) {
-  const getPriorityTone = (priority: HITLTask["priority"]) => {
-    switch (priority) {
-      case "CRITICAL":
-        return "red" as const;
-      case "HIGH":
-        return "amber" as const;
-      case "MEDIUM":
-        return "blue" as const;
-      default:
-        return "neutral" as const;
-    }
-  };
-
-  const getStatusTone = (status: HITLTask["status"]) => {
-    switch (status) {
-      case "APPROVED":
-        return "emerald" as const;
-      case "REJECTED":
-        return "red" as const;
-      case "ESCALATED":
-        return "amber" as const;
-      case "IN_REVIEW":
-        return "blue" as const;
-      default:
-        return "neutral" as const;
-    }
-  };
-
-  const getTypeIcon = (type: HITLTask["type"]) => {
-    switch (type) {
-      case "CONTRADICTION_RESOLUTION":
-        return <AlertTriangle className="h-3.5 w-3.5 text-critical-red" />;
-      case "ENTITY_MERGE":
-        return <GitMerge className="h-3.5 w-3.5 text-electric-blue-soft" />;
-      case "TIER_ELEVATION":
-        return <ArrowUpRight className="h-3.5 w-3.5 text-verified-emerald" />;
-      default:
-        return <ShieldAlert className="h-3.5 w-3.5 text-amber" />;
-    }
-  };
-
+export function HITLTaskCard({ task, isActive, onClick }: HITLTaskCardProps) {
   const isResolved = task.status === "APPROVED" || task.status === "REJECTED";
 
   return (
-    <div
-      onClick={() => onSelect(task.id)}
+    <button
+      type="button"
+      onClick={onClick}
       className={cn(
-        "group relative rounded-md border text-left transition-all duration-150 cursor-pointer",
-        isSelected
-          ? "border-electric-blue bg-surface-2 ring-1 ring-electric-blue/40 shadow-panel"
-          : "border-border-subtle bg-surface-1 hover:border-border-strong hover:bg-surface-2/60",
-        task.priority === "CRITICAL" && !isResolved && "border-l-4 border-l-critical-red",
-        compact ? "p-3 space-y-2" : "p-4 space-y-3",
+        "w-full text-left rounded-lg border p-3.5 transition-all relative overflow-hidden group hover:bg-surface-2",
+        isActive
+          ? "border-electric-blue bg-electric-blue/5 shadow-panel"
+          : "border-border-subtle bg-surface-1",
+        isResolved && !isActive && "opacity-60 hover:opacity-100",
       )}
     >
-      {/* Top Header Strip */}
-      <div className="flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2 flex-wrap">
-          <span className="font-mono text-xs font-semibold text-text-primary">
-            {task.id}
-          </span>
-          <Badge tone={getPriorityTone(task.priority)} className="text-micro font-mono">
-            {task.priority}
+      <div className="flex items-start justify-between gap-3 mb-2.5">
+        <div className="flex items-center gap-2">
+          <div
+            className={cn(
+              "flex h-7 w-7 items-center justify-center rounded",
+              isActive ? "bg-electric-blue/20 text-electric-blue" : "bg-surface-3 text-text-muted",
+              isResolved && "bg-verified-emerald/20 text-verified-emerald"
+            )}
+          >
+            {isResolved ? (
+              <CheckCircle2 className="h-3.5 w-3.5" />
+            ) : (
+              <GitMerge className="h-3.5 w-3.5" />
+            )}
+          </div>
+          <Badge
+            tone={task.status === "PENDING" ? "blue" : (task.status === "APPROVED" ? "emerald" : "neutral")}
+            className="text-[10px] font-mono px-1.5 py-0 uppercase"
+          >
+            {task.status.replace("_", " ")}
           </Badge>
-          <Badge tone={getStatusTone(task.status)} className="text-micro font-mono">
-            {task.status.replace(/_/g, " ")}
-          </Badge>
-        </div>
-
-        <div className="flex items-center gap-1.5 text-micro font-mono text-text-muted">
-          <Clock className="h-3 w-3" />
-          <span>SLA: {new Date(task.slaDeadline).toLocaleDateString("en-IN", { month: "short", day: "numeric" })}</span>
-        </div>
-      </div>
-
-      {/* Title & Type */}
-      <div>
-        <div className="flex items-center gap-1.5 text-xs text-text-secondary font-mono mb-1">
-          {getTypeIcon(task.type)}
-          <span className="uppercase font-medium tracking-wide">
-            {task.type.replace(/_/g, " ")}
-          </span>
-          <span className="text-text-muted">&bull;</span>
-          <span className="text-text-muted">{task.caseId}</span>
-        </div>
-        <h3 className="text-sm font-medium text-text-primary group-hover:text-electric-blue-soft transition-colors line-clamp-1">
-          {maskPhoneNumbersInText(task.title)}
-        </h3>
-      </div>
-
-      {/* Target Entity / Entities Display */}
-      <div className="flex items-center justify-between gap-2 rounded bg-surface-2/70 p-2 border border-border-subtle/60 text-xs">
-        <div className="flex items-center gap-2 min-w-0 flex-1">
-          <span className="font-mono text-text-secondary truncate">
-            {maskPhoneNumbersInText(task.entityAName)}
-          </span>
-          {task.entityBName && (
-            <>
-              <span className="text-text-muted text-micro font-mono">&harr;</span>
-              <span className="font-mono text-electric-blue-soft truncate">
-                {maskPhoneNumbersInText(task.entityBName)}
-              </span>
-            </>
+          {task.flagManualReview && !isResolved && (
+            <Badge tone="amber" className="text-[10px] font-mono px-1.5 py-0 uppercase flex items-center gap-1">
+              <Flag className="h-2.5 w-2.5" />
+              MANDATORY
+            </Badge>
           )}
         </div>
-
-        {task.relationshipId && (
-          <span className="font-mono text-micro text-text-muted shrink-0 bg-surface-3 px-1.5 py-0.5 rounded">
-            {task.relationshipId}
-          </span>
-        )}
-      </div>
-
-      {/* Contradiction Alert Badge if Present */}
-      {task.hasContradiction && (
-        <div className="flex items-center gap-2 rounded bg-critical-red/10 border border-critical-red/30 px-2.5 py-1 text-micro text-critical-red font-medium">
-          <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-          <span>
-            {task.contradictionType === "SPATIAL_TEMPORAL"
-              ? "⚠ SPATIO-TEMPORAL CONTRADICTION DETECTED"
-              : "⚠ EVIDENTIARY CONTRADICTION DETECTED"}
-          </span>
-        </div>
-      )}
-
-      {/* Confidence Meter & Action Row */}
-      <div className="space-y-2 pt-1 border-t border-border-subtle/60">
-        <ConfidenceMeter
-          confidence={task.confidence}
-          flagManualReview={task.flagManualReview && !isResolved}
-          className="text-xs"
-        />
-
-        <div className="flex items-center justify-between pt-1">
-          <div className="flex items-center gap-2 text-micro text-text-muted font-mono">
-            {task.assignedAnalyst ? (
-              <span className="flex items-center gap-1 text-text-secondary">
-                <UserCheck className="h-3 w-3 text-electric-blue-soft" />
-                {task.assignedAnalyst.name}
-              </span>
-            ) : (
-              <span className="text-amber">Unassigned</span>
-            )}
-            <span>&bull;</span>
-            <span className="flex items-center gap-1">
-              <FileCheck2 className="h-3 w-3" />
-              {task.evidenceIds.length} doc{task.evidenceIds.length > 1 ? "s" : ""}
-            </span>
-          </div>
-
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 text-xs text-electric-blue-soft hover:text-text-primary px-2 font-mono gap-1"
-            onClick={(e) => {
-              e.stopPropagation();
-              onSelect(task.id);
-            }}
-          >
-            <span>Review</span>
-            <ChevronRight className="h-3.5 w-3.5" />
-          </Button>
+        <div className="text-micro font-mono text-text-muted shrink-0 text-right">
+           <span className="block">{new Date(task.createdAt).toLocaleDateString("en-IN")}</span>
         </div>
       </div>
-    </div>
+
+      <div className="space-y-1 mb-3">
+        <h3 className={cn(
+          "text-sm font-semibold tracking-tight",
+          isActive ? "text-electric-blue" : "text-text-primary"
+        )}>
+          {task.title}
+        </h3>
+        <p className="text-xs text-text-secondary line-clamp-2 leading-relaxed">
+          {task.description}
+        </p>
+      </div>
+
+      <div className="flex items-end justify-between pt-2 border-t border-border-subtle/50">
+        <div className="flex items-center gap-3 text-micro text-text-muted">
+          {task.assignedAnalyst ? (
+            <div className="flex items-center gap-1">
+              <UserCheck className="h-3 w-3 text-electric-blue-soft" />
+              <span>{task.assignedAnalyst.name}</span>
+            </div>
+          ) : (
+            <span className="italic text-text-disabled">Unassigned</span>
+          )}
+        </div>
+        
+        <div className="w-24">
+          <ConfidenceMeter confidence={task.confidence} flagManualReview={false} />
+        </div>
+      </div>
+    </button>
   );
 }

@@ -23,11 +23,11 @@ import type { HITLTaskDecision } from "@/types/hitl";
 import { cn } from "@/lib/utils";
 
 export function HITLWorkspacePage() {
-  const { taskId } = useParams<{ taskId?: string }>();
+  const { taskId, caseId } = useParams<{ taskId?: string, caseId?: string }>();
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const caseIdFilter = searchParams.get("caseId") || "CASE-0001";
+  const caseIdFilter = caseId || "CASE-0001";
 
   const {
     tasks,
@@ -62,11 +62,11 @@ export function HITLWorkspacePage() {
   }, [taskId, loadTaskById, selectTask]);
 
   const handleSelectTask = (id: string) => {
-    navigate(`/hitl/${id}${caseIdFilter ? `?caseId=${caseIdFilter}` : ""}`);
+    navigate(`/cases/${caseIdFilter}/hitl/${id}`);
   };
 
   const handleBackToQueue = () => {
-    navigate(`/hitl${caseIdFilter ? `?caseId=${caseIdFilter}` : ""}`);
+    navigate(`/cases/${caseIdFilter}/hitl`);
   };
 
   const handleDecisionRequest = async (decision: HITLTaskDecision) => {
@@ -192,7 +192,7 @@ export function HITLWorkspacePage() {
             <div className="h-full min-h-0 overflow-hidden">
               <HITLDecisionPane
                 task={activeTask}
-                onSubmitDecision={handleDecisionRequest}
+                onRequestDecision={handleDecisionRequest}
                 isSubmitting={isSubmitting}
               />
             </div>
@@ -234,7 +234,7 @@ export function HITLWorkspacePage() {
                   <HITLTaskCard
                     key={task.id}
                     task={task}
-                    onSelect={handleSelectTask}
+                    onClick={() => handleSelectTask(task.id)} isActive={task.id === taskId}
                   />
                 ))}
               </div>

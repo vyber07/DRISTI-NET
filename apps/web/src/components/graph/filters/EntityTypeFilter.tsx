@@ -13,7 +13,7 @@ const POLE_TYPES: EntityType[] = [
 ];
 
 export function EntityTypeFilter() {
-  const {
+  const { 
     activeEntityTypes,
     toggleEntityType,
     selectAllEntityTypes,

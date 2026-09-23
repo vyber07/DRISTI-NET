@@ -21,7 +21,7 @@ export function CaseTimeline({ caseId }: CaseTimelineProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const entityIdFromUrl = searchParams.get("entityId");
 
-  const {
+  const { 
     events,
     isLoading,
     error,
@@ -58,7 +58,7 @@ export function CaseTimeline({ caseId }: CaseTimelineProps) {
     }[] = [];
 
     filteredEvents.forEach((evt) => {
-      const d = new Date(evt.timestamp);
+      const d = new Date(evt.time);
       const dateKey = isNaN(d.getTime()) ? "UNKNOWN" : d.toISOString().split("T")[0];
       const displayDate = isNaN(d.getTime())
         ? "Undated Events"
@@ -129,8 +129,6 @@ export function CaseTimeline({ caseId }: CaseTimelineProps) {
 
         {/* Filter Bar */}
         <TimelineFilterBar
-          totalCount={events.length}
-          filteredCount={filteredEvents.length}
         />
 
         {/* State 1: Loading Skeleton */}
@@ -230,7 +228,7 @@ export function CaseTimeline({ caseId }: CaseTimelineProps) {
                 <div className="space-y-3 pl-2 sm:pl-4">
                   {group.events.map((evt, idx) => (
                     <TimelineEventRow
-                      key={evt.id}
+                      key={evt.claim_id || Math.random().toString()}
                       event={evt}
                       caseId={caseId}
                       isLast={idx === group.events.length - 1}

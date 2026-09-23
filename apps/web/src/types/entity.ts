@@ -39,15 +39,19 @@ export interface EntitySummary {
   jurisdiction: string;
 }
 
-export interface EntityDetail extends EntitySummary {
-  aliases: string[];
-  identifiers: EntityIdentifier[];
+export interface EntityDetail {
+  entity_id: string;
+  kind: string;
+  label: string;
+  masked: boolean;
   attributes: Record<string, string>;
-  firstSeen: string;
-  lastSeen: string;
-  riskTags: string[];
-  caseRole: string;
-  notes?: string;
+  access_class: number;
+  cross_case?: {
+    visible_cases: string[];
+    restricted_case_count: number;
+    total_cases: number;
+  };
+  claims?: any[];
 }
 
 export interface RelationshipSummary {
@@ -75,26 +79,22 @@ export interface ContradictionDetails {
   arbitrationNotes: string;
 }
 
-export interface RelationshipDetail extends RelationshipSummary {
+export interface RelationshipDetail {
+  id: string;
+  type: string;
   label: string;
+  sourceId: string;
+  targetId: string;
   sourceLabel: string;
   targetLabel: string;
-  timestamp: string; // ISO format for temporal tracking
-  channel:
-    | "VOIP"
-    | "GSM_CALL"
-    | "SMS"
-    | "IM_TELEGRAM"
-    | "BANK_TRANSFER"
-    | "HAWALA"
-    | "PHYSICAL_MEETING"
-    | "CELL_TOWER_CO_LOCATION";
-  frequency?: number;
-  durationSeconds?: number;
-  amount?: number;
-  currency?: string;
-  contradictionDetails?: ContradictionDetails;
-  provenanceRecordId: string;
+  count: number;
+  weight: number;
+  minConfidence: number;
+  evidenceIds: string[];
+  claimIds: string[];
+  firstSeen: string | null;
+  lastSeen: string | null;
+  relevance: string;
 }
 
 /** Graphology Node Attributes consumed by GraphEngine */
@@ -105,11 +105,9 @@ export interface GraphNodeAttributes {
   y: number;
   size: number;
   color: string;
-  entityType: EntityType;
-  evidenceTier: EvidenceTier;
-  confidence: number;
+  entityType: string;
+  degree: number;
   isMasked: boolean;
-  maskedLabel: string;
   hidden?: boolean;
   highlighted?: boolean;
   [key: string]: unknown;
@@ -121,16 +119,19 @@ export interface GraphEdgeAttributes {
   source: string;
   target: string;
   label: string;
-  relationshipType: RelationshipType;
-  evidenceTier: EvidenceTier;
-  confidence: number;
-  hasContradiction: boolean;
-  timestamp: string;
-  size: number;
-  color: string;
-  lineStyle: "dotted" | "dashed" | "solid" | "solid-glow";
+  relationshipType: string;
+  count: number;
+  weight: number;
+  minConfidence: number;
+  evidenceIds: string[];
+  claimIds: string[];
+  firstSeen: string | null;
+  lastSeen: string | null;
+  relevance: string;
   hidden?: boolean;
   highlighted?: boolean;
+  size: number;
+  color: string;
   [key: string]: unknown;
 }
 
@@ -184,4 +185,18 @@ export interface ProvenanceRecord {
   extractionModel: string;
   extractionConfidence: number;
   chainOfCustody: ChainOfCustodyEntry[];
+}
+
+export interface ContextLine {
+  n: number;
+  text: string;
+  hit: boolean;
+}
+
+export interface ContextResponse {
+  evidence_id: string;
+  filename: string;
+  hash_match: boolean;
+  locator: Record<string, any>;
+  lines: ContextLine[];
 }
