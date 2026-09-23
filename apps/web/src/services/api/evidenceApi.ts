@@ -1,5 +1,5 @@
-import { get } from "./real_client";
-import type { ApiResponse } from "./client";
+import { get, type ApiResponse } from "./real_client";
+
 import type { EvidenceItem, EvidenceFilter } from "@/types/evidence";
 
 export async function listEvidence(caseId: string, filter?: EvidenceFilter): Promise<ApiResponse<EvidenceItem[]>> {

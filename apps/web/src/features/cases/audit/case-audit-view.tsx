@@ -14,7 +14,7 @@ interface CaseAuditViewProps {
 
 export function CaseAuditView({ caseId }: CaseAuditViewProps) {
   const [searchParams] = useSearchParams();
-  const {
+  const { 
     logs,
     isLoading,
     error,
@@ -43,11 +43,11 @@ export function CaseAuditView({ caseId }: CaseAuditViewProps) {
   // Map chronological block numbers (1-indexed based on oldest timestamp)
   const blockNumberMap = useMemo(() => {
     const chronological = [...logs].sort(
-      (a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime(),
+      (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime(),
     );
     const map = new Map<string, number>();
     chronological.forEach((entry, idx) => {
-      map.set(entry.id, idx + 1);
+      map.set(entry.audit_id, idx + 1);
     });
     return map;
   }, [logs]);
@@ -138,10 +138,10 @@ export function CaseAuditView({ caseId }: CaseAuditViewProps) {
             </div>
 
             {filteredLogs.map((log) => {
-              const blockNumber = blockNumberMap.get(log.id) ?? 1;
+              const blockNumber = blockNumberMap.get(log.audit_id) ?? 1;
               return (
                 <AuditEventCard
-                  key={log.id}
+                  key={log.audit_id}
                   log={log}
                   blockNumber={blockNumber}
                   onInspect={openDrawer}

@@ -1,5 +1,5 @@
-import { get, post } from "./real_client";
-import type { ApiResponse } from "./client";
+import { get, post, type ApiResponse } from "./real_client";
+
 
 export async function createIntegrityAnchor(caseId: string): Promise<ApiResponse<any>> {
   const data = await post(`/cases/${caseId}/integrity/anchor`);

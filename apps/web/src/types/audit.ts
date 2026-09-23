@@ -1,53 +1,32 @@
 export type AuditActionType =
-  | "VIEW_CASE"
-  | "VIEW_GRAPH"
-  | "FILTER_GRAPH"
-  | "EXPAND_NODE"
-  | "VIEW_EVIDENCE"
-  | "EXPORT_DOSSIER"
-  | "CREATE_NOTE"
-  | "UPDATE_NOTE"
-  | "DELETE_NOTE"
-  | "REVEAL_PII_REQUESTED"
-  | "REVEAL_PII_APPROVED"
-  | "REVEAL_PII_DENIED"
-  | "ARBITRATE_CONTRADICTION"
-  | "UPDATE_TIER"
-  | "APPROVE_HITL_TASK"
-  | "REJECT_HITL_TASK"
-  | "ESCALATE_HITL_TASK";
-
-export type AuditTargetType =
-  | "CASE"
-  | "ENTITY"
-  | "RELATIONSHIP"
-  | "EVIDENCE"
-  | "NOTE"
-  | "PII"
-  | "GRAPH"
-  | "HITL_TASK";
+  | "LOGIN"
+  | "CASE_VIEW"
+  | "ACCESS_DENIED"
+  | "EVIDENCE_UPLOAD"
+  | "SCAN_RESULT"
+  | "REVIEW_DECISION"
+  | "UNMASK"
+  | "EXPORT"
+  | string;
 
 export interface AuditLogEntry {
-  id: string;
-  timestamp: string; // ISO 8601
+  audit_id: string;
+  trace_id: string;
+  actor_id: string | null;
   action: AuditActionType;
-  actorBadgeNumber: string;
-  actorName: string;
-  actorRole: string;
-  caseId: string;
-  targetType?: AuditTargetType;
-  targetId?: string;
-  ipAddress: string;
-  details: Record<string, unknown>;
-  hash: string;
-  previousHash?: string;
+  target_kind: string | null;
+  target_id: string | null;
+  case_id: string | null;
+  outcome: string;
+  detail: Record<string, unknown>;
+  created_at: string;
 }
 
 export interface AuditFilter {
   action?: AuditActionType;
-  actorBadgeNumber?: string;
-  targetType?: AuditTargetType;
-  targetId?: string;
-  startDate?: string;
-  endDate?: string;
+  actor_id?: string;
+  target_kind?: string;
+  target_id?: string;
+  start_date?: string;
+  end_date?: string;
 }

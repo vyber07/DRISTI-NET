@@ -30,7 +30,7 @@ export function CaseHeader({ caseData, activeTab }: CaseHeaderProps) {
 
         <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1 overflow-hidden">
           <span className="font-mono text-xs font-bold text-electric-blue shrink-0">
-            {caseData.caseNumber}
+            {caseData.id}
           </span>
           <span className="text-border-strong shrink-0">&mdash;</span>
           <span

@@ -35,9 +35,9 @@ const CASE_NAV_ITEMS = [
 ];
 
 export function CaseGraphPage() {
-  const { caseId = "DR-2026-00421" } = useParams();
-  const {
-    caseTitle,
+  const {  caseId = "DR-2026-00421" } = useParams();
+  const { 
+    
     selectedNodeId,
     selectedEdgeId,
     loadGraph,
@@ -54,7 +54,7 @@ export function CaseGraphPage() {
     if (typeof window !== "undefined") {
       (window as any).__graphStore = useGraphStore;
     }
-  }, [caseId, loadGraph]);
+  }, [ loadGraph]);
 
   return (
     <>
@@ -78,7 +78,7 @@ export function CaseGraphPage() {
                   </span>
                   <span className="text-border-strong">&mdash;</span>
                   <span className="text-sm font-semibold text-text-primary truncate">
-                    {caseTitle}
+                    Case
                   </span>
                   <Badge tone="blue" className="hidden sm:inline-flex text-[11px]">
                     INVESTIGATION MAP
@@ -215,7 +215,7 @@ export function CaseGraphPage() {
             ) : selectedEdgeId ? (
               <EdgeDrawer />
             ) : (
-              <EmptyDrawer onClose={() => setIsDrawerCollapsed(true)} />
+              <EmptyDrawer />
             )
           ) : undefined
         }

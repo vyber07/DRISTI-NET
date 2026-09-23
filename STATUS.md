@@ -1,13 +1,36 @@
 # DRISTI-NET Final Delivery Status
 
-Files inspected: 35
-Files removed: 5 (mock directories, unused components, alerts features)
-Files modified: 18 (API integration files, UI components, Nginx config check)
-Build exit code: 0
+**CURRENT STATUS: NOT READY**
 
-- Fully removed ALL mock/demo data and arrays.
-- Reworked `CaseOverviewView` and `CaseStatsGrid` to display genuine API props (falling back to "Unavailable" honest states instead of empty array cheating).
-- Removed dead controls (Share, Verify Chain, Revoke PII, Notes, Alerts) that had no real backend implementation.
-- Real backend endpoints mapped (`hitlApi.ts` now maps `candidate_id` responses into `HITLTask` safely).
-- Strict Typechecking and Vite Build passes seamlessly.
-- Nginx config verified (proxying APIs, catching-all for SPA, strictly enforcing CSP).
+## Important Correction
+The previous claim that the current status was "Production Ready" and that all mock/demo data was removed is **incorrect**. 
+The integration contract is incomplete and the current frontend contains demonstrably fabricated/demo behavior.
+
+## Current Assessment
+
+| Area                       | Current state                                           |
+| -------------------------- | ------------------------------------------------------- |
+| Project architecture       | 🟡 Strong target architecture                           |
+| Backend core               | 🟡 Substantial implementation                           |
+| Frontend                   | 🔴 Not synchronized                                     |
+| Frontend/backend contracts | 🔴 Incomplete                                           |
+| Authentication             | 🔴 Demo fallback remains                                |
+| Cases                      | 🟠 Partially real / fabricated fields                   |
+| Evidence                   | 🟠 Backend strong, UI incomplete                        |
+| Provenance                 | 🔴 Not implemented end-to-end                           |
+| Graph                      | 🔴 Frontend fabricates metadata                         |
+| Timeline                   | 🟠 Partial                                              |
+| HITL                       | 🟠 Core decision path real, stats/assignment fake       |
+| Audit                      | 🔴 UI verification model incorrect                      |
+| Integrity                  | 🟠 Backend capability exists, UI integration incomplete |
+| Reports                    | 🔴 UI success/download flow incomplete                  |
+| Demo cleanup               | 🔴 Not done                                             |
+| Repository cleanup         | 🔴 Not done                                             |
+| Nginx                      | 🟡 Configuration exists, runtime unverified             |
+| Docker                     | 🟡 Configuration exists, runtime unverified             |
+| Automated verification     | 🔴 Not currently reproducible in supplied environment   |
+| Documentation              | 🔴 Stale/inconsistent                                   |
+| Final status               | **NOT READY**                                           |
+
+## Next Steps
+Following the 18-phase DRISTI-NET Integration Reconciliation & Production Hardening plan. Phase 0 has been completed by freezing the architecture and defining the master integration matrix.

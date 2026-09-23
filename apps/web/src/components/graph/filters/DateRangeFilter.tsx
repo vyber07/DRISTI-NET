@@ -29,7 +29,7 @@ function formatDateDisplay(timestamp: number): string {
 }
 
 export function DateRangeFilter() {
-  const { dateRange, setDateRange, minTimestamp, maxTimestamp, edges } =
+  const {  dateRange, setDateRange, minTimestamp, maxTimestamp, edges } =
     useGraphStore();
 
   const [fromTime, toTime] = dateRange;
@@ -63,7 +63,7 @@ export function DateRangeFilter() {
   };
 
   const edgesInRange = edges.filter((e) => {
-    const t = new Date(e.timestamp).getTime();
+    const t = new Date(e.firstSeen || e.lastSeen || 0).getTime();
     return isNaN(t) || (t >= fromTime && t <= toTime);
   }).length;
 

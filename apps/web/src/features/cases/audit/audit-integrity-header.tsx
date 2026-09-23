@@ -1,14 +1,7 @@
-import { useState } from "react";
 import {
   ShieldCheck,
-  ShieldAlert,
-  RefreshCw,
   Download,
-  CheckCircle2,
   FileSpreadsheet,
-  Network,
-  Eye,
-  Hash,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -19,183 +12,63 @@ interface AuditIntegrityHeaderProps {
 }
 
 export function AuditIntegrityHeader({ caseId }: AuditIntegrityHeaderProps) {
-  const {
-    logs,
-    verificationResult,
-    lastVerifiedAt,
-    verifyChain,
-  } = useAuditStore();
-
-  const [copiedNotification, setCopiedNotification] = useState(false);
-
-  // Compute domain breakdown statistics
+  const { logs } = useAuditStore();
   const totalEvents = logs.length;
-  const evidenceOps = logs.filter(
-    (l) => l.action === "VIEW_EVIDENCE" || l.action === "UPDATE_TIER",
-  ).length;
-  const graphOps = logs.filter(
-    (l) =>
-      l.action === "VIEW_GRAPH" ||
-      l.action === "FILTER_GRAPH" ||
-      l.action === "EXPAND_NODE" ||
-      l.action === "ARBITRATE_CONTRADICTION",
-  ).length;
-  const identityOps = logs.filter(
-    (l) =>
-      l.action === "REVEAL_PII_REQUESTED" ||
-      l.action === "REVEAL_PII_APPROVED" ||
-      l.action === "REVEAL_PII_DENIED",
-  ).length;
 
   const handleExportDossier = () => {
-    const exportData = {
-      exportTitle: "STATUTORY DIGITAL AUDIT DOSSIER",
-      caseId,
-      statutoryFramework: "BSA §63 / IT Act §79A Digital Evidence Trail (Demo Mapping)",
-      exportedAt: new Date().toISOString(),
-      cryptographicChainValid: verificationResult?.isValid ?? true,
-      totalBlocks: logs.length,
-      auditRecords: logs,
-    };
-
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], {
-      type: "application/json",
-    });
+    // Generate a quick CSV of the logs
+    const csvHeader = "Timestamp,Action,Actor,Target Kind,Target ID,Outcome\n";
+    const csvContent = logs.map(l => 
+      `${l.created_at},${l.action},${l.actor_id || ""},${l.target_kind || ""},${l.target_id || ""},${l.outcome}`
+    ).join("\n");
+    
+    const blob = new Blob([csvHeader + csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = `AUDIT_TRAIL_${caseId}_${new Date().toISOString().slice(0, 10)}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-
-    setCopiedNotification(true);
-    setTimeout(() => setCopiedNotification(false), 3000);
+    const link = document.createElement("a");
+    link.href = url;
+    link.setAttribute("download", `audit_log_${caseId}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
-  const isChainValid = verificationResult?.isValid ?? true;
-
   return (
-    <div className="space-y-4">
-      {/* Top Banner */}
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between rounded-lg border border-border-subtle bg-surface-1 p-4 shadow-sm">
-        <div className="space-y-1">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-md bg-electric-blue/10 text-electric-blue border border-electric-blue/30">
-              <ShieldCheck className="h-4 w-4" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h2 className="text-base font-semibold text-text-primary">
-                  Case Audit &amp; Integrity Ledger
-                </h2>
-                <Badge tone="blue" className="text-[10px] tracking-wider uppercase font-mono">
-                  BSA §63 — DEMO POLICY MAPPING
-                </Badge>
-              </div>
-              <p className="text-xs text-text-muted">
-                Statutory tamper-evident judicial event journal for Case {caseId}. All forensic accesses, note mutations, and identity requisitions are cryptographically chained.
-              </p>
-            </div>
-          </div>
+    <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 bg-surface-1 border border-border-subtle p-4 rounded-lg shadow-sm">
+      <div className="space-y-1">
+        <div className="flex items-center gap-2">
+          <h2 className="text-lg font-semibold text-text-primary tracking-tight flex items-center gap-2">
+            <ShieldCheck className="h-5 w-5 text-emerald-500" />
+            Case Audit Ledger
+          </h2>
+          <Badge tone="emerald" className="text-micro font-mono">
+            LIVE
+          </Badge>
         </div>
-
-        {/* Action Controls & Chain Status */}
-        <div className="flex flex-wrap items-center gap-2.5">
-          {/* Integrity Status Pill */}
-          <div
-            className={`flex items-center gap-2 px-3 py-1.5 rounded-md border text-xs font-mono transition-colors ${
-              isChainValid
-                ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-400"
-                : "border-critical-red/40 bg-critical-red/10 text-critical-red"
-            }`}
-          >
-            {isChainValid ? (
-              <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-400" />
-            ) : (
-              <ShieldAlert className="h-3.5 w-3.5 shrink-0 text-critical-red" />
-            )}
-            <span className="font-semibold">
-              {isChainValid
-                ? `SHA-256 CHAIN: ${verificationResult?.validBlocks ?? totalEvents}/${totalEvents} VALID`
-                : "CHAIN INTEGRITY ALERT"}
-            </span>
-          </div>
-
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => verifyChain()}
-            className="gap-1.5 text-xs"
-            title="Traverse cryptographic hash links across all blocks"
-          >
-          </Button>
-
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={handleExportDossier}
-            className="gap-1.5 text-xs"
-            title="Download cryptographically verifiable audit docket in JSON format"
-          >
-            <Download className="h-3.5 w-3.5 text-text-muted" />
-            <span>{copiedNotification ? "Downloaded!" : "Export Dossier"}</span>
-          </Button>
-        </div>
+        <p className="text-xs text-text-secondary max-w-xl leading-relaxed">
+          Permanent chronological log of all interactions and data state changes within Case {caseId}.
+        </p>
       </div>
 
-      {/* Domain Metric Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        <div className="rounded-lg border border-border-subtle bg-surface-1 p-3 flex flex-col justify-between">
-          <div className="flex items-center justify-between text-text-muted">
-            <span className="text-micro uppercase font-semibold tracking-wider">Total Ledger Blocks</span>
-            <Hash className="h-3.5 w-3.5 text-text-muted" />
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-xl font-bold font-mono text-text-primary">{totalEvents}</span>
-            <span className="text-micro text-emerald-400 font-mono">Sealed</span>
-          </div>
-          <span className="text-micro text-text-muted mt-1 truncate">
-            {lastVerifiedAt ? `Verified ${new Date(lastVerifiedAt).toLocaleTimeString()}` : "Chain active"}
+      <div className="flex items-center gap-2 shrink-0 self-end md:self-auto">
+        <div className="bg-surface-2 border border-border-subtle rounded-md px-3 py-1.5 flex flex-col justify-center items-end mr-2">
+          <span className="text-micro font-mono text-text-muted uppercase tracking-wider">
+            Total Records
+          </span>
+          <span className="text-sm font-semibold font-mono text-text-primary">
+            {totalEvents}
           </span>
         </div>
 
-        <div className="rounded-lg border border-border-subtle bg-surface-1 p-3 flex flex-col justify-between">
-          <div className="flex items-center justify-between text-text-muted">
-            <span className="text-micro uppercase font-semibold tracking-wider">Evidence Inspections</span>
-            <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-400" />
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-xl font-bold font-mono text-text-primary">{evidenceOps}</span>
-            <span className="text-micro text-text-muted">Forensic</span>
-          </div>
-          <span className="text-micro text-text-muted mt-1 truncate">CDR &amp; Banking Bounding Box</span>
-        </div>
-
-        <div className="rounded-lg border border-border-subtle bg-surface-1 p-3 flex flex-col justify-between">
-          <div className="flex items-center justify-between text-text-muted">
-            <span className="text-micro uppercase font-semibold tracking-wider">Graph Ops &amp; Contradictions</span>
-            <Network className="h-3.5 w-3.5 text-electric-blue" />
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-xl font-bold font-mono text-text-primary">{graphOps}</span>
-            <span className="text-micro text-text-muted">Analyzed</span>
-          </div>
-          <span className="text-micro text-text-muted mt-1 truncate">Expansions &amp; Discrepancy reviews</span>
-        </div>
-
-        <div className="rounded-lg border border-border-subtle bg-surface-1 p-3 flex flex-col justify-between">
-          <div className="flex items-center justify-between text-text-muted">
-            <span className="text-micro uppercase font-semibold tracking-wider">PII Access Requisitions</span>
-            <Eye className="h-3.5 w-3.5 text-amber-400" />
-          </div>
-          <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-xl font-bold font-mono text-text-primary">{identityOps}</span>
-            <span className="text-micro text-amber-400 font-mono">Governed</span>
-          </div>
-          <span className="text-micro text-text-muted mt-1 truncate">Sec 91 BNSS Thresholds</span>
-        </div>
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={handleExportDossier}
+          className="gap-2 text-xs font-mono h-9"
+          disabled={totalEvents === 0}
+        >
+          <FileSpreadsheet className="h-4 w-4" />
+          <span>Export CSV</span>
+        </Button>
       </div>
     </div>
   );

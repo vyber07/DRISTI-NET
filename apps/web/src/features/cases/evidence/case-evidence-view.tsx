@@ -1,128 +1,80 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
-import {
-  FileCheck2,
-  Lock,
-  Scale,
-  AlertOctagon,
-  RotateCcw,
-  AlertCircle,
-  FilterX,
-  Radio,
-  Landmark,
-} from "lucide-react";
+import { LayoutGrid, List, FilterX, RotateCcw, AlertCircle, HardDrive, ShieldCheck, FileCheck, Search, Radio, Landmark, Lock, Scale, AlertOctagon } from "lucide-react";
+import { useEvidenceStore } from "@/stores/evidenceStore";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { EvidenceFilterBar } from "./evidence-filter-bar";
 import { EvidenceCard } from "./evidence-card";
 import { EvidenceRow } from "./evidence-row";
-import { useEvidenceStore } from "@/stores/evidenceStore";
 
-interface CaseEvidenceViewProps {
-  caseId: string;
-}
-
-export function CaseEvidenceView({ caseId }: CaseEvidenceViewProps) {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [uploadMsg, setUploadMsg] = useState('');
-  // We actually already have React imported above as `import { useEffect, useState } from "react";`
-  // I will just use React.useState
-
-  const entityIdFromUrl = searchParams.get("entityId");
-
+export function CaseEvidenceView() {
   const {
+    caseId,
+    entityScope,
     evidence,
     isLoading,
     error,
-    entityScope,
     viewMode,
-    loadEvidence,
+    setViewMode,
     setEntityScope,
     resetFilters,
+    loadEvidence,
     getFilteredEvidence,
   } = useEvidenceStore();
 
-  useEffect(() => {
-    loadEvidence(caseId, entityIdFromUrl);
-  }, [caseId, entityIdFromUrl, loadEvidence]);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadMsg, setUploadMsg] = useState("");
 
-  const handleScopeEntity = (entityId: string) => {
-    setEntityScope(entityId);
-    setSearchParams({ tab: "evidence", entityId });
+  const filteredEvidence = getFilteredEvidence();
+
+  const handleScopeEntity = (entId: string) => {
+    setEntityScope(entId === entityScope ? null : entId);
   };
 
   const handleClearScope = () => {
     setEntityScope(null);
-    setSearchParams({ tab: "evidence" });
   };
 
-  const filteredEvidence = getFilteredEvidence();
-
-  // Metrics summary
-  const courtAdmissibleCount = evidence.filter((e) => e.isCourtAdmissible).length;
-  const contradictionCount = evidence.filter(
-    (e) => e.extractionStatus === "FLAGGED_CONTRADICTION",
-  ).length;
-  const telecomCount = evidence.filter((e) => e.sourceType === "TELECOM").length;
-  const bankingCount = evidence.filter((e) => e.sourceType === "BANKING").length;
+  const statusMap = evidence.reduce((acc, curr) => {
+    acc[curr.status] = (acc[curr.status] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
 
   return (
-    <div className="flex flex-col h-full w-full max-w-full min-w-0 bg-background overflow-hidden">
-      {/* Non-Technical Orientation Guide Bar */}
-      <div className="border-b border-border-subtle bg-surface-1 px-4 py-2 flex flex-wrap items-center justify-between gap-2 text-xs">
-        <div className="flex items-center gap-2 text-text-secondary">
-          <span className="font-semibold text-text-primary flex items-center gap-1.5">
-            <FileCheck2 className="h-4 w-4 text-teal-primary" />
-            Evidence Library:
-          </span>
-          <span>4 source files ingested &bull; 3 evidence artifacts &bull; Every map connection links to original proof here</span>
-        </div>
-        <div className="text-micro text-text-muted hidden md:inline">
-          Click <strong>Inspect Document</strong> on any card to view the exact page and highlighted clue.
-        </div>
-      </div>
-
-      <div className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden p-4 space-y-4">
-        {/* Evidence Docket Header */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-border-subtle pb-3">
-          <div className="space-y-0.5">
-            <h2 className="text-base font-semibold text-text-primary tracking-tight">
-              Case Evidence &amp; Source Documents
-            </h2>
-            <p className="text-xs text-text-muted">
-              Original documents and verified files supporting this case. Demo evidence records with cryptographic integrity checks.
-            </p>
-          </div>
-
-          {/* Key Evidentiary Stat Chips */}
-          <div className="flex flex-wrap items-center gap-2 text-micro">
-            <div className="flex items-center gap-1.5 rounded-md border border-purple-300/60 bg-purple-50 px-2.5 py-1 text-court-purple font-medium">
-              <Scale className="h-3 w-3 text-court-purple shrink-0" />
-              <span>{courtAdmissibleCount} Verified Records (Demo)</span>
+    <div className="h-full flex flex-col min-w-0 max-w-full">
+      <div className="flex-1 space-y-4 p-4 min-w-0 max-w-full overflow-y-auto">
+        <div className="flex flex-col gap-3 rounded-xl border border-border-subtle bg-surface-1 p-4 shadow-sm">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <HardDrive className="h-4 w-4 text-electric-blue shrink-0" />
+              <h2 className="text-sm font-semibold text-text-primary tracking-tight">Evidence Repository</h2>
             </div>
-
-            {contradictionCount > 0 && (
-              <div className="flex items-center gap-1.5 rounded-md border border-critical-red/40 bg-critical-red/10 px-2.5 py-1 text-critical-red font-medium">
-                <AlertOctagon className="h-3 w-3" />
-                <span>{contradictionCount} Discrepancy Flagged</span>
-              </div>
-            )}
-
-            <div className="flex items-center gap-1.5 rounded-md border border-teal-primary/30 bg-teal-primary/5 px-2.5 py-1 text-teal-primary font-medium">
-              <Radio className="h-3 w-3 text-teal-primary" />
-              <span>{telecomCount} Phone Records (CDR)</span>
-            </div>
-
-            <div className="flex items-center gap-1.5 rounded-md border border-verified-emerald/40 bg-emerald-50 px-2.5 py-1 text-verified-emerald font-medium">
-              <Landmark className="h-3 w-3 text-verified-emerald" />
-              <span>{bankingCount} Banking Record</span>
-            </div>
-
-            <div className="flex items-center gap-1.5 rounded-md border border-border-subtle bg-surface-2 px-2.5 py-1 text-text-secondary font-medium">
-              <Lock className="h-3 w-3 text-verified-emerald" />
-              <span>Tamper-Proof (Hashed)</span>
+            <div className="flex items-center gap-1.5 bg-surface-2 rounded-lg p-0.5 border border-border-subtle">
+              <button
+                type="button"
+                onClick={() => setViewMode("grid")}
+                className={cn("p-1.5 rounded-md transition-colors", viewMode === "grid" ? "bg-surface-1 text-text-primary shadow-xs border border-border-subtle" : "text-text-muted hover:text-text-secondary")}
+              >
+                <LayoutGrid className="h-3.5 w-3.5" />
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("table")}
+                className={cn("p-1.5 rounded-md transition-colors", viewMode === "table" ? "bg-surface-1 text-text-primary shadow-xs border border-border-subtle" : "text-text-muted hover:text-text-secondary")}
+              >
+                <List className="h-3.5 w-3.5" />
+              </button>
             </div>
           </div>
+          
+          <div className="flex flex-wrap items-center gap-3">
+             {Object.entries(statusMap).map(([status, count]) => (
+                <div key={status} className="flex items-center gap-1.5 rounded-md border border-electric-blue/40 bg-electric-blue/10 px-2.5 py-1 text-electric-blue font-medium text-xs">
+                  <span>{count} {status}</span>
+                </div>
+             ))}
+          </div>
+
           <div className="flex items-center gap-2 mt-4 w-full">
             <input type="file" onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} className="text-sm border border-border-subtle p-1 rounded" />
             <Button onClick={async () => {
@@ -131,9 +83,9 @@ export function CaseEvidenceView({ caseId }: CaseEvidenceViewProps) {
               fd.append("file", selectedFile);
               fd.append("source_label", "manual");
               const tok = localStorage.getItem("drishti.token");
-              const res = await fetch(`/api/v1/cases/${caseId}/evidence`, {
+              const res = await fetch(`/api/v1/cases/\${caseId}/evidence`, {
                 method: "POST",
-                headers: tok ? { Authorization: `Bearer ${tok}` } : {},
+                headers: tok ? { Authorization: `Bearer \${tok}` } : {},
                 body: fd
               });
               if (!res.ok) {
@@ -145,105 +97,47 @@ export function CaseEvidenceView({ caseId }: CaseEvidenceViewProps) {
                  }
               } else {
                  setUploadMsg("Uploaded");
+                 loadEvidence(caseId, entityScope);
               }
-              loadEvidence(caseId, entityScope);
             }}>Upload</Button>
             {uploadMsg && <span className="text-critical-red font-bold text-xs">{uploadMsg}</span>}
           </div>
         </div>
 
-        {/* Filter Bar */}
-        <EvidenceFilterBar
-          totalCount={evidence.length}
-          filteredCount={filteredEvidence.length}
-        />
+        <EvidenceFilterBar totalCount={evidence.length} filteredCount={filteredEvidence.length} />
 
-        {/* State 1: Loading Skeleton */}
         {isLoading && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pt-2 animate-pulse">
-            {[1, 2, 3].map((i) => (
-              <div
-                key={i}
-                className="h-64 rounded-lg bg-surface-2 border border-border-subtle p-4 space-y-3"
-              />
-            ))}
+            {[1, 2, 3].map((i) => (<div key={i} className="h-64 rounded-lg bg-surface-2 border border-border-subtle p-4" />))}
           </div>
         )}
 
-        {/* State 2: Error State */}
         {!isLoading && error && (
           <div className="rounded-lg border border-critical-red/40 bg-critical-red/10 p-6 text-center space-y-3 my-8">
             <AlertCircle className="h-8 w-8 text-critical-red mx-auto" />
             <div className="space-y-1">
-              <h3 className="text-sm font-semibold text-text-primary">
-                Unable to load evidence docket
-              </h3>
+              <h3 className="text-sm font-semibold text-text-primary">Unable to load evidence</h3>
               <p className="text-xs text-text-muted">{error}</p>
             </div>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => loadEvidence(caseId, entityScope)}
-              className="gap-1.5"
-            >
-              <RotateCcw className="h-3.5 w-3.5" />
-              Retry
-            </Button>
           </div>
         )}
 
-        {/* State 3: Empty State */}
         {!isLoading && !error && filteredEvidence.length === 0 && (
           <div className="rounded-lg border border-border-subtle bg-surface-1/50 p-10 text-center space-y-3 my-8">
             <FilterX className="h-8 w-8 text-text-muted mx-auto" />
             <div className="space-y-1">
-              <h3 className="text-sm font-semibold text-text-primary">
-                {entityScope
-                  ? `No evidence artifacts associated with entity ${entityScope}`
-                  : "No evidence artifacts match current filter criteria"}
-              </h3>
-              <p className="text-xs text-text-muted max-w-md mx-auto">
-                {entityScope
-                  ? "This entity may not be directly cited in the current ingested evidentiary artifacts."
-                  : "Broaden your search or reset tier/source filters to view the full evidence library."}
-              </p>
+              <h3 className="text-sm font-semibold text-text-primary">No evidence artifacts</h3>
             </div>
-            <div className="flex items-center justify-center gap-2 pt-2">
-              {entityScope && (
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={handleClearScope}
-                  className="text-xs"
-                >
-                  View Full Case Evidence
-                </Button>
-              )}
-              <Button
-                variant="secondary"
-                size="sm"
-                onClick={resetFilters}
-                className="text-xs"
-              >
-                Reset Filters
-              </Button>
-            </div>
+            <Button variant="secondary" size="sm" onClick={resetFilters} className="text-xs">Reset Filters</Button>
           </div>
         )}
 
-        {/* State 4: Evidence Items List */}
         {!isLoading && !error && filteredEvidence.length > 0 && (
           <>
             {viewMode === "grid" ? (
               <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-2 gap-4.5 pt-1 min-w-0">
                 {filteredEvidence.map((item) => (
-                  <EvidenceCard
-                    key={item.id}
-                    item={item}
-                    caseId={caseId}
-                    onScopeEntity={handleScopeEntity}
-                    currentEntityScope={entityScope}
-                  />
+                  <EvidenceCard key={item.evidence_id} item={item} caseId={caseId} onScopeEntity={handleScopeEntity} currentEntityScope={entityScope} />
                 ))}
               </div>
             ) : (
@@ -252,23 +146,16 @@ export function CaseEvidenceView({ caseId }: CaseEvidenceViewProps) {
                   <thead>
                     <tr className="border-b border-border-subtle bg-surface-2/60 text-micro font-semibold uppercase tracking-wider text-text-muted">
                       <th className="py-2.5 px-3">Document / Title</th>
-                      <th className="py-2.5 px-3">Source Agency</th>
-                      <th className="py-2.5 px-3">Tier</th>
+                      <th className="py-2.5 px-3">Uploaded By</th>
+                      <th className="py-2.5 px-3">Source</th>
                       <th className="py-2.5 px-3">SHA-256 Digest</th>
                       <th className="py-2.5 px-3">Status</th>
-                      <th className="py-2.5 px-3">Entities</th>
                       <th className="py-2.5 px-3 text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border-subtle/60">
                     {filteredEvidence.map((item) => (
-                      <EvidenceRow
-                        key={item.id}
-                        item={item}
-                        caseId={caseId}
-                        onScopeEntity={handleScopeEntity}
-                        currentEntityScope={entityScope}
-                      />
+                      <EvidenceRow key={item.evidence_id} item={item} caseId={caseId} onScopeEntity={handleScopeEntity} currentEntityScope={entityScope} />
                     ))}
                   </tbody>
                 </table>

@@ -1,5 +1,5 @@
-import { post } from "./real_client";
-import type { ApiResponse } from "./client";
+import { post, type ApiResponse } from "./real_client";
+
 
 export async function tamperEvidence(evidenceId: string): Promise<ApiResponse<void>> {
   const data = await post(`/demo/tamper/${evidenceId}`);

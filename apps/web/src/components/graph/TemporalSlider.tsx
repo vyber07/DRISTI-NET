@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 import { formatCompactTimestamp, formatDateOnly } from "@/lib/formatters";
 
 export function TemporalSlider({ className }: { className?: string }) {
-  const {
+  const { 
     minTimestamp,
     maxTimestamp,
     currentTimestamp,
@@ -30,7 +30,7 @@ export function TemporalSlider({ className }: { className?: string }) {
     if (!isPlaying) return;
 
     const interval = setInterval(() => {
-      const { minTimestamp, maxTimestamp, currentTimestamp } = useGraphStore.getState();
+      const {  minTimestamp, maxTimestamp, currentTimestamp } = useGraphStore.getState();
       const step = (maxTimestamp - minTimestamp) / 80;
       let next = currentTimestamp + step;
       if (next >= maxTimestamp) {
@@ -47,7 +47,7 @@ export function TemporalSlider({ className }: { className?: string }) {
     : 100;
 
   const activeEdgeCount = edges.filter((e) => {
-    const t = new Date(e.timestamp).getTime();
+    const t = new Date(e.firstSeen || e.lastSeen || 0).getTime();
     return isNaN(t) || t <= currentTimestamp;
   }).length;
 

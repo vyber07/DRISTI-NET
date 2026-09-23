@@ -15,7 +15,8 @@ human decisions. **It does not decide who is a criminal.** Everything in this re
 | ![Graph View](reports/screenshots/04-graph.png) | ![Review Workflow](reports/screenshots/03-review-candidate.png) |
 
 | Evidence Timeline | Evidence Quarantine |
-|---|---| | ![Quarantine](reports/screenshots/02-evidence-quarantine.png) |
+|---|---|
+| ![Timeline](reports/screenshots/06-timeline-historical.png) | ![Quarantine](reports/screenshots/02-evidence-quarantine.png) |
 
 ## What the prototype demonstrates (the one story)
 
@@ -232,10 +233,10 @@ Run from a clean clone of this repository on Linux, Python 3.11.6, Node 24.17:
 | deps | `python3 -m venv .venv && .venv/bin/pip install -r apps/api/requirements.txt` | ok |
 | data | `python3 data/synthetic/generate.py` | 14 people, 85 calls, 31 txns, 3 vehicles |
 | seed + ingest | `python3 -m apps.api.app.seed --ingest` | 8 files → HITL / GRAPH_PROJECTED |
-| backend | `pytest apps/api/app/tests` | 19 passed |
+| backend | `pytest apps/api/app/tests` | NOT RUN (psycopg2 missing in current env) |
 | web | `cd apps/web && npm install && npm run build` | 36 packages, build ok |
 | server | `uvicorn apps.api.app.main:app` → `/api/v1/health`, `/ready` | ok |
-| e2e | `pytest tests/e2e` (Playwright) | 5 passed |
+| e2e | `pytest tests/e2e` (Playwright) | NOT RUN (environment mismatch) |
 
 ### Production deployment verification (2026-09-18)
 

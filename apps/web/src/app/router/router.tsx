@@ -4,20 +4,12 @@ import { ProtectedRoute } from "@/components/auth/protected-route";
 import { LoginPage } from "@/features/auth/login-page";
 import { CommandCenterPage } from "@/features/command-center/command-center-page";
 import { CasesDirectoryPage } from "@/features/cases/cases-directory-page";
-import { WorkspaceSkeletonPreview } from "@/features/cases/workspace-skeleton-preview";
 import { CaseGraphPage } from "@/features/cases/case-graph-page";
 import { CaseWorkspacePage } from "@/features/cases/case-workspace-page";
 import { HITLWorkspacePage } from "@/features/hitl/hitl-workspace-page";
 import { ReportsPage } from "@/features/reports/reports-page";
 import { SettingsPage } from "@/features/settings/settings-page";
-import MapView from "@/legacy/MapView";
-import AnalysisPanel from "@/legacy/AnalysisPanel";
-import ReportPanel from "@/legacy/ReportPanel";
 
-/**
- * Route table updated for Phase 5 & SIH 2026 Evaluation:
- * Adds dedicated mock login screen with protected route gating.
- */
 export const router = createBrowserRouter([
   {
     path: "/login",
@@ -40,22 +32,13 @@ export const router = createBrowserRouter([
       { path: "cases/:caseId/timeline", element: <CaseWorkspacePage /> },
       { path: "cases/:caseId/evidence", element: <CaseWorkspacePage /> },
       { path: "cases/:caseId/notes", element: <CaseWorkspacePage /> },
-      { path: "cases/:caseId/map", element: <MapView caseId="TODO_EXTRACT_FROM_PARAMS" /> },
-      { path: "cases/:caseId/analysis", element: <AnalysisPanel caseId="TODO" /> },
-      { path: "cases/:caseId/report", element: <ReportPanel caseId="TODO" /> },
-
+      { path: "cases/:caseId/report", element: <ReportsPage /> },
+      { path: "cases/:caseId/reports", element: <ReportsPage /> },
       { path: "cases/:caseId/audit", element: <CaseWorkspacePage /> },
-      { path: "graph", element: <CaseGraphPage /> },
-      { path: "evidence", element: <Navigate to="/cases/CASE-0001/evidence" replace /> },
-      { path: "timeline", element: <Navigate to="/cases/CASE-0001/timeline" replace /> },
-      { path: "audit", element: <Navigate to="/cases/CASE-0001/audit" replace /> },
-      { path: "hitl", element: <HITLWorkspacePage /> },
-      { path: "hitl/:taskId", element: <HITLWorkspacePage /> },
-      { path: "reports", element: <ReportsPage /> },
+      { path: "cases/:caseId/hitl", element: <HITLWorkspacePage /> },
+      { path: "cases/:caseId/hitl/:taskId", element: <HITLWorkspacePage /> },
       { path: "settings", element: <SettingsPage /> },
-      { path: "cases/preview", element: <WorkspaceSkeletonPreview /> },
       { path: "*", element: <Navigate to="/command-center" replace /> },
     ],
   },
 ]);
-

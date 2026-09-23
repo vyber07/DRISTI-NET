@@ -43,7 +43,7 @@ function NavItemLink({ item, collapsed }: { item: NavItem; collapsed: boolean })
 }
 
 function Sidebar() {
-  const { sidebarCollapsed, toggleSidebar } = useUIStore();
+  const {  sidebarCollapsed, toggleSidebar } = useUIStore();
 
   return (
     <aside

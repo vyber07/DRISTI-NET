@@ -1,12 +1,22 @@
+import { useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import { useAuthStore } from "@/stores/authStore";
 
-/**
- * Root provider composition. Only TooltipProvider is needed in Phase 1.
- * Future phases add auth/session hydration, query client, etc. here rather
- * than scattering providers across feature entry points.
- */
 function AppProviders({ children }: { children: ReactNode }) {
+  const { restoreSession } = useAuthStore();
+  const [isRestoring, setIsRestoring] = useState(true);
+
+  useEffect(() => {
+    restoreSession().finally(() => {
+      setIsRestoring(false);
+    });
+  }, [restoreSession]);
+
+  if (isRestoring) {
+    return <div className="min-h-screen bg-bg-base flex items-center justify-center text-sm font-mono text-text-muted">Authenticating...</div>;
+  }
+
   return <TooltipProvider delayDuration={200}>{children}</TooltipProvider>;
 }
 

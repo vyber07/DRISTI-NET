@@ -13,7 +13,7 @@ const RELATIONSHIP_TYPES: RelationshipType[] = [
 ];
 
 export function RelationshipTypeFilter() {
-  const {
+  const { 
     activeRelationshipTypes,
     toggleRelationshipType,
     selectAllRelationshipTypes,

@@ -20,9 +20,7 @@ export function GraphFilterPanel() {
     isFilterPanelOpen,
     setFilterPanelOpen,
     resetFilters,
-    onlyContradictions,
-    setOnlyContradictions,
-    activeTiers,
+        activeTiers,
     activeEntityTypes,
     activeRelationshipTypes,
     minConfidence,
@@ -37,8 +35,7 @@ export function GraphFilterPanel() {
   if (activeTiers.size < 5) activeFilterCount++;
   if (activeEntityTypes.size < 6) activeFilterCount++;
   if (activeRelationshipTypes.size < 6) activeFilterCount++;
-  if (onlyContradictions) activeFilterCount++;
-  if (minConfidence > 0) activeFilterCount++;
+    if (minConfidence > 0) activeFilterCount++;
 
   return (
     <aside
@@ -91,32 +88,20 @@ export function GraphFilterPanel() {
             htmlFor="filter-contradictions-only"
             className={cn(
               "flex items-center justify-between p-2 rounded border cursor-pointer transition-colors",
-              onlyContradictions
-                ? "bg-critical-red/10 border-critical-red/60 text-critical-red"
-                : "bg-surface-2/40 border-border-subtle hover:bg-surface-2 text-text-secondary",
+              
             )}
           >
             <div className="flex items-center gap-2">
               <AlertTriangle
                 className={cn(
                   "h-3.5 w-3.5",
-                  onlyContradictions
-                    ? "text-critical-red"
-                    : "text-amber",
+                  
                 )}
               />
               <span className="font-medium text-xs">
                 Conflicting Clues Only
               </span>
             </div>
-            <Checkbox
-              id="filter-contradictions-only"
-              checked={onlyContradictions}
-              onCheckedChange={(checked) =>
-                setOnlyContradictions(checked === true)
-              }
-              aria-label="Filter to contradictory relationships only"
-            />
           </label>
         </div>
 

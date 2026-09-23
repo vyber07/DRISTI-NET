@@ -15,16 +15,14 @@ export function GraphCanvas({ className }: GraphCanvasProps) {
   const engineRef = useRef<GraphEngine | null>(null);
   const prevNodesCountRef = useRef(0);
 
-  const {
+  const { 
     nodes,
     edges,
     selectedNodeId,
     selectedEdgeId,
-    activeTiers,
     activeEntityTypes,
     activeRelationshipTypes,
     onlyContradictions,
-    minConfidence,
     dateRange,
     searchTerm,
     currentTimestamp,
@@ -75,11 +73,9 @@ export function GraphCanvas({ className }: GraphCanvasProps) {
   useEffect(() => {
     if (engineRef.current) {
       engineRef.current.setFilters({
-        activeTiers,
         activeEntityTypes,
         activeRelationshipTypes,
         onlyContradictions,
-        minConfidence,
         dateRange,
         searchTerm,
         currentTimestamp,
@@ -87,11 +83,9 @@ export function GraphCanvas({ className }: GraphCanvasProps) {
       });
     }
   }, [
-    activeTiers,
     activeEntityTypes,
     activeRelationshipTypes,
     onlyContradictions,
-    minConfidence,
     dateRange,
     searchTerm,
     currentTimestamp,

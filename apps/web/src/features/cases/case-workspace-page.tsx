@@ -1,30 +1,19 @@
-import { useState, useEffect } from "react";
-import { useParams, useSearchParams, useLocation, Link, useNavigate } from "react-router-dom";
-import {
-  Layers,
-  Network,
-  Clock,
-  FileCheck2,
-  FileText,
-  ShieldCheck,
-  CheckSquare,
-  Lock,
-  Database,
-  Radio,
-} from "lucide-react";
+import { useEffect, useState } from "react";
+import { useParams, useSearchParams, useLocation, useNavigate, Link } from "react-router-dom";
+import { Layers, Network, FileCheck2, Clock, CheckSquare, ShieldCheck, Lock, Radio, Database, ArrowRight } from "lucide-react";
 import { InvestigationShell } from "@/layouts/InvestigationShell/investigation-shell";
 import { CaseHeader } from "./components/case-header";
 import { CaseOverviewView } from "./components/case-overview-view";
-import { CaseDetailSidebar } from "./components/case-detail-sidebar";
-import { CasePlaceholderView } from "./components/case-placeholder-view";
-import { CaseTimeline } from "./timeline/case-timeline";
 import { CaseEvidenceView } from "./evidence/case-evidence-view";
+import { CaseTimeline } from "./timeline/case-timeline";
 import { CaseAuditView } from "./audit/case-audit-view";
+import { CaseDetailSidebar } from "./components/case-detail-sidebar";
 import { ProvenanceViewer } from "@/components/evidence/ProvenanceViewer";
-import { getCaseDetails } from "@/services/api/casesApi";
 import { useUIStore } from "@/stores/uiStore";
+import { getCaseDetails } from "@/services/api/casesApi";
 import { cn } from "@/lib/utils";
 import type { CaseDetail } from "@/types/case";
+import { Button } from "@/components/ui/button";
 
 const CASE_NAV_TABS = [
   { id: "overview", label: "Case Overview", icon: Layers },
@@ -35,8 +24,27 @@ const CASE_NAV_TABS = [
   { id: "audit", label: "Audit Trail", icon: ShieldCheck },
 ];
 
+function CasePlaceholderView({ tabId, caseId, onBackToOverview }: { tabId: string, caseId: string, onBackToOverview: () => void }) {
+  return (
+    <div className="flex h-full flex-col items-center justify-center p-8 bg-surface-1">
+      <div className="flex h-16 w-16 items-center justify-center rounded-full bg-surface-2 border border-border-subtle mb-4">
+        <Layers className="h-8 w-8 text-text-muted" />
+      </div>
+      <h3 className="text-base font-semibold text-text-primary">Feature currently unavailable in UI</h3>
+      <p className="mt-2 text-sm text-text-secondary text-center max-w-sm leading-relaxed">
+        The "{tabId}" view is pending full backend contract mapping. 
+        Case: <span className="font-mono text-electric-blue">{caseId}</span>
+      </p>
+      <Button variant="secondary" onClick={onBackToOverview} className="mt-6 text-xs gap-1.5 shadow-sm">
+        <ArrowRight className="h-3.5 w-3.5 rotate-180" />
+        Return to Overview
+      </Button>
+    </div>
+  );
+}
+
 export function CaseWorkspacePage() {
-  const { caseId = "DR-2026-00421" } = useParams();
+  const {  caseId = "CASE-0001" } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -46,8 +54,6 @@ export function CaseWorkspacePage() {
     activeTab = "timeline";
   } else if (location.pathname.endsWith("/evidence")) {
     activeTab = "evidence";
-  } else if (location.pathname.endsWith("/notes")) {
-    activeTab = "notes";
   } else if (location.pathname.endsWith("/audit")) {
     activeTab = "audit";
   } else if (location.pathname.endsWith("/overview")) {
@@ -58,11 +64,12 @@ export function CaseWorkspacePage() {
 
   const [caseData, setCaseData] = useState<CaseDetail | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const { caseInfoPanelExpanded, toggleCaseInfoPanel } = useUIStore();
+  const {  caseInfoPanelExpanded, toggleCaseInfoPanel } = useUIStore();
 
   useEffect(() => {
     let isMounted = true;
     async function load() {
+      if (!caseId) return;
       setIsLoading(true);
       try {
         const res = await getCaseDetails(caseId);
@@ -94,12 +101,8 @@ export function CaseWorkspacePage() {
       navigate(`/cases/${caseId}/evidence`);
       return;
     }
-    if (tabId === "notes") {
-      navigate(`/cases/${caseId}/notes`);
-      return;
-    }
     if (tabId === "hitl") {
-      navigate(`/hitl?caseId=${caseId}`);
+      navigate(`/cases/${caseId}/hitl`);
       return;
     }
     if (tabId === "audit") {
@@ -116,11 +119,10 @@ export function CaseWorkspacePage() {
   if (isLoading) { return <div className="flex h-screen items-center justify-center">Loading Workspace...</div>; }
   if (!caseData) { return <div className="p-8 text-center text-text-muted">Failed to load case data.</div>; }
 
-
   return (
     <>
       <InvestigationShell
-        header={<CaseHeader caseData={caseData!} activeTab={activeTab} />}
+        header={<CaseHeader caseData={caseData} activeTab={activeTab} />}
         caseNav={
           <nav className="p-2 min-w-0">
             <div className="px-2.5 py-1 text-micro font-semibold uppercase tracking-wider text-text-muted truncate">
@@ -175,41 +177,37 @@ export function CaseWorkspacePage() {
           </nav>
         }
         main={
-          isLoading ? (
-            <div className="flex h-full items-center justify-center bg-background text-text-secondary text-sm">
-              Loading Case Workspace Docket...
-            </div>
-          ) : activeTab === "overview" ? (
-            <CaseOverviewView caseData={caseData!} />
+          activeTab === "overview" ? (
+            <CaseOverviewView caseData={caseData} />
           ) : activeTab === "timeline" ? (
             <CaseTimeline caseId={caseId} />
           ) : activeTab === "evidence" ? (
-            <CaseEvidenceView caseId={caseId} />
+            <CaseEvidenceView  />
           ) : activeTab === "audit" ? (
             <CaseAuditView caseId={caseId} />
           ) : (
-            <CasePlaceholderView
+            <CasePlaceholderView caseId={caseId}
               tabId={activeTab}
-              caseId={caseId}
+              
               onBackToOverview={() => handleTabChange("overview")}
             />
           )
         }
         detailPanel={
           <CaseDetailSidebar
-            caseData={caseData!}
+            caseData={caseData}
             isCollapsed={!caseInfoPanelExpanded}
             onToggleCollapse={toggleCaseInfoPanel}
           />
         }
         isDetailPanelCollapsed={!caseInfoPanelExpanded}
         footer={
-          caseData && <div className="flex h-10 items-center justify-between px-4 text-xs text-text-muted min-w-0 overflow-hidden">
+          <div className="flex h-10 items-center justify-between px-4 text-xs text-text-muted min-w-0 overflow-hidden">
             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
               <div className="flex items-center gap-1 text-text-secondary shrink-0">
                 <Lock className="h-3.5 w-3.5 text-amber-400 shrink-0" />
                 <span className="font-mono text-micro font-semibold uppercase">
-                  {caseData!.classification.replace(/_/g, " ")}
+                  {caseData.classification.replace(/_/g, " ")}
                 </span>
               </div>
 
@@ -223,21 +221,20 @@ export function CaseWorkspacePage() {
               <span className="text-border-strong hidden xl:inline shrink-0">|</span>
 
               <span className="hidden xl:inline text-micro truncate">
-                Session: {caseData!.leadInvestigator.badgeNumber} ({caseData!.leadInvestigator.name})
+                Owner: {caseData.owner_id}
               </span>
             </div>
 
             <div className="flex items-center gap-3 shrink-0">
               <div className="flex items-center gap-1 font-mono text-micro text-text-muted">
                 <Database className="h-3 w-3 text-border-strong shrink-0" />
-                <span className="hidden sm:inline">DRISTI-NET Local Mock Mode</span>
+                <span className="hidden sm:inline">Secure Integration</span>
               </div>
             </div>
           </div>
         }
       />
 
-      {/* Tamper-Evident Provenance Subsystem */}
       <ProvenanceViewer />
     </>
   );

@@ -1,55 +1,28 @@
-import type { EvidenceTier } from "@/constants/evidenceTiers";
-
-export type CaseStatus = "ACTIVE" | "UNDER_REVIEW" | "CLOSED" | "ARCHIVED";
-
-export type CasePriority = "CRITICAL" | "HIGH" | "MEDIUM" | "LOW";
-
-export type SecurityClassification =
-  | "LAW_ENFORCEMENT_SENSITIVE"
-  | "RESTRICTED"
-  | "CONFIDENTIAL"
-  | "SECRET"
-  | "TOP_SECRET";
-
 export interface InvestigatorInfo {
-  badgeNumber: string;
+  username: string;
   name: string;
   role: string;
-  contact?: string;
 }
 
 export interface CaseStats {
-  totalEntities: number;
-  totalRelationships: number;
   totalEvidence: number;
-  contradictionsCount: number;
-  highestTier: EvidenceTier;
-  activeAlerts?: number;
-  notesCount?: number;
   pendingTasks?: number;
 }
 
 export interface CaseSummary {
   id: string;
-  caseNumber: string;
   title: string;
-  description: string;
-  status: CaseStatus;
-  priority: CasePriority;
-  classification: SecurityClassification;
+  classification: string;
   jurisdiction: string;
-  leadInvestigator: InvestigatorInfo;
-  registeredDate: string;
-  lastUpdated: string;
-  stats: CaseStats;
+  purpose: string;
+  authority_reference: string;
+  owner_id: string;
+  opened_at: string;
+  evidence_count: number;
+  pending_reviews: number;
+  assigned: string[];
 }
 
 export interface CaseDetail extends CaseSummary {
-  firNumber: string;
-  policeStation: string;
-  incidentDate: string;
-  actsAndSections: string[];
-  assignedTeam: InvestigatorInfo[];
-  summaryNarrative: string;
-  tags: string[];
+  // same fields, just explicit for detail view in case it expands later
 }
