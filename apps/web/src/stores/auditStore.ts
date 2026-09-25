@@ -39,7 +39,7 @@ export interface AuditState {
 
 export const useAuditStore = create<AuditState>((set, get) => ({
   logs: [],
-  caseId: "DR-2026-00421",
+  caseId: "",
   isLoading: false,
   error: null,
 
@@ -53,7 +53,7 @@ export const useAuditStore = create<AuditState>((set, get) => ({
   selectedLog: null,
   isDrawerOpen: false,
 
-  loadLogs: async (caseId = "DR-2026-00421") => {
+  loadLogs: async (caseId: string) => {
     set({ isLoading: true, error: null, caseId });
     try {
       const res = await listAuditLogs(caseId);

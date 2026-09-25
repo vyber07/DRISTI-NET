@@ -106,7 +106,7 @@ export function HITLWorkspacePage() {
             </div>
             <p className="text-micro font-mono text-text-muted mt-0.5">
               Arbitration Band: 0.60–0.95 Confidence &bull; Ground Truth Admissibility Verification &bull; Case:{" "}
-              {caseIdFilter || "DR-2026-00421"}
+              {caseIdFilter}
             </p>
           </div>
         </div>
@@ -125,13 +125,13 @@ export function HITLWorkspacePage() {
             </Button>
           ) : (
             <div className="flex items-center gap-2">
-              <Link to="/cases/DR-2026-00421/graph">
+              <Link to={`/cases/${caseIdFilter}/graph`}>
                 <Button variant="ghost" size="sm" className="text-xs font-mono gap-1 text-text-secondary">
                   <Waypoints className="h-3.5 w-3.5 text-electric-blue-soft" />
                   <span>Graph View</span>
                 </Button>
               </Link>
-              <Link to="/cases/DR-2026-00421">
+              <Link to={`/cases/${caseIdFilter}`}>
                 <Button variant="ghost" size="sm" className="text-xs font-mono gap-1 text-text-secondary">
                   <FileSpreadsheet className="h-3.5 w-3.5 text-verified-emerald" />
                   <span>Case Overview</span>

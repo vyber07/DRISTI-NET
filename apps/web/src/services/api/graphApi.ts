@@ -48,7 +48,7 @@ export async function getCaseGraph(caseId: string): Promise<ApiResponse<CaseGrap
 
   const data = {
     caseId: rawData.case_id || caseId,
-    caseTitle: `Case ${caseId}`,
+    caseTitle: rawData.case_title || `Case ${caseId}`,
     nodes: mappedNodes,
     edges: mappedEdges,
     stats: {
@@ -59,3 +59,16 @@ export async function getCaseGraph(caseId: string): Promise<ApiResponse<CaseGrap
 
   return { data, meta: { requestId: "req", timestamp: new Date().toISOString(), durationMs: 0, securityClassification: "REAL" } };
 }
+
+
+export async function getEdgeDetails(caseId: string, edgeId: string): Promise<ApiResponse<any>> {
+  // Edge ID format: source-target-rel_type-index
+  const parts = edgeId.split('-');
+  const source = parts[0];
+  const target = parts[1];
+  const rel_type = parts[2];
+  
+  const data = await get(`/cases/${caseId}/edge?source=${source}&target=${target}&rel_type=${rel_type}`);
+  return { data, meta: { requestId: "req", timestamp: new Date().toISOString(), durationMs: 0, securityClassification: "REAL" } };
+}
+

@@ -81,6 +81,42 @@ def decide(candidate_id: str, body: DecisionIn, request: Request, user: User = D
     return candidate_out(db, m)
 
 
+@router.post("/candidates/{candidate_id}/assign")
+def assign_candidate(candidate_id: str, request: Request, user: User = Depends(require_roles("REVIEWER", "INVESTIGATOR", "ADMIN")), db: Session = Depends(get_db)):
+    """Assign a candidate to the current user."""
+    m = db.get(MatchCandidate, candidate_id)
+    if m is None:
+        raise HTTPException(404, "unknown candidate")
+    
+    import datetime
+    m.assigned_to = user.user_id
+    m.assigned_at = datetime.datetime.now(datetime.UTC).isoformat()
+    record_audit(db, request.state.trace_id, user.user_id, "HITL_TASK_ASSIGNED", "MATCH_CANDIDATE", candidate_id, m.case_id)
+    db.commit()
+    return candidate_out(m)
+
+@router.get("/cases/{case_id}/stats")
+def hitl_stats(case_id: str, request: Request, user: User = Depends(require_roles("REVIEWER", "INVESTIGATOR", "ADMIN")), db: Session = Depends(get_db)):
+    """Returns HITL statistics for a case."""
+    cands = db.scalars(select(MatchCandidate).where(MatchCandidate.case_id == case_id)).all()
+    total = len(cands)
+    pending = sum(1 for c in cands if c.state == "REVIEW_REQUIRED")
+    resolved = sum(1 for c in cands if c.state in ("APPROVE", "REJECT"))
+    contradictions = sum(1 for c in cands if c.conflicts)
+    active_analysts = len(set(c.assigned_to for c in cands if getattr(c, "assigned_to", None) is not None))
+    in_review = sum(1 for c in cands if c.state == "REVIEW_REQUIRED" and getattr(c, "assigned_to", None) is not None)
+    
+    return {
+        "totalTasks": total,
+        "pendingCount": pending,
+        "criticalCount": contradictions,
+        "identityMergesCount": total,
+        "resolvedCount": resolved,
+        "activeAnalysts": active_analysts,
+        "inReviewCount": in_review,
+        "contradictionsCount": contradictions
+    }
+
 @router.post("/claims/{claim_id}/decision")
 def decide_claim(claim_id: str, body: DecisionIn, request: Request, user: User = Depends(require_roles("REVIEWER", "INVESTIGATOR", "ADMIN")), db: Session = Depends(get_db)):
     """Decisions on individual claims (e.g. resolving or flagging a contradiction, marking a claim STALE)."""

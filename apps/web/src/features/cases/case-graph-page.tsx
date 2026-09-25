@@ -35,7 +35,7 @@ const CASE_NAV_ITEMS = [
 ];
 
 export function CaseGraphPage() {
-  const {  caseId = "DR-2026-00421" } = useParams();
+  const {  caseId = "" } = useParams();
   const { 
     
     selectedNodeId,

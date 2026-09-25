@@ -9,7 +9,7 @@ import type {
 } from "@/types/entity";
 import type { EvidenceTier } from "@/constants/evidenceTiers";
 import { getEntityDetails } from "@/services/api/entityApi";
-import { getCaseGraph } from "@/services/api/graphApi";
+import { getCaseGraph, getEdgeDetails } from "@/services/api/graphApi";
 
 interface GraphState {
   caseId: string;
@@ -96,8 +96,8 @@ const INITIAL_MIN_TIME = new Date("2026-02-10T00:00:00Z").getTime();
 const INITIAL_MAX_TIME = new Date("2026-02-25T00:00:00Z").getTime();
 
 export const useGraphStore = create<GraphState>((set, get) => ({
-  caseId: "DR-2026-00421",
-  caseTitle: "Interstate Extortion Syndicate",
+  caseId: "",
+  caseTitle: "",
   nodes: [],
   edges: [],
   selectedNodeId: null,
