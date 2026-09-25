@@ -33,22 +33,6 @@ class DocumentExtractor(StructuredExtractor):
                 if doc_date is None and "Date:" in line:
                     dm = self.DATE_RE.search(line)
                     doc_date = dm.group(1) if dm else None
-                # organisations
-                for m in self.ORG_SUFFIX_RE.finditer(line):
-                    org = self.entity("ORGANIZATION", norm_text(m.group(1)), m.group(1))
-                    self.claim("MENTION", org, original=m.group(1), normalized=org.canonical, method="regex-ner",
-                               confidence=0.85, observed_time=doc_date, locator=loc(m), snippet=stripped)
-                # vehicle ownership asserted by the document → ATTRIBUTE claim (may contradict a registry).
-                # The sentence may wrap, so match against this line joined with the next one.
-                joined = line + " " + (lines[lno] if lno < len(lines) else "")
-                for m in self.OWNER_RE.finditer(re.sub(r"\s+", " ", joined)):
-                    if "registration" not in line:
-                        continue
-                    veh = self.entity("VEHICLE", norm_reg(m.group(1)), m.group(1))
-                    self.claim("ATTRIBUTE", veh, attribute="owner", original=m.group(2), normalized=norm_name(m.group(2)),
-                               method="regex-ner", confidence=0.7, observed_time=doc_date,
-                               locator={"page": pno, "line": lno, "line_end": lno + 1, "char_offset": offset + line.find("registration")},
-                               snippet=re.sub(r"\s+", " ", joined).strip())
                 # regex passes for structural identifiers only: phone, account, vehicle reg
                 # We intentionally removed PERSON/ORGANIZATION regex (e.g. NAME_RE, ORG_SUFFIX_RE)
                 # to strictly rely on real NLP (IndicBERT) models as per architectural instruction.
@@ -90,7 +74,7 @@ class DocumentExtractor(StructuredExtractor):
                     self.claim(
                         "MENTION", ent,
                         original=nc.original_text, normalized=nc.normalized_text,
-                        method="indic-bert-ner", method_version=nc.method_version,
+                        method="indic-bert-ner",
                         confidence=nc.confidence,
                         locator={**nc.locator, "engine": "indic-bert-ner"},
                         snippet=nc.original_text,

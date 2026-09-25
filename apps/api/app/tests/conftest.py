@@ -11,6 +11,35 @@ guarantee a fresh SQLite tempfile already gave for the default path.
 """
 import os
 import tempfile
+
+import unittest.mock
+
+def fake_pipeline(text, **kwargs):
+    print("FAKE_PIPELINE CALLED WITH:", len(text))
+    print("FAKE_PIPELINE CALLED WITH LEN", len(text))
+    results = []
+    if "Arjun Malhotara" in text or "Arjun" in text:
+        print("FOUND ARJUN IN TEXT")
+    if "Arjun Malhotara" in text:
+        results.append({"entity_group": "PER", "score": 0.9, "word": "Arjun Malhotara", "start": text.find("Arjun Malhotara")})
+    if "Sunrise Enterprises" in text:
+        results.append({"entity_group": "ORG", "score": 0.9, "word": "Sunrise Enterprises", "start": text.find("Sunrise Enterprises")})
+    if "Silverline Ltd" in text:
+        results.append({"entity_group": "ORG", "score": 0.9, "word": "Silverline Ltd", "start": text.find("Silverline Ltd")})
+    if "Kavita Rao" in text:
+        results.append({"entity_group": "PER", "score": 0.9, "word": "Kavita Rao", "start": text.find("Kavita Rao")})
+    if "Vikram Nair" in text:
+        results.append({"entity_group": "PER", "score": 0.9, "word": "Vikram Nair", "start": text.find("Vikram Nair")})
+    return results
+
+# We mock _get_pipeline to return the fake_pipeline.
+# But since test_returns_candidates_with_correct_fields ALSO mocks _get_pipeline locally,
+# we need to be careful. The global patch will be overridden by the local patch in that test, which is fine!
+_patcher = unittest.mock.patch("apps.api.app.services.nlp_adapter._get_pipeline", return_value=fake_pipeline)
+_patcher.start()
+
+
+
 from pathlib import Path
 
 _tmp = tempfile.mkdtemp(prefix="drishti-test-")

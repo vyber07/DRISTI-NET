@@ -97,17 +97,7 @@ class StructuredExtractor(ExtractorBase):
     PHONE_RE = re.compile(r"\+91[\s-]?\d{5}[\s-]?\d{5}")
     ACCOUNT_RE = re.compile(r"ACC-[A-Z]+-\d{4}")
     REG_RE = re.compile(r"\b[A-Z]{2}\d{2} [A-Z]{2} \d{4}\b")
-    NAME_RE = re.compile(r"\b([A-Z][a-z]+ [A-Z][a-z]+)\b")
-    ORG_SUFFIX_RE = re.compile(
-        r"\b([A-Z][A-Za-z&]+(?: [A-Z][A-Za-z&]+)* "
-        r"(?:Traders|Logistics|Freight|Enterprises|Industries|Corporation|Company|Ltd|Limited|"
-        r"Pvt Ltd|LLC|Inc|Group|Bank|Foundation|Association|Society|Trust))\b"
-    )
-    OWNER_RE = re.compile(
-        r"registration ([A-Z]{2}\d{2} [A-Z]{2} \d{4}),?\s*"
-        r"(?:said to belong to|belonging to|belongs to|owned by|registered to|registered in the name of)\s+"
-        r"([A-Z][a-z]+ [A-Z][a-z]+)"
-    )
+    
+
     DATE_RE = re.compile(r"\b(20\d{2}-\d{2}-\d{2})\b")
     STOP_NAMES = {"Demo District", "First Information", "Case Ref", "River Bridge", "Junction Square", "Summary of", "Persons named", "Organisations named", "Police (FICTIONAL)"}
-
