@@ -1,6 +1,6 @@
 # Status against the blueprint (`docs/context.md` §3 vocabulary)
 
-Last audited: 2026-09-19 against `main` (see also `PROJECT_STATUS.md` for day-by-day and in-progress view,
+Last audited: 2026-09-25 against `main` (see also `PROJECT_STATUS.md` for day-by-day and in-progress view,
 and `TASK_BOARD.md` for the live-verification methodology behind each item marked Demonstrated below).
 "Demonstrated" means a test in `apps/api/app/tests` or `tests/e2e` exercises it.
 
