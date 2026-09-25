@@ -142,40 +142,6 @@ separately licensed GDS plugin.
 
 Dev loop: `make api` (auto-reload) + `make web` (Vite on :5173 proxies `/api` to :8000).
 
-### Hosted demo (Antideploy)
-
-A demo-mode instance is deployed at <https://dristi-net.antideploy.com> (SQLite + in-process graph +
-`testgate` scanner — no Postgres/Neo4j/ClamAV in that container). **Note the hyphen** — the provisioned
-subdomain is `dristi-net`, not `dristinet`; this doc previously listed the wrong (unhyphenated) host,
-which silently 404s with "Nothing deployed here" rather than erroring loudly, and cost real time to
-notice — see `TASK_BOARD.md` Phase 22. `.antideploy.json` holds only the application id (no secret; safe
-to commit). Also unlike this doc's older claim, the platform **reuses the same database across
-redeploys** (confirmed live 2026-09-13: a schema change without a matching migration path broke a
-redeploy against the already-seeded database) — plan schema changes accordingly, the same discipline
-`apps/api/migrations` already uses for the real Postgres path. To redeploy:
-
-```bash
-APP_ID=$(python3 -c 'import json; print(json.load(open(".antideploy.json"))["applicationId"])')
-TOKEN=$(python3 -c 'import json, os; print(json.load(open(os.path.expanduser("~/.antideploy/config.json")))["token"])')
-tar czf - --exclude=.git --exclude=node_modules --exclude=.venv --exclude=__pycache__ \
-  --exclude=storage --exclude=.env --exclude=.claude --exclude=releases . \
-  | curl -sS -X POST "https://antideploy.com/api/v1/deploy?applicationId=$APP_ID" \
-    -H "authorization: Bearer $TOKEN" -F "archive=@-"
-# then poll the returned `watch` URL until status is succeeded or failed
-```
-
-Send the whole repository: Antideploy's build is multi-stage (a Node stage builds `apps/web`, then the
-Python stage runs the API), so stripping `apps/web`'s source breaks its generated Dockerfile. The account
-token lives in `~/.antideploy/config.json` (mode 0600) — never in the repo.
-
-**Auto-deploy on push**: `.github/workflows/deploy-antideploy.yml` redeploys automatically on every push
-to `main` (and can be triggered by hand from the Actions tab). It needs a repository secret named
-`ANTIDEPLOY_TOKEN` — a **project-scoped deploy key** (prefix `ad_`) for this one application, not the
-account token above (a project key's scope is exactly this application, so a leaked CI secret costs at
-most this app, never the whole account). Get one from the dashboard at
-<https://antideploy.com/app/2f53ae0d-a3b9-430e-a1b9-a80e69f9b519>, then add it under
-**Settings → Secrets and variables → Actions → New repository secret**. Until that secret is set the
-workflow fails loudly with instructions rather than silently skipping the deploy.
 
 ## Repository layout
 
