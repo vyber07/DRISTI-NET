@@ -34,6 +34,8 @@ services:
       DRISHTI_S3_ACCESS_KEY: drishti
       DRISHTI_S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in .env}
       DRISHTI_STORAGE_ROOT: /data
+      DRISHTI_KAFKA_BROKERS: kafka:9092
+      DRISHTI_BESU_ENDPOINT: http://besu:8545
     volumes:
     - drishti-data:/data
     depends_on:
@@ -47,6 +49,10 @@ services:
         condition: service_healthy
       migrations:
         condition: service_completed_successfully
+      kafka:
+        condition: service_healthy
+      besu:
+        condition: service_healthy
   postgres:
     image: postgres:16
     restart: unless-stopped
@@ -136,6 +142,8 @@ services:
       DRISHTI_S3_ACCESS_KEY: drishti
       DRISHTI_S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in .env}
       DRISHTI_STORAGE_ROOT: /data
+      DRISHTI_KAFKA_BROKERS: kafka:9092
+      DRISHTI_BESU_ENDPOINT: http://besu:8545
     volumes:
     - drishti-data:/data
     depends_on:
@@ -145,8 +153,55 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+      kafka:
+        condition: service_healthy
+      besu:
+        condition: service_healthy
+  kafka:
+    image: bitnami/kafka:3.5
+    restart: unless-stopped
+    environment:
+      KAFKA_ENABLE_KRAFT: 'yes'
+      KAFKA_CFG_NODE_ID: '1'
+      KAFKA_CFG_PROCESS_ROLES: broker,controller
+      KAFKA_CFG_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+      KAFKA_CFG_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_CFG_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      KAFKA_CFG_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_CFG_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+    volumes:
+    - drishti-kafkadata:/bitnami/kafka
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - kafka-broker-api-versions.sh --bootstrap-server localhost:9092 || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 10
+  besu:
+    image: hyperledger/besu:24.1
+    restart: unless-stopped
+    command:
+    - --network=dev
+    - --rpc-http-enabled
+    - --rpc-http-host=0.0.0.0
+    - --rpc-http-api=ETH,NET,WEB3,DEBUG,MINER
+    - --host-allowlist=*
+    expose:
+    - '8545'
+    volumes:
+    - drishti-besudata:/opt/besu/data
+    healthcheck:
+      test:
+      - CMD-SHELL
+      - wget -q -O - http://localhost:8545 || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 10
 volumes:
   drishti-data: null
   drishti-pgdata: null
   drishti-neo4jdata: null
   drishti-miniodata: null
+  drishti-kafkadata: null
+  drishti-besudata: null

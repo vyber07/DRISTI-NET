@@ -43,13 +43,7 @@ const DEFAULT_FILTER: HITLFilter = {
 };
 
 
-async function getHITLStats(caseId?: string) {
-  return { data: { totalTasks: 0, pendingCount: 0, criticalCount: 0, identityMergesCount: 0, resolvedCount: 0, activeAnalysts: 0, inReviewCount: 0, contradictionsCount: 0 } };
-}
-
-async function assignTask(taskId: string, analyst: any) {
-  return { data: null };
-}
+import { getHITLStats, assignTask } from "@/services/api/hitlApi";
 
 export const useHITLStore = create<HITLState>((set, get) => ({
   tasks: [],
@@ -178,7 +172,7 @@ export const useHITLStore = create<HITLState>((set, get) => ({
         });
       }
     } catch {
-      // Ignore in mock
+      console.error('Failed to refresh stats')
     }
   },
 
@@ -189,7 +183,7 @@ export const useHITLStore = create<HITLState>((set, get) => ({
         set({ stats: statsRes.data });
       }
     } catch {
-      // Ignore in mock
+      console.error('Failed to refresh stats')
     }
   },
 }));

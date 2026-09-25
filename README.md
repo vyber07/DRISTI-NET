@@ -28,7 +28,7 @@ fictional case → synthetic upload → validated + quarantined → SHA-256 mani
 → human-reviewed report export (JSON / HTML)
 ```
 
-Every step above has an automated test (`make test`, 19 tests) and a UI screen.
+Every step above has an automated test (`make test`, 109 tests) and a UI screen.
 
 ## Production deployment (port 80, no port in URL)
 
@@ -218,7 +218,7 @@ a SHA-256 hash is an integrity reference, not a chain-of-custody certificate. Se
 ## Tests
 
 ```bash
-make test      # pytest: security gate (authz, scan gate, hash, masking, audit) + full workflow  (19 tests)
+make test      # pytest: security gate (authz, scan gate, hash, masking, audit) + full workflow  (109 tests)
 make e2e       # Playwright walkthrough of the demo script against a running server on :8000    (5 tests)
                #   one-time: pip install playwright && playwright install chromium
                #   (on hosts without root, Chromium's shared libs can come from conda-forge; set LD_LIBRARY_PATH)
@@ -244,7 +244,7 @@ Full Docker Compose stack on Linux, Docker 27, nginx 1.27:
 
 | step | result |
 |---|---|
-| `docker compose up -d` | all 7 containers healthy (nginx, api, postgres, neo4j, redis, minio, clamav) |
+| `docker compose up -d` | all 10 containers healthy (nginx, api, postgres, neo4j, redis, minio, clamav) |
 | `curl http://<ip>/api/v1/health` | `{"status":"ok","database":"postgresql+psycopg2","graph_store":"neo4j"}` |
 | `curl http://<ip>/` | React SPA — `DRISHTI-NET · prototype` |
 | `curl http://<ip>/docs` | HTTP 200 — OpenAPI docs |

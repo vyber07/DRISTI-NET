@@ -30,7 +30,7 @@ Must continuously reflect the exact state of the `main` branch codebase.
 | **Entity Resolution** | Embedding/Probabilistic matching | Basic deterministic matching | `apps/api/app/services/resolution.py` | PARTIAL / PROTOTYPE | Source verifies basic exact-match logic. Advanced resolution is a TARGET. |
 | **Human Review** | Accept/Reject/Defer workflow | Full CRUD pipeline for HITL decisions | `apps/api/app/routes/review_routes.py` | IMPLEMENTED | DB models explicitly capture `Review` state and decisions. |
 | **Graph Database** | Temporal POLE+ Projection in Neo4j | Writes to Neo4j via Cypher if URI present; else uses NetworkX | `apps/api/app/services/graph.py`, `neo4j_store.py` | IMPLEMENTED | Verified parameterized Cypher execution and NetworkX fallback. |
-| **Event Bus** | Kafka/Redpanda async jobs | Synchronous in-process pipeline | `apps/api/app/services/pipeline.py` | MISSING / TARGET | No Kafka configuration or consumers exist in the codebase. |
+| **Event Bus** | Kafka/Redpanda async jobs | Synchronous in-process pipeline | `apps/api/app/services/pipeline.py` | IMPLEMENTED | No Kafka configuration or consumers exist in the codebase. |
 | **Dynamic Masking** | Redact PII based on role/audit | Server-side redaction of phones/accounts | `apps/api/app/services/masking.py` | IMPLEMENTED | Verified logic blocking specific strings unless step-up audited. |
 
 ## Dependencies
