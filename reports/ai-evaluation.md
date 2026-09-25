@@ -9,25 +9,25 @@
 ## 1. Document Extraction (OCR)
 | Metric | Score | Target (P1) | Status |
 |--------|-------|-------------|--------|
-| CER (Character Error Rate) | 4.2% | < 5.0% | 🟢 Pass |
-| WER (Word Error Rate) | 8.1% | < 10.0% | 🟢 Pass |
-| Bounding Box IoU | 0.88 | > 0.85 | 🟢 Pass |
+| CER (Character Error Rate) | N/A | < 5.0% | ⚪ Insufficient Data |
+| WER (Word Error Rate) | N/A | < 10.0% | ⚪ Insufficient Data |
+| Bounding Box IoU | N/A | > 0.85 | ⚪ Insufficient Data |
 
 ## 2. Named Entity Recognition (NER)
 | Entity Type | Precision | Recall | F1 Score | Target F1 | Status |
 |-------------|-----------|--------|----------|-----------|--------|
-| PERSON      | 0.91     | 0.89  | 0.90   | > 0.85    | 🟢 Pass |
-| ORGANIZATION| 0.84     | 0.82  | 0.83   | > 0.80    | 🟢 Pass |
-| LOCATION    | 0.95     | 0.93  | 0.94   | > 0.85    | 🟢 Pass |
+| PERSON      | 0.00     | 0.00  | 0.00   | > 0.85    | 🔴 Fail |
+| ORGANIZATION| 0.00     | 0.00  | 0.00   | > 0.80    | 🔴 Fail |
+| LOCATION    | 0.00     | 0.00  | 0.00   | > 0.85    | 🔴 Fail |
 
 ## 3. Entity Resolution
 | Task | Precision | Recall | F1 Score | Target F1 | Status |
 |------|-----------|--------|----------|-----------|--------|
-| Pairwise Matching | 0.92 | 0.91 | 0.91 | > 0.90 | 🟢 Pass |
+| Pairwise Matching | N/A | N/A | N/A | > 0.90 | ⚪ Insufficient Data |
 
 ## 4. Provenance
 | Metric | Accuracy | Target | Status |
 |--------|----------|--------|--------|
-| Exact Line Match | 97.5% | > 95.0% | 🟢 Pass |
+| Exact Line Match | N/A | > 95.0% | ⚪ Insufficient Data |
 
-**Conclusion**: Models successfully evaluated against held-out ground truth. IndicBERT NER and PaddleOCR meet all P1 target constraints.
+**Conclusion**: Models evaluated on available data. NER (PERSON, ORG, LOC) computed dynamically. OCR and ER data missing in sample evaluation set.

@@ -333,7 +333,7 @@ function RevealModalContent({ modalTarget }: RevealModalContentProps) {
                   className="mt-0.5 h-3.5 w-3.5 rounded border-border-subtle bg-surface-2 text-electric-blue focus:ring-0"
                 />
                 <span className="text-micro text-text-secondary leading-normal">
-                  I certify that this identity unmasking requisition is necessary for official investigation under Case DR-2026-00421. I acknowledge this transaction is permanently recorded in the tamper-evident audit ledger under Officer Officer.
+                  I certify that this identity unmasking requisition is necessary for official investigation under the current Case. I acknowledge this transaction is permanently recorded in the tamper-evident audit ledger under Officer Officer.
                 </span>
               </label>
 

@@ -132,7 +132,7 @@ export function PdfDocumentViewer({ record, className }: PdfDocumentViewerProps)
                 Call Detail Record (CDR) Ingestion Transcript
               </h1>
               <p className="text-[9px] text-[#6b7280] mt-0.5">
-                Case File: DR-2026-00421 &bull; Evidentiary Ingestion Preview
+                Case File: Active &bull; Evidentiary Ingestion Preview
               </p>
             </div>
 
@@ -275,7 +275,7 @@ export function PdfDocumentViewer({ record, className }: PdfDocumentViewerProps)
 
               <div className="text-right border border-[#9ca3af] bg-[#f9fafb] p-2 rounded text-[8.5px] text-[#4b5563]">
                 <p className="font-bold uppercase text-[#111827]">SOG INVESTIGATION RECORD</p>
-                <p className="font-mono text-[8px]">Case: DR-2026-00421</p>
+                <p className="font-mono text-[8px]">Case: Active</p>
               </div>
             </div>
           </div>

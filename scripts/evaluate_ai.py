@@ -2,6 +2,13 @@ import json
 import logging
 from pathlib import Path
 
+# Add project root to sys.path
+import sys
+import os
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+
+from apps.api.app.services.nlp_adapter import extract_entities
+
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
 REPORT_TEMPLATE = """# AI Evaluation Report
@@ -39,6 +46,12 @@ REPORT_TEMPLATE = """# AI Evaluation Report
 **Conclusion**: {conclusion}
 """
 
+def _calc_f1(tp, fp, fn):
+    p = tp / (tp + fp) if tp + fp > 0 else 0.0
+    r = tp / (tp + fn) if tp + fn > 0 else 0.0
+    f1 = 2 * p * r / (p + r) if p + r > 0 else 0.0
+    return f"{p:.2f}", f"{r:.2f}", f"{f1:.2f}", f1
+
 def evaluate():
     reports_dir = Path(__file__).resolve().parents[1] / "reports"
     reports_dir.mkdir(exist_ok=True)
@@ -49,43 +62,69 @@ def evaluate():
     
     if not gt_file.exists():
         logging.warning("Evaluation dataset not found. Outputting NOT EVALUATED.")
-        report_text = REPORT_TEMPLATE.format(
-            cer="NOT EVALUATED", cer_status="🔴 Missing Data",
-            wer="NOT EVALUATED", wer_status="🔴 Missing Data",
-            iou="NOT EVALUATED", iou_status="🔴 Missing Data",
-            p_p="NOT EVAL.", p_r="NOT EVAL.", p_f1="NOT EVAL.", p_status="🔴 Missing Data",
-            o_p="NOT EVAL.", o_r="NOT EVAL.", o_f1="NOT EVAL.", o_status="🔴 Missing Data",
-            l_p="NOT EVAL.", l_r="NOT EVAL.", l_f1="NOT EVAL.", l_status="🔴 Missing Data",
-            er_p="NOT EVAL.", er_r="NOT EVAL.", er_f1="NOT EVAL.", er_status="🔴 Missing Data",
-            prov_acc="NOT EVALUATED", prov_status="🔴 Missing Data",
-            conclusion="AI pipeline is implemented and integrated, but formal evaluation metrics cannot be computed because the ground-truth held-out dataset is missing. Metrics are NOT EVALUATED."
-        )
-    else:
-        logging.info("Running evaluation against held-out dataset...")
-        # Simulate real inference vs ground truth matching logic
-        # In a real environment we would call the model endpoints
-        with open(gt_file, 'r') as f:
-            data = json.load(f)
+        return
         
-        # Real metric computation placeholder (simulated scores for the valid dataset)
-        cer, wer, iou = "4.2%", "8.1%", "0.88"
-        p_p, p_r, p_f1 = "0.91", "0.89", "0.90"
-        o_p, o_r, o_f1 = "0.84", "0.82", "0.83"
-        l_p, l_r, l_f1 = "0.95", "0.93", "0.94"
-        er_p, er_r, er_f1 = "0.92", "0.91", "0.91"
-        prov_acc = "97.5%"
+    logging.info("Running evaluation against held-out dataset...")
+    with open(gt_file, 'r') as f:
+        data = json.load(f)
+    
+    tp_p, fp_p, fn_p = 0, 0, 0
+    tp_o, fp_o, fn_o = 0, 0, 0
+    tp_l, fp_l, fn_l = 0, 0, 0
+
+    # We evaluate against the NLP adapter dynamically
+    for doc in data.get("docs", []):
+        text = doc["text"]
+        truth = doc.get("entities", [])
         
-        report_text = REPORT_TEMPLATE.format(
-            cer=cer, cer_status="🟢 Pass",
-            wer=wer, wer_status="🟢 Pass",
-            iou=iou, iou_status="🟢 Pass",
-            p_p=p_p, p_r=p_r, p_f1=p_f1, p_status="🟢 Pass",
-            o_p=o_p, o_r=o_r, o_f1=o_f1, o_status="🟢 Pass",
-            l_p=l_p, l_r=l_r, l_f1=l_f1, l_status="🟢 Pass",
-            er_p=er_p, er_r=er_r, er_f1=er_f1, er_status="🟢 Pass",
-            prov_acc=prov_acc, prov_status="🟢 Pass",
-            conclusion="Models successfully evaluated against held-out ground truth. IndicBERT NER and PaddleOCR meet all P1 target constraints."
-        )
+        # Real call to nlp_adapter
+        candidates = extract_entities(text)
+        
+        pred_p = [c.original_text.lower() for c in candidates if c.kind == "PERSON"]
+        pred_o = [c.original_text.lower() for c in candidates if c.kind == "ORGANIZATION"]
+        pred_l = [c.original_text.lower() for c in candidates if c.kind == "LOCATION"]
+        
+        true_p = [e["text"].lower() for e in truth if e["type"] == "PERSON"]
+        true_o = [e["text"].lower() for e in truth if e["type"] == "ORGANIZATION"]
+        true_l = [e["text"].lower() for e in truth if e["type"] == "LOCATION"]
+        
+        # Calculate true positives etc (simplified metric for evaluation)
+        for p in pred_p:
+            if p in true_p: tp_p += 1; true_p.remove(p)
+            else: fp_p += 1
+        fn_p += len(true_p)
+        
+        for o in pred_o:
+            if o in true_o: tp_o += 1; true_o.remove(o)
+            else: fp_o += 1
+        fn_o += len(true_o)
+        
+        for l in pred_l:
+            if l in true_l: tp_l += 1; true_l.remove(l)
+            else: fp_l += 1
+        fn_l += len(true_l)
+        
+    p_p, p_r, p_f1, f1_p = _calc_f1(tp_p, fp_p, fn_p)
+    o_p, o_r, o_f1, f1_o = _calc_f1(tp_o, fp_o, fn_o)
+    l_p, l_r, l_f1, f1_l = _calc_f1(tp_l, fp_l, fn_l)
+
+    cer = "N/A"
+    wer = "N/A"
+    iou = "N/A"
+    er_p, er_r, er_f1 = "N/A", "N/A", "N/A"
+    prov_acc = "N/A"
+
+    report_text = REPORT_TEMPLATE.format(
+        cer=cer, cer_status="⚪ Insufficient Data",
+        wer=wer, wer_status="⚪ Insufficient Data",
+        iou=iou, iou_status="⚪ Insufficient Data",
+        p_p=p_p, p_r=p_r, p_f1=p_f1, p_status="🟢 Pass" if f1_p > 0.85 else "🔴 Fail",
+        o_p=o_p, o_r=o_r, o_f1=o_f1, o_status="🟢 Pass" if f1_o > 0.80 else "🔴 Fail",
+        l_p=l_p, l_r=l_r, l_f1=l_f1, l_status="🟢 Pass" if f1_l > 0.85 else "🔴 Fail",
+        er_p=er_p, er_r=er_r, er_f1=er_f1, er_status="⚪ Insufficient Data",
+        prov_acc=prov_acc, prov_status="⚪ Insufficient Data",
+        conclusion="Models evaluated on available data. NER (PERSON, ORG, LOC) computed dynamically. OCR and ER data missing in sample evaluation set."
+    )
 
     report_path.write_text(report_text)
     logging.info(f"AI evaluation report generated at {report_path}")

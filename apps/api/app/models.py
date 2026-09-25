@@ -205,6 +205,8 @@ class MatchCandidate(Base):
     matcher_version: Mapped[str] = mapped_column(String, default="0.1.0")
     state: Mapped[str] = mapped_column(String, default="REVIEW_REQUIRED")
     evidence_ids: Mapped[list] = mapped_column(JSON, default=list)
+    assigned_to: Mapped[str | None] = mapped_column(ForeignKey("users.user_id"), nullable=True)
+    assigned_at: Mapped[str | None] = mapped_column(String, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
 
 
