@@ -117,18 +117,18 @@ def run_resolve(db: Session, ev: Evidence, trace_id: str, actor_id: str | None) 
     return len(created)
 
 
-def process_evidence(db: Session, evidence_id: str, trace_id: str, actor_id: str | None) -> Evidence:
+def process_evidence(db: Session, evidence_id: str, trace_id: str, actor_id: str | None, async_allowed: bool = True) -> Evidence:
     ev = db.get(Evidence, evidence_id)
     if ev is None:
         raise ValueError("unknown evidence")
     if ev.status in BLOCKED_STATES:
         raise ValueError(f"evidence {evidence_id} is {ev.status}; it cannot re-enter processing")
 
-    # When Kafka is configured, publish the job and return immediately.
-    # The worker/worker.py consumer will call process_evidence() again from the
-    # worker process (without Kafka enabled, so it runs the direct path).
-    # The Job table remains the idempotency/status source of truth in both cases.
-    if kafka_bus.kafka_enabled():
+    # When Kafka is configured and async processing is allowed (e.g. from API), 
+    # publish the job and return immediately.
+    # The worker process will call process_evidence(async_allowed=False) to run the direct path.
+    # This explicit boolean avoids implicit environment assumptions.
+    if async_allowed and kafka_bus.kafka_enabled():
         published = kafka_bus.publish(evidence_id, ev.case_id, trace_id, actor_id)
         if published:
             record_audit(db, trace_id, actor_id, "EVIDENCE_QUEUED_KAFKA", "EVIDENCE", evidence_id, ev.case_id,

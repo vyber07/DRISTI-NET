@@ -17,3 +17,8 @@ pytest>=8.0
 moto[s3]
 kafka-python==2.0.2
 web3==6.15.1
+paddlepaddle
+paddleocr
+pymupdf
+transformers
+torch

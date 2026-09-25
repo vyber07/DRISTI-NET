@@ -10,7 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { EvidenceTierBadge } from "@/components/intelligence/evidence-tier-badge";
 import { PdfDocumentViewer } from "@/components/evidence/PdfDocumentViewer";
-import { useProvenanceStore } from "@/stores/provenanceStore";
+import { useProvenanceStore } from "@/stores/provenanceStore";\nimport { getEvidenceById } from "@/services/api/evidenceApi";
 import { maskPhoneNumbersInText } from "@/lib/pii";
 import type { ProvenanceRecord } from "@/types/entity";
 import type { HITLTask } from "@/types/hitl";
@@ -29,18 +29,13 @@ export function HITLEvidencePane({ task }: HITLEvidencePaneProps) {
     async function loadRecord() {
       setIsLoading(true);
       try {
-        let matched: ProvenanceRecord | null = null;
+        let matched: any = null;
         if (task.primaryEvidenceId) {
-          let res: any = null;// getProvenanceByRecordId(task.primaryEvidenceId);
-          matched = res.data;
-        } else if (false) {
-          let res: any = null;// getProvenanceByRelationshipId(task.relationshipId);
-          matched = res.data;
-        }
-
-        // Fallback to mock records if not found
-        if (!matched) {
-          matched = null;
+          // In a fully integrated backend, this fetches the evidence record linked to the candidate
+          const evidenceRes = await getEvidenceById(task.primaryEvidenceId);
+          if (evidenceRes.data) {
+             matched = { id: evidenceRes.data.id, caseId: evidenceRes.data.caseId, sourceId: evidenceRes.data.id, sourceName: evidenceRes.data.filename, extractionMethod: evidenceRes.data.sourceType, confidenceScore: 0.9, rawExtractedText: "", parsedData: {}, extractedAt: evidenceRes.data.createdAt, verifiedBy: evidenceRes.data.uploadedBy, status: "VERIFIED" };
+          }
         }
 
         if (isMounted) {

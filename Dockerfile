@@ -15,4 +15,4 @@ COPY --from=web /web/dist apps/web/dist
 RUN python3 data/synthetic/generate.py
 ENV DRISHTI_STORAGE_ROOT=/data
 EXPOSE 8000
-CMD ["sh", "-c", "python3 -m apps.api.app.seed --ingest && python3 -m uvicorn apps.api.app.main:app --host 0.0.0.0 --port 8000"]
+CMD ["python3", "-m", "uvicorn", "apps.api.app.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -67,7 +67,7 @@ def _process_message(msg_value: dict) -> bool:
 
     db = SessionLocal()
     try:
-        ev = pipeline.process_evidence(db, evidence_id, trace_id, actor_id)
+        ev = pipeline.process_evidence(db, evidence_id, trace_id, actor_id, async_allowed=False)
         logger.info("Worker processed %s → status=%s", evidence_id, ev.status)
         return True
     except sqlalchemy.exc.OperationalError as exc:

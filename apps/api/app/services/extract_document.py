@@ -49,45 +49,29 @@ class DocumentExtractor(StructuredExtractor):
                                method="regex-ner", confidence=0.7, observed_time=doc_date,
                                locator={"page": pno, "line": lno, "line_end": lno + 1, "char_offset": offset + line.find("registration")},
                                snippet=re.sub(r"\s+", " ", joined).strip())
-                # person mentions: "Name: X" or lines in the persons section, or "X, <org>, contact <phone>"
-                names = []
-                nm = re.search(r"Name:\s*([A-Z][a-z]+ [A-Z][a-z]+)", line)
-                if nm:
-                    names.append(nm)
-                elif section.startswith("3.") or section.startswith("2."):
-                    for m in self.NAME_RE.finditer(line):
-                        if m.group(1) not in self.STOP_NAMES and not self.ORG_SUFFIX_RE.match(m.group(1)):
-                            names.append(m)
-                for m in names:
-                    name = m.group(1)
-                    person = self.entity("PERSON", f"mention:{norm_name(name)}@{self.ev.evidence_id}", name,
-                                         {"mention_of": name, "source_document": self.ev.filename})
-                    self.claim("RELATIONSHIP", person, case, "NAMED_IN", original=name, normalized=norm_name(name),
-                               method="regex-ner", confidence=0.8, observed_time=doc_date, locator=loc(m), snippet=stripped)
-                    self.claim("ATTRIBUTE", person, attribute="name", original=name, normalized=norm_name(name),
-                               method="regex-ner", confidence=0.8, locator=loc(m), snippet=stripped)
-                    for om in self.ORG_SUFFIX_RE.finditer(line):
-                        org = self.entity("ORGANIZATION", norm_text(om.group(1)), om.group(1))
-                        self.claim("RELATIONSHIP", person, org, "MEMBER_OF", original=om.group(1), normalized=org.canonical,
-                                   method="regex-ner", confidence=0.7, observed_time=doc_date, locator=loc(om), snippet=stripped)
-                    for pm in self.PHONE_RE.finditer(line):
-                        ph = self.entity("PHONE", norm_phone(pm.group(0)), pm.group(0))
-                        self.claim("RELATIONSHIP", person, ph, "USES_PHONE", original=pm.group(0), normalized=ph.canonical,
-                                   method="regex-ner", confidence=0.75, observed_time=doc_date, locator=loc(pm), snippet=stripped)
-                    if "not provided" in line or "could not confirm" in line:
-                        self.stats.missing_fields += 1
+                # regex passes for structural identifiers only: phone, account, vehicle reg
+                # We intentionally removed PERSON/ORGANIZATION regex (e.g. NAME_RE, ORG_SUFFIX_RE)
+                # to strictly rely on real NLP (IndicBERT) models as per architectural instruction.
+                for pm in self.PHONE_RE.finditer(line):
+                    ph = self.entity("PHONE", norm_phone(pm.group(0)), pm.group(0))
+                    self.claim("MENTION", ph, original=pm.group(0), normalized=ph.canonical,
+                               method="regex-id", confidence=0.75, observed_time=doc_date, locator=loc(pm), snippet=stripped)
+                if "not provided" in line or "could not confirm" in line:
+                    self.stats.missing_fields += 1
+                
                 # accounts: "X to Y" → transfer with unknown amount
                 accts = list(self.ACCOUNT_RE.finditer(line))
                 if len(accts) == 2 and " to " in line:
                     a = self.entity("ACCOUNT", norm_account(accts[0].group(0)), accts[0].group(0))
                     b = self.entity("ACCOUNT", norm_account(accts[1].group(0)), accts[1].group(0))
-                    self.claim("RELATIONSHIP", a, b, "TRANSFERRED_TO", original=None, normalized=None, method="regex-ner",
+                    self.claim("RELATIONSHIP", a, b, "TRANSFERRED_TO", original=None, normalized=None, method="regex-id",
                                confidence=0.6, observed_time=doc_date, missingness={"amount_inr": "amount not stated in document"},
                                locator=loc(accts[0]), snippet=stripped)
+                
                 # vehicle mentions
                 for m in self.REG_RE.finditer(line):
                     veh = self.entity("VEHICLE", norm_reg(m.group(0)), m.group(0))
-                    self.claim("MENTION", veh, original=m.group(0), normalized=veh.canonical, method="regex-ner",
+                    self.claim("MENTION", veh, original=m.group(0), normalized=veh.canonical, method="regex-id",
                                confidence=0.9, observed_time=doc_date, locator=loc(m), snippet=stripped)
                 offset += len(line) + 1
         if not any(pages):
@@ -117,7 +101,7 @@ class DocumentExtractor(StructuredExtractor):
                         f"indic-bert-ner produced {len(ner_candidates)} candidate(s) requiring human review"
                     )
         except Exception as exc:
-            self.stats.warnings.append(f"indic-bert-ner pass skipped: {exc}")
+            self.stats.warnings.append(f"indic-bert-ner pass failed: {exc}")
     # ---------------------------------------------------------------- ZIP archive: extract each member
     def extract_archive(self, data: bytes):
         """Re-validates the archive (defence in depth -- validate_upload already checked it at upload
