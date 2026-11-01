@@ -87,8 +87,9 @@ class TestNlpAdapter:
         from apps.api.app.services.nlp_adapter import extract_entities, EntityCandidate
         mock_pipeline = MagicMock(return_value=[
             {"entity_group": "PER", "score": 0.92, "word": "Vikram Sharma", "start": 0, "end": 13},
-            {"entity_group": "LOC", "score": 0.88, "word": "Jaipur", "start": 20, "end": 26},
-            {"entity_group": "ORG", "score": 0.30, "word": "Corp", "start": 40, "end": 44},  # below threshold
+            # offsets corrected to match the text below (were 20/26 and 40/44, which point mid-word)
+            {"entity_group": "LOC", "score": 0.88, "word": "Jaipur", "start": 17, "end": 23},
+            {"entity_group": "ORG", "score": 0.30, "word": "Corp", "start": 28, "end": 32},  # below threshold
         ])
         with patch("apps.api.app.services.nlp_adapter._get_pipeline", return_value=mock_pipeline):
             results = extract_entities("Vikram Sharma in Jaipur and Corp.", confidence_threshold=0.5)
@@ -97,6 +98,49 @@ class TestNlpAdapter:
         assert results[0].original_text == "Vikram Sharma"
         assert results[1].kind == "LOCATION"
         assert results[1].original_text == "Jaipur"
+
+    def test_subword_fragments_are_merged_with_conservative_score(self):
+        """Real IndicBERT 'simple' aggregation splits 'Silverline Ltd' into 'Silver' | 'line Ltd' (observed
+        2026-11-01). Character-adjacent same-kind fragments become ONE candidate; the score is the minimum."""
+        from apps.api.app.services.nlp_adapter import extract_entities
+        text = "met at the Silverline Ltd office in Demo District A."
+        mock_pipeline = MagicMock(return_value=[
+            {"entity_group": "ORG", "score": 0.99, "word": "Silver", "start": 11, "end": 17},
+            {"entity_group": "ORG", "score": 0.97, "word": "line Ltd", "start": 17, "end": 25},
+            {"entity_group": "LOC", "score": 0.93, "word": "Dem", "start": 36, "end": 39},
+            {"entity_group": "LOC", "score": 0.90, "word": "o District A", "start": 39, "end": 51},
+        ])
+        with patch("apps.api.app.services.nlp_adapter._get_pipeline", return_value=mock_pipeline):
+            results = extract_entities(text)
+        assert [(r.kind, r.original_text) for r in results] == [
+            ("ORGANIZATION", "Silverline Ltd"), ("LOCATION", "Demo District A")]
+        assert results[0].confidence == 0.97 and results[1].confidence == 0.90
+        assert results[0].locator["char_offset"] == 11
+
+    def test_separate_entities_are_not_merged(self):
+        """Failure-path guard: two same-kind entities separated by ANY character must stay separate
+        (merging distinct people would be a silent identity assertion)."""
+        from apps.api.app.services.nlp_adapter import extract_entities
+        text = "Kavita Rao, Vikram Nair"
+        mock_pipeline = MagicMock(return_value=[
+            {"entity_group": "PER", "score": 0.9, "word": "Kavita Rao", "start": 0, "end": 10},
+            {"entity_group": "PER", "score": 0.9, "word": "Vikram Nair", "start": 12, "end": 23},
+        ])
+        with patch("apps.api.app.services.nlp_adapter._get_pipeline", return_value=mock_pipeline):
+            results = extract_entities(text)
+        assert [r.original_text for r in results] == ["Kavita Rao", "Vikram Nair"]
+
+    def test_original_text_is_exact_source_span(self):
+        """original_text must be the verbatim source substring, not the tokenizer's detokenised form."""
+        from apps.api.app.services.nlp_adapter import extract_entities
+        text = "Witness: ARJUN  Malhotara"
+        mock_pipeline = MagicMock(return_value=[
+            {"entity_group": "B-PER", "score": 0.9, "word": "arjun malhotara", "start": 9, "end": 25},
+        ])
+        with patch("apps.api.app.services.nlp_adapter._get_pipeline", return_value=mock_pipeline):
+            results = extract_entities(text)
+        assert len(results) == 1 and results[0].kind == "PERSON"
+        assert results[0].original_text == "ARJUN  Malhotara"
 
     def test_inference_error_returns_empty_list(self):
         """If the pipeline raises during inference, extract_entities returns [] (never raises)."""

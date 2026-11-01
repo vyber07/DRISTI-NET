@@ -55,7 +55,7 @@ export function ProvenanceViewer() {
              <div className="bg-surface-2 border border-border-subtle rounded-md p-3 overflow-x-auto">
                 <pre className="text-xs font-mono">
                    {record.lines.map((line, i) => (
-                      <div key={i} className={cn("px-2 py-1 flex", line.hit && "bg-amber-500/20 border-l-2 border-amber-500 text-amber-500 font-bold")}>
+                      <div key={i} data-hit={line.hit ? "true" : undefined} data-line={line.n} className={cn("px-2 py-1 flex", line.hit && "bg-amber-500/20 border-l-2 border-amber-500 text-amber-500 font-bold")}>
                          <span className="w-8 text-text-muted select-none">{line.n}</span>
                          <span>{line.text}</span>
                       </div>

@@ -30,10 +30,10 @@ def test_real_clamav_application_scan(client, officer, live_clamav):
 
     # Clean file -> EXTRACTED (since extraction runs synchronously in the test flow before HITL)
     # The pipeline is: UPLOAD -> QUARANTINE -> SCAN -> CLEAN -> ACCEPTED -> EXTRACT -> EXTRACTED/HITL/etc
-    # Create test case
-    r = client.post("/api/v1/cases", headers=officer, json={"title": "ClamAV E2E", "jurisdiction": "Test", "purpose": "Testing", "classification": "U"})
-    assert r.status_code == 201
-    case_id = r.json()["case_id"]
+    # Use seeded CASE-0002 (the officer is assigned there). The previous version tried to create a case as
+    # EVIDENCE_OFFICER, which the API correctly forbids (403: only INVESTIGATOR/ADMIN may create cases), and
+    # omitted the required case_id -- so this test had never passed (it is deselected by `make test`).
+    case_id = "CASE-0002"
 
     clean_data = b"Clean content for live integration test"
     r = client.post(f"/api/v1/cases/{case_id}/evidence", headers=officer, files={"file": ("clean.txt", clean_data)}, data={"source_label": "synthetic"})

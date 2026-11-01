@@ -10,13 +10,21 @@ export type EntityType =
   | "CYBER";
 
 /** Relationship classification — a representative subset from §19; extended in Phase 2. */
-export type RelationshipType =
-  | "COMMUNICATED_WITH"
-  | "TRANSFERRED_FUNDS"
-  | "USED_DEVICE"
-  | "USED_PHONE"
-  | "CO_LOCATED_AT"
-  | "ASSOCIATED_IN_CASE";
+/**
+ * Projected relationship vocabulary -- MUST match the backend contract in graph/README.md (the rel_type values
+ * the extractors emit). The previous list (COMMUNICATED_WITH, TRANSFERRED_FUNDS, USED_PHONE, ...) shared no
+ * value with the backend, so the default relationship filter hid every real edge (0 of 117 drawn on CASE-0001).
+ */
+export const RELATIONSHIP_TYPES = [
+  "CALLED",
+  "OBSERVED_AT",
+  "TRANSFERRED_TO",
+  "USES_PHONE",
+  "HOLDS_ACCOUNT",
+  "MEMBER_OF",
+  "OWNS_VEHICLE",
+] as const;
+export type RelationshipType = (typeof RELATIONSHIP_TYPES)[number];
 
 export interface EntityIdentifier {
   type: "PHONE" | "ACCOUNT" | "IMEI" | "IP" | "AADHAAR" | "PAN" | "EMAIL" | "CUSTOM";
@@ -95,6 +103,30 @@ export interface RelationshipDetail {
   firstSeen: string | null;
   lastSeen: string | null;
   relevance: string;
+  /** Per-claim provenance from GET /cases/{id}/edge (undefined while loading). */
+  claims?: EdgeClaim[];
+  claimsError?: string | null;
+}
+
+/** Source locator for one provenance record (structured: json_path/row; documents: page/line). */
+export interface SourceLocator {
+  page?: number;
+  line?: number;
+  row?: number;
+  json_path?: string;
+  char_offset?: number;
+}
+
+/** One supporting claim behind an aggregated edge, as returned by GET /cases/{case_id}/edge. */
+export interface EdgeClaim {
+  claim_id: string;
+  method: string;
+  method_version: string;
+  confidence: number;
+  state: string;
+  observed_time: string | null;
+  evidence: { evidence_id: string; filename: string; sha256: string; version: number };
+  provenance: { provenance_id: string; locator: SourceLocator; snippet: string }[];
 }
 
 /** Graphology Node Attributes consumed by GraphEngine */

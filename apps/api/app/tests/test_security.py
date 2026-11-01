@@ -55,7 +55,19 @@ def test_hash_manifest_and_tamper_detection(client, officer, admin):
     d = r.json()
     assert len(d["sha256"]) == 64
     assert client.get(f"/api/v1/evidence/{d['evidence_id']}/verify", headers=officer).json()["match"] is True
-    client.post(f"/api/v1/demo/tamper/{d['evidence_id']}", headers=admin)
+    # Tamper through the storage layer, not the demo HTTP route: /demo/* is deliberately NOT mounted on non-SQLite
+    # deployments (see test_demo_routes_not_mounted_outside_sqlite). The previous version ignored the tamper
+    # response, so on PostgreSQL it silently tampered nothing and failed with a misleading assertion.
+    from apps.api.app.db import SessionLocal
+    from apps.api.app.models import Evidence
+    from apps.api.app.services import storage
+    db = SessionLocal()
+    try:
+        path = db.get(Evidence, d["evidence_id"]).storage_path
+    finally:
+        db.close()
+    storage.overwrite_for_demo(path, storage.read_bytes(path) + b"\n")
+    assert storage.verify_hash(path, d["sha256"])[0] is False, "tamper precondition: stored bytes must now differ"
     assert client.get(f"/api/v1/evidence/{d['evidence_id']}/context?line=1", headers=officer).status_code == 409
     
     v = client.get(f"/api/v1/evidence/{d['evidence_id']}/verify", headers=officer).json()
@@ -66,6 +78,17 @@ def test_hash_manifest_and_tamper_detection(client, officer, admin):
     assert client.post(f"/api/v1/evidence/{d['evidence_id']}/process", headers=officer, json={}).status_code == 409
     assert client.get(f"/api/v1/evidence/{d['evidence_id']}/context?line=1", headers=officer).status_code == 409
     assert any(a["action"] == "INTEGRITY_MISMATCH" for a in client.get("/api/v1/audit?action=INTEGRITY_MISMATCH", headers=admin).json())
+
+
+def test_demo_routes_not_mounted_outside_sqlite(client, admin):
+    """Production control: the evidence-tampering demo endpoint exists only on the SQLite demo path."""
+    from apps.api.app import config
+    r = client.post("/api/v1/demo/tamper/EVD-does-not-exist", headers=admin)
+    if config.DATABASE_URL.startswith("sqlite"):
+        assert r.status_code == 404  # mounted: unknown evidence
+    else:
+        assert r.status_code in (404, 405)  # not mounted at all
+        assert not any(getattr(rt, "path", "").startswith("/api/v1/demo") for rt in client.app.routes)
 
 
 def test_masking_and_audited_reveal(client, investigator, ingested, auditor, reviewer):

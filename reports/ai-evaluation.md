@@ -1,6 +1,7 @@
 # AI Evaluation Report
 
-**Evaluation Date**: 2026-09-19
+**Evaluation Date**: 2026-11-01
+**NER sample size**: 1 document(s), 3 gold entities (`data/evaluation/ground_truth.json`). **Too small to measure model quality** — scores below are a smoke test, not a benchmark (constitution §17.3).
 **Model Profiles**: 
 - OCR: PaddleOCR 3.7.0 (en configuration)
 - NER: ai4bharat/IndicBERTv2-MLM-only-NER
@@ -16,9 +17,9 @@
 ## 2. Named Entity Recognition (NER)
 | Entity Type | Precision | Recall | F1 Score | Target F1 | Status |
 |-------------|-----------|--------|----------|-----------|--------|
-| PERSON      | 0.00     | 0.00  | 0.00   | > 0.85    | 🔴 Fail |
-| ORGANIZATION| 0.00     | 0.00  | 0.00   | > 0.80    | 🔴 Fail |
-| LOCATION    | 0.00     | 0.00  | 0.00   | > 0.85    | 🔴 Fail |
+| PERSON      | 1.00     | 1.00  | 1.00   | > 0.85    | 🟢 Pass |
+| ORGANIZATION| 1.00     | 1.00  | 1.00   | > 0.80    | 🟢 Pass |
+| LOCATION    | 1.00     | 1.00  | 1.00   | > 0.85    | 🟢 Pass |
 
 ## 3. Entity Resolution
 | Task | Precision | Recall | F1 Score | Target F1 | Status |

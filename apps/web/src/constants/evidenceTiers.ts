@@ -2,6 +2,11 @@ import type { BadgeProps } from "@/components/ui/badge";
 
 /**
  * Six-Tier Evidence State Machine (technical spec Part V §13).
+ *
+ * INTERNAL GOVERNANCE MODEL ONLY. These tiers describe review progress inside DRISTI-NET; they are not a
+ * statutory classification and say nothing about legal admissibility (docs/context.md §2.2, §16).
+ * NOTE: the backend does not yet emit a tier per edge, so no projected edge currently carries one
+ * (see audit/BUG_AND_DEFECT_REGISTER.md DEF-020).
  * Tier 1 (RAW_ARTIFACT) is intentionally excluded — it is never rendered
  * as a graph relationship or an evidentiary badge; it exists only as an
  * unparsed, hashed byte stream in raw storage.
@@ -68,7 +73,7 @@ export const EVIDENCE_TIER_CONFIG: Record<EvidenceTier, EvidenceTierConfig> = {
     label: "Supervisor Verified",
     shortLabel: "Tier 5",
     description:
-      "Reviewed and attested by a Gazetted Police Officer (SP / DySP). Eligible for inter-agency sharing.",
+      "Reviewed and confirmed by a supervisory reviewer. Sharing beyond the case remains subject to separate authorization.",
     tone: "emerald",
     lineStyle: "solid",
     lineWidth: 3,
@@ -77,10 +82,10 @@ export const EVIDENCE_TIER_CONFIG: Record<EvidenceTier, EvidenceTierConfig> = {
   6: {
     tier: 6,
     code: "COURT_READY",
-    label: "Court Ready",
+    label: "Integrity-Referenced Export",
     shortLabel: "Tier 6",
     description:
-      "Tamper-evident verification format for judicial submission. Demonstrates highest evidentiary standing.",
+      "Supervisor-reviewed and packaged with integrity references (SHA-256 manifest, Merkle root). An integrity reference is not proof of authenticity or legal admissibility.",
     tone: "purple",
     lineStyle: "solid-glow",
     lineWidth: 4,

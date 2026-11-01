@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { ContextResponse } from "@/types/entity";
+import type { ContextResponse, SourceLocator } from "@/types/entity";
 import { get, post } from "@/services/api/real_client";
 
 interface ProvenanceState {
@@ -12,7 +12,8 @@ interface ProvenanceState {
   isRevealing: boolean;
   revealError: string | null;
 
-  openProvenanceForRecord: (evidenceId: string) => Promise<void>;
+  /** Opens the source context; with a locator it opens AT the claim's page/line/row/json_path. */
+  openProvenanceForRecord: (evidenceId: string, locator?: SourceLocator) => Promise<void>;
   revealContext: (reason: string) => Promise<void>;
   closeModal: () => void;
 }
@@ -26,10 +27,16 @@ export const useProvenanceStore = create<ProvenanceState>((set, getStore) => ({
   isRevealing: false,
   revealError: null,
 
-  openProvenanceForRecord: async (evidenceId: string) => {
+  openProvenanceForRecord: async (evidenceId: string, locator?: SourceLocator) => {
     set({ isModalOpen: true, activeRecordId: evidenceId, isLoading: true, error: null, revealError: null });
     try {
-      const res = await get(`/evidence/${evidenceId}/context`);
+      const qs = new URLSearchParams();
+      for (const key of ["page", "line", "row", "json_path"] as const) {
+        const v = locator?.[key];
+        if (v !== undefined && v !== null) qs.set(key, String(v));
+      }
+      const q = qs.toString();
+      const res = await get(`/evidence/${encodeURIComponent(evidenceId)}/context${q ? `?${q}` : ""}`);
       set({ record: res || null, isLoading: false });
     } catch (err: unknown) {
       set({ error: (err as Error).message, isLoading: false, record: null });

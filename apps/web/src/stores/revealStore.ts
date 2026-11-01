@@ -26,7 +26,7 @@ interface RevealState {
   openRevealModal: (target: RevealModalTarget) => void;
   closeRevealModal: () => void;
   setOfficerClearance: (level: number) => void;
-  submitRevealRequest: (justification: string, emergencyBypass?: boolean) => Promise<RevealResult>;
+  submitRevealRequest: (justification: string) => Promise<RevealResult>;
   isRevealed: (entityId: string, identifierType: string) => boolean;
   getRevealedValue: (entityId: string, identifierType: string) => string | null;
 }
@@ -65,14 +65,16 @@ export const useRevealStore = create<RevealState>((set, get) => ({
     set({ officerClearance: level });
   },
 
-  submitRevealRequest: async (justification: string, emergencyBypass = false) => {
+  submitRevealRequest: async (justification: string) => {
     const state = get();
     if (!state.modalTarget) throw new Error("No target selected");
 
     set({ isSubmitting: true, submissionError: null });
 
     try {
-      const activeCaseId = useGraphStore.getState().caseId || "CASE-0001";
+      const activeCaseId = useGraphStore.getState().caseId;
+      // Never fall back to a default case: a reveal (and its audit record) must target the case the user is viewing.
+      if (!activeCaseId) throw new Error("No active case loaded; cannot submit a reveal request.");
       const res = await requestPiiReveal({
         caseId: activeCaseId,
         maskedValue: state.modalTarget.maskedValue,
@@ -83,7 +85,6 @@ export const useRevealStore = create<RevealState>((set, get) => ({
         entityId: state.modalTarget.entityId,
         identifierType: state.modalTarget.identifierType as any,
         justification,
-        emergencyBypass,
       });
       const result = res.data;
       if (result.status === "APPROVED") {

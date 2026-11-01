@@ -21,8 +21,8 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 RELEASES_DIR = REPO_ROOT / "releases"  # gitignored -- the archive itself is never committed
 
-EXCLUDE_DIR_NAMES = {".git", ".claude", "node_modules", "__pycache__", ".venv", "venv", ".pytest_cache", ".ruff_cache",
-                     "storage", "dist", "releases"}
+EXCLUDE_DIR_NAMES = {".git", ".claude", "node_modules", "__pycache__", ".venv", ".venv311", "venv", ".pytest_cache", ".ruff_cache",
+                     "storage", "dist", "releases", ".cache"}
 EXCLUDE_SUFFIXES = {".db", ".pyc"}
 EXCLUDE_EXACT_NAMES = {".env", "DRISTINET_export.zip"}
 

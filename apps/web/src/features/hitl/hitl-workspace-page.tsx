@@ -105,7 +105,7 @@ export function HITLWorkspacePage() {
               </Badge>
             </div>
             <p className="text-micro font-mono text-text-muted mt-0.5">
-              Arbitration Band: 0.60–0.95 Confidence &bull; Ground Truth Admissibility Verification &bull; Case:{" "}
+              Arbitration Band: 0.60–0.95 Confidence &bull; Human review of candidate matches &bull; Case:{" "}
               {caseIdFilter}
             </p>
           </div>

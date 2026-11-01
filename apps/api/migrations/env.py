@@ -11,6 +11,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[3]))  # repo root, for `
 
 from apps.api.app import config as app_config  # noqa: E402
 from apps.api.app import models  # noqa: E402  (registers all tables on Base.metadata)
+# LedgerAnchor is declared in services/integrity.py, not models.py. Without this import autogenerate never
+# saw it and no migration created `ledger_anchors` (fixed by 5bcde1234569).
+from apps.api.app.services import integrity  # noqa: E402,F401
 from apps.api.app.db import Base  # noqa: E402
 
 # this is the Alembic Config object, which provides

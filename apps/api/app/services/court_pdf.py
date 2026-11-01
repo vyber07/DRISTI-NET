@@ -1,4 +1,4 @@
-"""Court-ready evidence dossier — structured PDF export.
+"""Integrity-reference evidence dossier — structured PDF export (not a legal certificate).
 
 Generates a human-analyst-reviewed dossier following the structure of
 BSA 2023 Section 63(4)(c) Part A / Part B certificate fields.
@@ -58,7 +58,7 @@ def generate_court_pdf(
     generated_by: str,
     trace_id: str,
 ) -> bytes:
-    """Generate a court-ready evidence dossier PDF.
+    """Generate an integrity-reference evidence dossier PDF.
 
     Parameters
     ----------

@@ -135,23 +135,51 @@ def extract_entities(
         logger.warning("NER inference failed: %s", exc)
         return []
 
-    results: list[EntityCandidate] = []
+    import re
+
+    # 1. Normalise raw pipeline items into (kind, start, end, score, word) spans.
+    spans: list[dict] = []
     for item in raw:
         label_raw: str = item.get("entity_group") or item.get("entity") or ""
-        label = label_raw.lstrip("B-").lstrip("I-")
+        # Strip a BIO *prefix*. (str.lstrip("B-") strips a character set, not a prefix.)
+        label = re.sub(r"^[BI]-", "", label_raw)
         kind = _LABEL_MAP.get(label.upper())
         if kind is None:
             continue
         score: float = float(item.get("score", 0.0))
         if score < confidence_threshold:
             continue
-        import re
-        word_raw: str = item.get("word", "").strip()
-        word = re.sub(r"\s*##\s*", "", word_raw).strip()
+        start, end = item.get("start"), item.get("end")
+        word = re.sub(r"\s*##\s*", "", item.get("word", "")).strip()
+        spans.append({"kind": kind, "start": start, "end": end, "score": score, "word": word})
+
+    # 2. Merge sub-word fragments: same kind and character-adjacent (end == next start, no gap), which is
+    #    how "simple" aggregation splits one source word ("Silver" | "line Ltd"). Words separated by any
+    #    character are never merged. The merged span keeps the LOWEST constituent score (conservative).
+    merged: list[dict] = []
+    for s in spans:
+        prev = merged[-1] if merged else None
+        if (prev is not None and s["kind"] == prev["kind"] and isinstance(s["start"], int)
+                and isinstance(prev["end"], int) and s["start"] == prev["end"]):
+            prev["end"] = s["end"]
+            prev["score"] = min(prev["score"], s["score"])
+            prev["word"] = prev["word"] + s["word"]
+        else:
+            merged.append(dict(s))
+
+    results: list[EntityCandidate] = []
+    for s in merged:
+        kind, score = s["kind"], s["score"]
+        start_char, end_char = s["start"], s["end"]
+        # Preserve the exact source span when offsets are available (constitution §9.3/§11.1: retain originals);
+        # fall back to the detokenised word only when the pipeline gives no offsets.
+        if isinstance(start_char, int) and isinstance(end_char, int) and 0 <= start_char < end_char <= len(text):
+            word = text[start_char:end_char].strip()
+        else:
+            word = s["word"]
+            start_char = start_char if isinstance(start_char, int) else 0
         if not word:
             continue
-        # Best-effort line localisation: find word in original text by char offset
-        start_char: int = item.get("start", 0)
         lines_before = text[:start_char].count("\n")
         results.append(EntityCandidate(
             kind=kind,

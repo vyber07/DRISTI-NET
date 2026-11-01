@@ -13,7 +13,8 @@ logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
 REPORT_TEMPLATE = """# AI Evaluation Report
 
-**Evaluation Date**: 2026-09-19
+**Evaluation Date**: {eval_date}
+**NER sample size**: {n_docs} document(s), {n_entities} gold entities (`data/evaluation/ground_truth.json`). {sample_warning}
 **Model Profiles**: 
 - OCR: PaddleOCR 3.7.0 (en configuration)
 - NER: ai4bharat/IndicBERTv2-MLM-only-NER
@@ -68,6 +69,8 @@ def evaluate():
     with open(gt_file, 'r') as f:
         data = json.load(f)
     
+    n_docs = len(data.get("docs", []))
+    n_entities = sum(len(d.get("entities", [])) for d in data.get("docs", []))
     tp_p, fp_p, fn_p = 0, 0, 0
     tp_o, fp_o, fn_o = 0, 0, 0
     tp_l, fp_l, fn_l = 0, 0, 0
@@ -114,7 +117,12 @@ def evaluate():
     er_p, er_r, er_f1 = "N/A", "N/A", "N/A"
     prov_acc = "N/A"
 
+    from datetime import datetime, timezone
+    sample_warning = ("**Too small to measure model quality** — scores below are a smoke test, not a benchmark "
+                      "(constitution §17.3)." if n_entities < 100 else "")
     report_text = REPORT_TEMPLATE.format(
+        eval_date=datetime.now(timezone.utc).strftime("%Y-%m-%d"), n_docs=n_docs, n_entities=n_entities,
+        sample_warning=sample_warning,
         cer=cer, cer_status="⚪ Insufficient Data",
         wer=wer, wer_status="⚪ Insufficient Data",
         iou=iou, iou_status="⚪ Insufficient Data",

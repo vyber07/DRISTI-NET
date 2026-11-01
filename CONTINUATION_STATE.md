@@ -1,44 +1,47 @@
 # DRISTI-NET — Continuation State & Handoff Record
 
-**Document ID:** DRISTI-CONT-001  
-**Timestamp:** 2026-11-01T04:45:00Z  
-**Current Phase:** Phase 28 (Step 3: Live Infrastructure & Service Boundary Hardening)  
-**Current Task:** P0 and P1 Defect Remediation  
-**Last Completed Task:** Phase 0 & Phase 1 Discovery, Roadmap Traceability Matrix, and Inventory Baseline  
-**Active Branch:** `main`  
-**Latest Git Commit:** `4dc088e` (HEAD)  
-**Environment State:**
-- Host: Linux x86_64, Docker 29.9.1, Docker Compose v5.6.0
-- Python: 3.11.14 in `.venv311` (83/83 unit/integration tests passing)
-- Node: v24.22.0, npm 11.19.1 in `apps/web`
-- Playwright: Installed in `.venv311`, Chromium headless shell binary installed
+**Updated:** 2026-11-01 (session 3)
+**Release status:** ENGINEERING PREVIEW (`audit/RELEASE_READINESS_REPORT.md`)
+**Position:** Step 3 (infrastructure/release validation) partially complete → Step 4 (Golden Synthetic Journey) demonstrated
+**Branch / HEAD:** `main` @ `e969324` — **all of session 2's and session 3's work is uncommitted** (nothing pushed)
 
----
+## What session 3 established (evidence: `audit/TEST_RESULTS.md`, `audit/BUG_AND_DEFECT_REGISTER.md`)
+- The previous handoff's "Phase 0–32 complete / Production Ready / Staging Candidate" claims were not supported and
+  have been withdrawn in `STATUS.md`, `PROJECT_PROGRESS.md`, `PROJECT_TASK_BOARD.md`, the release report, and the
+  government matrix (12 "FULLY COMPLIANT" + 4 "READY FOR AUDIT" verdicts → "NOT ASSESSED").
+- Fixed + tested: DEF-011R, 016, 017, 018 (partial), 019, 021 (P0), 022 (P0), 023, 024, 025.
+- Live-store suite (PostgreSQL + Neo4j + S3 + ClamAV): 93/93. SQLite: 87 passed. E2E 5/5. Dry runs 5×29/29.
 
-## 1. Verified Defect Register Summary (To Remediate)
+## Files changed in session 3
+Backend: `services/nlp_adapter.py`, `routes/integrity_routes.py`, `services/court_pdf.py` (docstrings), `schemas.py` (docstring),
+`migrations/env.py`, new `migrations/versions/5bcde1234569_add_ledger_anchors_and_mc_assignment.py`.
+Tests: `test_migrations.py` (rewritten), `test_security.py`, `test_clamav_live.py`, `test_storage_s3.py`, `test_new_components.py`, `tests/e2e/test_ui_demo.py`.
+Frontend: `types/entity.ts`, `types/reveal.ts`, `services/api/graphApi.ts`, `stores/graphStore.ts`, `stores/revealStore.ts`,
+`stores/provenanceStore.ts`, `components/graph/engine/GraphEngine.ts`, `components/graph/drawers/EdgeDrawer.tsx`,
+`components/graph/filters/RelationshipTypeFilter.tsx`, `components/intelligence/relationship-badge.tsx`,
+`components/intelligence/reveal-identity-modal.tsx`, `components/evidence/ProvenanceViewer.tsx`, `constants/evidenceTiers.ts`,
+`features/hitl/hitl-workspace-page.tsx`, `features/reports/reports-page.tsx`, `features/command-center/foundation-preview-page.tsx`.
+Scripts/reports: `scripts/evaluate_ai.py`, `reports/ai-evaluation.md`, `reports/dry-runs.md`, `reports/screenshots/*`.
+Docs: `STATUS.md`, `docs/status.md`, `PROJECT_*`, `CONTINUATION_STATE.md`, `audit/{BUG_AND_DEFECT_REGISTER,RELEASE_READINESS_REPORT,TEST_RESULTS}.md`,
+`government/GOVERNMENT_READINESS_MATRIX.md`.
 
-1. `apps/web/src/services/api/integrityApi.ts`: Missing closing brace `}` on line 22 (P0 - blocks build).
-2. `apps/web/package.json`: Typecheck script needs `-b` flag (`tsc -b --noEmit`) to enforce project references.
-3. `apps/web/src/features/cases/evidence/case-evidence-view.tsx`: Escaped template string syntax (`\${caseId}`, `\${tok}`); missing `useEffect` to load evidence on mount.
-4. `apps/web/src/stores/revealStore.ts` & `apps/web/src/services/api/revealApi.ts`: Payload mismatch with backend `RevealIn` schema (`case_id`, `reason`).
-5. `apps/web/src/services/api/entityApi.ts`: `GET /entities/${entityId}` missing mandatory `?case_id=` query parameter.
-6. `apps/web/src/components/graph/engine/GraphEngine.ts`: Checks non-existent `attr.timestamp` instead of `firstSeen`/`lastSeen`.
-7. `apps/web/src/services/api/real_client.ts`: Does not handle binary blob responses for PDF downloads.
-8. `apps/api/app/tests/test_storage_s3.py`: Calls non-existent `storage.s3()` instead of `storage._client()`.
-9. `scripts/validate_besu.py`: Broken imports and invalid instantiation of SQLAlchemy model as RPC client.
-10. `docker-compose.yml`: Redis service missing (login rate-limiting unconfigured); worker does not wait for migrations service.
-11. `scripts/dry_run.py` & `docs/contracts.md`: Obsolete references to removed `force_scan_outcome`.
-12. `infrastructure/dristinet.service`: Hardcoded directory path `/home/ubuntu/project/DRISTINET`.
-13. `apps/web/src/components/graph/GraphLegend.tsx`, `hitl-decision-pane.tsx`, `reports-page.tsx`: Scrub non-neutral terminology ("Court-Ready", "Certified").
-14. `apps/web/src/components/intelligence/reveal-identity-modal.tsx`: Inappropriate statutory justification presets (NAFIS biometric, phone KYC).
-15. `Makefile`: Destructive `docker compose down -v` in `test-stack`.
+## Environment state
+- Public demo: uvicorn on 0.0.0.0:8000 (started before session 3, **still running old backend code**; serves the rebuilt
+  `apps/web/dist`), proxied by host nginx on :80. Not restarted, DB not written by session 3.
+- Disposable verification containers (`dristi-verify-*`) and the :8001 server were stopped at session end.
 
----
+## Approval needed from the owner
+1. Commit the working tree (and on which branch) — nothing has been committed.
+2. BLK-04: choose a replacement S3-compatible image for Compose.
+3. Restart the public :8000 demo so it runs the fixed backend (it currently serves new frontend + old backend; the new
+   frontend only uses endpoints that already existed, so it works, but the NER fix is not live).
+4. DEF-020: decide the semantics of the six-tier model (or remove the tier UI).
+5. BLK-05: an isolated host for the Compose stack + backup/restore drill.
 
-## 2. Immediate Next Actions
-
-1. Apply P0 fix to `apps/web/src/services/api/integrityApi.ts` and `apps/web/package.json`.
-2. Run `make build-web` to prove web compilation is clean.
-3. Apply P1 contract and UI bug fixes (evidence view, reveal store, entity API, graph engine, S3 test, besu script, docker-compose, service paths).
-4. Run full test suites: `make test` and `make build-web`.
-5. Execute Step 4: Golden Synthetic Evidence Journey and Playwright E2E browser validation.
+## Next exact actions
+1. After commit approval: `make test && (cd apps/web && npm run typecheck && npm run build)`, commit, then
+   `python scripts/make_release_archive.py`, unpack the archive in a scratch dir and re-run tests from it.
+2. Resolve BLK-04, pin all Compose images by digest, `make test-stack` on an isolated host.
+3. Backup → restore → `/verify` every evidence item → graph rebuild → dry run, documented in `operations/RESTORE_TEST_REPORT.md`.
+4. Security scans (pip-audit / npm audit / a secret scanner / container scan); bind uvicorn to 127.0.0.1; verify TLS.
+5. NER: pin model `revision=`, set `HF_HUB_OFFLINE=1`, confirm label order from the model card, build a ≥100-entity synthetic eval set.

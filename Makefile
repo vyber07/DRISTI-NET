@@ -29,7 +29,7 @@ redis-up:  ## start the user-space Redis build for login-throttle (see scripts/e
 redis-down:  ## stop the user-space Redis build
 	$$HOME/.cache/drishti/redis/bin/redis-cli -p 6379 shutdown nosave || true
 clean:
-	rm -rf storage/*.db storage/quarantine storage/accepted storage/derived
+	rm -rf storage/*.db storage/*.db-shm storage/*.db-wal storage/quarantine storage/accepted storage/derived
 db-upgrade:  ## apply Alembic migrations to whatever DRISHTI_DATABASE_URL points at (no-op for sqlite; the app applies them automatically on startup too)
 	cd apps/api && $(PY) -m alembic upgrade head
 db-revision:  ## autogenerate a new migration from model changes; review the diff before committing

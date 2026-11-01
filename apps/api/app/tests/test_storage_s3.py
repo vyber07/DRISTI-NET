@@ -62,7 +62,6 @@ def test_abs_path_rejected_on_s3_backend(monkeypatch):
         storage.abs_path("accepted/x/y/z")
 
 @pytest.mark.skipif(not _HAS_MINIO, reason=f"no live MinIO reachable on {os.environ.get('DRISHTI_TEST_MINIO_ENDPOINT', 'http://minio:9000')}")
-@pytest.mark.skipif(not _HAS_MINIO, reason=f"no live MinIO reachable on {os.environ.get('DRISHTI_TEST_MINIO_ENDPOINT', 'http://minio:9000')}")
 def test_s3_backend_round_trip_live_minio(monkeypatch):
     monkeypatch.setattr(config, "S3_ENDPOINT_URL", os.environ.get("DRISHTI_TEST_MINIO_ENDPOINT", "http://minio:9000"))
     monkeypatch.setattr(config, "S3_ACCESS_KEY", "drishti")
@@ -73,7 +72,7 @@ def test_s3_backend_round_trip_live_minio(monkeypatch):
     import uuid
     bucket_name = f"drishti-live-test-{uuid.uuid4()}"
     monkeypatch.setattr(config, "S3_BUCKET", bucket_name)
-    c = storage.s3()
+    c = storage._client()
     try:
         c.create_bucket(Bucket=bucket_name)
     except Exception:

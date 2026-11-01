@@ -6,6 +6,7 @@ import type {
   EntityType,
   RelationshipType,
 } from "@/types/entity";
+import { RELATIONSHIP_TYPES } from "@/types/entity";
 import type { EvidenceTier } from "@/constants/evidenceTiers";
 import { maskPersonName, maskSensitiveText } from "@/lib/pii";
 
@@ -28,6 +29,9 @@ export interface GraphEngineCallbacks {
   onEdgeEnter?: (edgeId: string) => void;
   onEdgeLeave?: () => void;
 }
+
+const KNOWN_RELATIONSHIP_TYPES: ReadonlySet<string> = new Set(RELATIONSHIP_TYPES);
+const KNOWN_ENTITY_TYPES: ReadonlySet<string> = new Set(["PERSON", "ORGANIZATION", "LOCATION", "EVENT", "FINANCIAL", "CYBER"]);
 
 export const CORE_RELATIONSHIP_IDS = new Set([
   "R-01", // USED DEVICE (Vikram -> IMEI)
@@ -233,7 +237,7 @@ export class GraphEngine {
         }
 
         const cameraRatio = this.sigma ? this.sigma.getCamera().ratio : 1.0;
-        const confidence = (data.confidence as number) || 1.0;
+        const confidence = typeof data.minConfidence === "number" ? (data.minConfidence as number) : 0;
 
         const isCoreOverviewLink =
           isContradiction ||
@@ -441,8 +445,9 @@ export class GraphEngine {
     const attr = this.graph.getNodeAttributes(nodeId);
     const entityType = attr.entityType as EntityType;
 
-    // Filter by entity type
-    if (!this.filters.activeEntityTypes.has(entityType)) return false;
+    // Filter by entity type. Hide only explicitly deselected KNOWN types; an unmapped backend kind (e.g. VEHICLE)
+    // stays visible rather than silently disappearing (30 of 56 CASE-0001 nodes were hidden this way).
+    if (KNOWN_ENTITY_TYPES.has(entityType) && !this.filters.activeEntityTypes.has(entityType)) return false;
 
 
     // Filter by search term
@@ -484,8 +489,14 @@ export class GraphEngine {
 
 
     // Filter by relationship type
+    // Hide only types the user has explicitly deselected. A rel_type outside the known vocabulary is SHOWN, so a
+    // frontend/backend vocabulary drift can never again silently hide every relationship.
     const relType = attr.relationshipType as RelationshipType;
-    if (this.filters.activeRelationshipTypes && !this.filters.activeRelationshipTypes.has(relType)) {
+    if (
+      this.filters.activeRelationshipTypes &&
+      KNOWN_RELATIONSHIP_TYPES.has(relType) &&
+      !this.filters.activeRelationshipTypes.has(relType)
+    ) {
       return false;
     }
 
@@ -572,7 +583,7 @@ export class GraphEngine {
         ctx.stroke();
       }
 
-      // Tier 6: Court Ready Glowing Purple
+      // Tier 6: Integrity-Referenced Export (glowing purple)
       if (tier === 6) {
         ctx.beginPath();
         ctx.setLineDash([]);
@@ -813,7 +824,6 @@ export class GraphEngine {
       const entityType = (attr.entityType as EntityType) || "PERSON";
       const p = this.sigma!.graphToViewport({ x: attr.x as number, y: attr.y as number });
       const size = (attr.size as number) || 16;
-      const confidence = 100;
       const rawLabel = ((attr.maskedLabel || attr.label || "") as string);
       const fullLabel = entityType === "PERSON" ? maskPersonName(rawLabel) : maskSensitiveText(rawLabel);
 
@@ -828,7 +838,8 @@ export class GraphEngine {
 
       ctx.save();
       ctx.font = '600 10px "Inter", sans-serif';
-      const tagText = `${typeLabels[entityType] || entityType} · ${confidence}% Match Confidence`;
+      // No confidence on nodes: entities carry no match score, so none is displayed (was a hardcoded "100%").
+      const tagText = `${typeLabels[entityType] || (attr.sourceKind as string) || entityType}`;
       ctx.font = 'bold 12px "Inter", sans-serif';
       const titleText = fullLabel;
 
@@ -884,13 +895,14 @@ export class GraphEngine {
       const midY = (p1.y + p2.y) / 2;
 
       const relLabel = maskSensitiveText((edgeAttr.label as string) || "CONNECTED");
-      const conf = Math.round(((edgeAttr.confidence as number) || 0.9) * 100);
+      // Real backend value: minimum extraction confidence over the supporting claims (not an identity-match score).
+      const minConf = typeof edgeAttr.minConfidence === "number" ? Math.round((edgeAttr.minConfidence as number) * 100) : null;
 
       ctx.save();
       ctx.font = '600 10px "Inter", sans-serif';
       const tagText = edgeAttr.hasContradiction
         ? "⚠️ Conflicting Information Flagged"
-        : `Connection · ${conf}% Match Confidence`;
+        : minConf === null ? "Candidate relationship · confidence not recorded" : `Candidate relationship · min. extraction confidence ${minConf}%`;
       ctx.font = 'bold 12px "Inter", sans-serif';
       const titleText = relLabel;
 
