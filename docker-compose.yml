@@ -34,7 +34,7 @@ services:
       DRISHTI_S3_ACCESS_KEY: drishti
       DRISHTI_S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in .env}
       DRISHTI_STORAGE_ROOT: /data
-      DRISHTI_KAFKA_BROKERS: kafka:9092
+      DRISHTI_KAFKA_BOOTSTRAP_SERVERS: kafka:9092  # DEF-053: name the code reads
       DRISHTI_BESU_ENDPOINT: http://besu:8545
       DRISHTI_REDIS_URL: redis://redis:6379/0
     volumes:
@@ -124,6 +124,9 @@ services:
     environment:
       DRISHTI_DATABASE_URL: postgresql+psycopg2://drishti:${POSTGRES_PASSWORD:?Set
         POSTGRES_PASSWORD in .env}@postgres:5432/drishti
+      # DEF-052: config's production guard rejects the default key on import, so without this the migrations
+      # service exited non-zero and api/worker (service_completed_successfully) never started.
+      DRISHTI_SECRET_KEY: ${DRISHTI_SECRET_KEY:?Set DRISHTI_SECRET_KEY in .env}
     depends_on:
       postgres:
         condition: service_healthy
@@ -145,7 +148,7 @@ services:
       DRISHTI_S3_ACCESS_KEY: drishti
       DRISHTI_S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in .env}
       DRISHTI_STORAGE_ROOT: /data
-      DRISHTI_KAFKA_BROKERS: kafka:9092
+      DRISHTI_KAFKA_BOOTSTRAP_SERVERS: kafka:9092  # DEF-053: name the code reads
       DRISHTI_BESU_ENDPOINT: http://besu:8545
     volumes:
     - drishti-data:/data

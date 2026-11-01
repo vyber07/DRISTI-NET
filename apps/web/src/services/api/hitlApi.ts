@@ -2,7 +2,11 @@ import { get, post, type ApiResponse } from "./real_client";
 
 import type { HITLTask, HITLFilter, HITLTaskDecision, HITLProposedMatch, MatchedEntitySummary, HITLTaskStatus, HITLTaskType, HITLTaskPriority } from "@/types/hitl";
 
+const DECISION_ACTION: Record<string, HITLTaskDecision["action"]> = { APPROVE: "APPROVE_MERGE", REJECT: "REJECT_MERGE", DEFER: "DEFER" };
+
 function mapCandidateToTask(cand: any): HITLTask {
+  const reviews: any[] = Array.isArray(cand.reviews) ? cand.reviews : [];
+  const last = reviews.length ? reviews[reviews.length - 1] : null;
   let statusStr = cand.state;
   if (statusStr === "REVIEW_REQUIRED") statusStr = "PENDING";
   else if (statusStr === "APPROVE") statusStr = "APPROVED";
@@ -32,8 +36,24 @@ function mapCandidateToTask(cand: any): HITLTask {
       entityB: { id: cand.right?.entity_id || "", name: cand.right?.label || "", type: cand.right?.kind || "", attributes: cand.right?.attributes || {} },
       similarityScore: cand.confidence || 0,
       similarityMetrics: [],
-      candidateReason: cand.positive_signals ? JSON.stringify(cand.positive_signals) : ""
+      candidateReason: ""
     },
+    // DEF-059: the matcher's reasons, counter-evidence, conflicts and missingness were never shown to the reviewer.
+    signals: {
+      positive: Array.isArray(cand.positive_signals) ? cand.positive_signals : [],
+      counter: Array.isArray(cand.counter_evidence) ? cand.counter_evidence : [],
+      conflicts: Array.isArray(cand.conflicts) ? cand.conflicts : [],
+      missing: Array.isArray(cand.missing) ? cand.missing : [],
+    },
+    // DEF-060: resolved tasks rendered a blank decision because `decision` was never mapped from reviews[].
+    decision: last ? {
+      action: DECISION_ACTION[last.decision] || ("DEFER" as HITLTaskDecision["action"]),
+      officerName: last.reviewer_id || "",
+      officerBadge: last.decision,
+      justification: last.reason || "",
+      arbitratedAt: last.created_at || "",
+    } : undefined,
+    assignedAnalyst: cand.assigned_to ? { name: cand.assigned_to, badge: "" } : undefined,
     createdAt: cand.created_at || new Date().toISOString(),
     updatedAt: cand.created_at || new Date().toISOString(),
     slaDeadline: new Date(Date.now() + 86400000).toISOString()

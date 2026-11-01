@@ -75,7 +75,8 @@ export function HITLDecisionDialog({
 
         {/* Compliance Warning */}
         <div className="rounded bg-critical-red/10 border border-critical-red/30 p-2.5 text-micro text-critical-red leading-relaxed">
-          <strong>Mandatory Notice:</strong> This action permanently writes to the immutable cryptographic audit log under Indian Evidence Act guidelines. All timestamps, IP addresses, and officer credentials are cryptographically committed.
+          <strong>Notice:</strong> Your decision, reason, user id and time are written to the case audit log (each event
+          HMAC-signed). Decisions are reversible; a reversal is recorded as a new review that supersedes this one.
         </div>
 
         {/* Action Buttons */}

@@ -27,7 +27,13 @@ export function CaseReviewsView() {
   const handleClaimDecision = async (claimId: string, decision: string) => {
     setActionState((s) => ({ ...s, [claimId]: "loading" }));
     try {
-      await makeClaimDecision(claimId, decision, "Reviewed via UI");
+      // DEF-065: a fixed reason ("Reviewed via UI") recorded no real rationale; ask the reviewer.
+      const reason = window.prompt(`Reason for ${decision} (min. 5 characters, recorded in the audit log):`) || "";
+      if (reason.trim().length < 5) {
+        setActionState((s) => ({ ...s, [claimId]: "error: a reason of at least 5 characters is required" }));
+        return;
+      }
+      await makeClaimDecision(claimId, decision, reason.trim());
       setActionState((s) => ({ ...s, [claimId]: "done" }));
       load();
     } catch (e: any) {
@@ -116,7 +122,7 @@ export function CaseReviewsView() {
               {r.target_kind === "CLAIM" && (
                 <div className="flex items-center gap-2 pt-1">
                   <span className="text-[10.5px] text-text-muted">Override decision:</span>
-                  {["ALLOWED", "REJECT", "CONTRADICTORY", "REVERSE"].map((d) => (
+                  {["APPROVE", "REJECT", "CONTRADICTORY", "REVERSE"].map((d) => (  /* DEF-065: "ALLOWED" is not a valid decision -> 422 */
                     <Button
                       key={d}
                       variant="ghost"
@@ -129,7 +135,7 @@ export function CaseReviewsView() {
                     </Button>
                   ))}
                   {actionState[r.target_id] && actionState[r.target_id] !== "loading" && (
-                    <span className="text-[10px] text-emerald-400">{actionState[r.target_id]}</span>
+                    <span role="status" className={`text-[10px] ${actionState[r.target_id].startsWith("error") ? "text-critical-red" : "text-emerald-400"}`}>{actionState[r.target_id]}</span>
                   )}
                 </div>
               )}

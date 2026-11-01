@@ -57,12 +57,12 @@ export const useHITLStore = create<HITLState>((set, get) => ({
 
   loadTasks: async (overrideFilter) => {
     const activeFilter = { ...get().filter, ...overrideFilter };
-    set({ isLoading: true, error: null });
+    // DEF-067: clear the previous case's queue first; load stats independently. /stats is role-restricted, so with
+    // Promise.all an analyst or auditor who may read the queue saw a false "queue clear" when stats returned 403.
+    set({ isLoading: true, error: null, tasks: [], activeTask: null });
     try {
-      const [tasksRes, statsRes] = await Promise.all([
-        listHITLTasks(activeFilter),
-        getHITLStats(activeFilter.caseId),
-      ]);
+      const tasksRes = await listHITLTasks(activeFilter);
+      const statsRes = await getHITLStats(activeFilter.caseId).catch(() => ({ data: get().stats }));
 
       const currentActiveId = get().activeTaskId;
       const matchedActive = currentActiveId
@@ -72,12 +72,12 @@ export const useHITLStore = create<HITLState>((set, get) => ({
       set({
         tasks: tasksRes.data,
         stats: statsRes.data,
-        activeTask: matchedActive || get().activeTask,
+        activeTask: matchedActive,
         filter: activeFilter,
         isLoading: false,
       });
-    } catch {
-      set({ error: "Failed to load HITL tasks", isLoading: false });
+    } catch (e: any) {
+      set({ error: `Failed to load review tasks: ${e?.message || "error"}`, isLoading: false });
     }
   },
 

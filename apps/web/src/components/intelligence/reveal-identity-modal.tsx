@@ -147,7 +147,7 @@ function RevealModalContent({ modalTarget }: RevealModalContentProps) {
                 <div className="flex items-center justify-between text-micro text-text-muted">
                   <span className="uppercase font-mono">{lastResult.identifierType} Plaintext:</span>
                   <span className="text-emerald-400 font-mono flex items-center gap-1">
-                    <Clock className="h-3 w-3" /> Expires in 15 mins
+                    <Clock className="h-3 w-3" /> Shown for this session view only
                   </span>
                 </div>
                 <div className="font-mono text-base font-bold text-text-primary tracking-wider select-all pt-1">
@@ -202,7 +202,7 @@ function RevealModalContent({ modalTarget }: RevealModalContentProps) {
             {/* Target Value Box: clear masked representation */}
             <div className="rounded-lg border border-border-subtle bg-surface-2/60 p-3 space-y-2">
               <div className="flex items-center justify-between text-micro text-text-muted">
-                <span className="font-semibold uppercase tracking-wider">Target Suspect &amp; Identifier</span>
+                <span className="font-semibold uppercase tracking-wider">Entity &amp; identifier</span>
                 <span className="font-mono">{modalTarget.entityId}</span>
               </div>
               <div className="flex items-center justify-between bg-surface-1 p-2.5 rounded border border-border-subtle">
@@ -260,7 +260,7 @@ function RevealModalContent({ modalTarget }: RevealModalContentProps) {
               {officerClearance < 2 && (
                 <p className="text-micro text-critical-red flex items-center gap-1 mt-1">
                   <AlertTriangle className="h-3 w-3 shrink-0" />
-                  Clearance Level 1 lacks unmasking authority. Submitting will result in a logged audit denial.
+                  This selector is not sent to the server: the server decides by your role, and every attempt (granted or denied) is audited.
                 </p>
               )}
             </div>

@@ -68,10 +68,8 @@ export function GraphToolbar({
   } = useGraphStore();
 
   let activeFilterCount = 0;
-  if (activeTiers.size < 5) activeFilterCount++;
   if (activeEntityTypes.size < 6) activeFilterCount++;
   if (activeRelationshipTypes.size < 6) activeFilterCount++;
-  if (onlyContradictions) activeFilterCount++;
   if (minConfidence > 0) activeFilterCount++;
 
   const [showFilterDropdown, setShowFilterDropdown] = useState(false);
@@ -214,59 +212,9 @@ export function GraphToolbar({
 
         <div className="mx-0.5 h-4 w-px bg-border-subtle shrink-0" />
 
-        {EVIDENCE_TIER_ORDER.map((tier) => {
-          const cfg = EVIDENCE_TIER_CONFIG[tier];
-          const isActive = activeTiers.has(tier);
-          return (
-            <Tooltip key={tier}>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  onClick={() => toggleTier(tier)}
-                  className={cn(
-                    "flex items-center gap-0.5 rounded px-1 py-0.5 text-[11px] font-mono font-medium transition-colors shrink-0",
-                    isActive
-                      ? "bg-surface-3 text-text-primary border border-border-strong"
-                      : "opacity-40 text-text-disabled hover:opacity-75",
-                  )}
-                >
-                  <span
-                    className="inline-block h-1.5 w-1.5 rounded-full shrink-0"
-                    style={{ backgroundColor: `var(--tier-${tier}-color)` }}
-                  />
-                  <span>T{tier}</span>
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                <p className="font-semibold text-text-primary">{cfg.label}</p>
-                <p className="text-text-muted">{cfg.code}</p>
-              </TooltipContent>
-            </Tooltip>
-          );
-        })}
-
-        <div className="mx-0.5 h-4 w-px bg-border-subtle shrink-0" />
-
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <button
-              type="button"
-              onClick={() => setOnlyContradictions(!onlyContradictions)}
-              className={cn(
-                "flex items-center gap-1 rounded px-1.5 py-0.5 text-xs font-medium transition-colors shrink-0",
-                onlyContradictions
-                  ? "bg-critical-red/20 border border-critical-red text-critical-red font-semibold"
-                  : "text-text-muted hover:text-critical-red",
-              )}
-            >
-              <AlertTriangle className="h-3 w-3 shrink-0" />
-              <span className="hidden 2xl:inline">Alerts</span>
-            </button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">
-            Filter to conflicting witness/evidence claims
-          </TooltipContent>
-        </Tooltip>
+        {/* DEF-020/063: tier toggles and the "Alerts" (contradictions-only) control removed -- the API sends no
+            evidence tier and no edge-level contradiction flag, so they filtered nothing or hid every edge.
+            Contradictions are listed on the case overview from /cases/{id}/contradictions. */}
 
         <div className="relative shrink-0 hidden 2xl:block">
           <Tooltip>

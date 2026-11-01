@@ -22,7 +22,12 @@ from datetime import datetime, timedelta
 import networkx as nx
 from sqlalchemy.orm import Session
 
+import logging
+
 from .. import config
+from .masking import case_attributes
+
+logger = logging.getLogger("drishti.graph")
 from ..models import Claim, Entity, Evidence, MatchCandidate
 from . import neo4j_store
 
@@ -85,7 +90,7 @@ def build_projection(db: Session, case_id: str, t_from: datetime | None = None, 
         e = ents.get(eid)
         if r not in G:
             base = ents.get(r, e)
-            case_attrs = (base.attributes or {}).get(case_id, {}) if isinstance(base.attributes, dict) and case_id in (base.attributes or {}) else (base.attributes or {})
+            case_attrs = case_attributes(base.attributes, case_id)  # DEF-033b: never other cases' attributes
             G.add_node(r, entity_id=r, kind=base.kind, label=base.label, merged_from=[], attributes=case_attrs,
                        access_class=base.access_class, flags={})
         if r != eid and e is not None and e.label not in G.nodes[r]["merged_from"] and e.label != G.nodes[r]["label"]:
@@ -117,7 +122,11 @@ def build_projection(db: Session, case_id: str, t_from: datetime | None = None, 
                    jurisdiction=evd.jurisdiction if evd else None, access_class=evd.access_class if evd else None,
                    authority_reference=evd.authority_reference if evd else None)
     if neo4j_store.available():
-        _sync_to_neo4j(case_id, G)
+        try:
+            _sync_to_neo4j(case_id, G)
+        except Exception as exc:  # DEF-043 / constitution §6.1: projection failure must not fail the request
+            logger.warning("Neo4j projection sync failed for %s, serving in-process projection: %s", case_id, exc)
+            G.graph["projection_stale"] = True
     return G
 
 
@@ -221,9 +230,16 @@ def bounded_subgraph(G: nx.MultiDiGraph, case_id: str, center: str | None, hops:
     neo4j_store.read_bounded for why a centered hop-bounded traversal can't be paged the same way.
     """
     offset = max(0, offset)
-    if neo4j_store.available():
-        nodes, _edges, truncated = neo4j_store.read_bounded(case_id, center, hops, max_nodes, offset)
-        return {n["entity_id"] for n in nodes}, truncated
+    # DEF-071 / DEC-010: centered traversals are bounded in-process on every backend. The Neo4j Cypher traversal
+    # did not apply the supernode fan-out cap (a 20-spoke hub returned all 20 neighbours, cap 12) -- found when
+    # the restored supernode test ran against live Neo4j. The authoritative projection G is already in memory.
+    if neo4j_store.available() and not G.graph.get("projection_stale") and (center is None or center not in G):
+        try:
+            nodes, _edges, truncated = neo4j_store.read_bounded(case_id, center, hops, max_nodes, offset)
+            return {n["entity_id"] for n in nodes}, truncated
+        except Exception as exc:  # DEF-043: fall back to the authoritative in-process projection
+            logger.warning("Neo4j bounded read failed for %s, using in-process projection: %s", case_id, exc)
+            G.graph["projection_stale"] = True
     hops = max(1, min(hops, config.GRAPH_MAX_HOPS))
     max_nodes = max(5, min(max_nodes, config.GRAPH_MAX_NODES))
     U = G.to_undirected(as_view=True)

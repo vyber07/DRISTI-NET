@@ -1,166 +1,140 @@
-import { useState, useEffect } from "react";
-import {
-  FileText,
-  ShieldCheck,
-  ExternalLink,
-  CheckCircle2,
-  Hash,
-} from "lucide-react";
+import { useEffect, useState } from "react";
+import { FileText, ExternalLink, Hash, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { EvidenceTierBadge } from "@/components/intelligence/evidence-tier-badge";
-import { PdfDocumentViewer } from "@/components/evidence/PdfDocumentViewer";
 import { useProvenanceStore } from "@/stores/provenanceStore";
-import { getEvidenceById } from "@/services/api/evidenceApi";
-import { maskPhoneNumbersInText } from "@/lib/pii";
-import type { ProvenanceRecord } from "@/types/entity";
+import { getEvidenceById, getEvidenceContext } from "@/services/api/evidenceApi";
 import type { HITLTask } from "@/types/hitl";
 
-interface HITLEvidencePaneProps {
-  task: HITLTask;
+/**
+ * Supporting evidence for a review candidate.
+ *
+ * DEF-058: this pane used to render a static, fabricated "Call Detail Record" (agency letterhead, invented call
+ * rows, a made-up threat transcript, fixed tier 2 / 90 % confidence) under the real file's name and SHA-256.
+ * It now shows only what the API returns: the evidence record and its masked source lines.
+ */
+interface ContextLine { n: number; text: string; hit: boolean }
+interface EvidenceView {
+  evidence_id: string;
+  filename: string;
+  sha256: string;
+  status: string;
+  detected_type: string;
+  created_at: string;
+  lines: ContextLine[];
+  error: string | null;
 }
 
-export function HITLEvidencePane({ task }: HITLEvidencePaneProps) {
-  const [record, setRecord] = useState<ProvenanceRecord | null>(null);
+async function loadOne(evidenceId: string): Promise<EvidenceView> {
+  const ev = (await getEvidenceById(evidenceId)).data as any;
+  const base: EvidenceView = {
+    evidence_id: ev.evidence_id, filename: ev.filename, sha256: ev.sha256, status: ev.status,
+    detected_type: ev.detected_type, created_at: ev.created_at, lines: [], error: null,
+  };
+  try {
+    const ctx = (await getEvidenceContext(evidenceId, { line: 1, window: 10 })).data as any;
+    base.lines = Array.isArray(ctx?.lines) ? ctx.lines : [];
+  } catch (e: any) {
+    base.error = e?.status === 409 ? `Source not shown: ${e.message}` : `Source could not be loaded: ${e?.message || "error"}`;
+  }
+  return base;
+}
+
+export function HITLEvidencePane({ task }: { task: HITLTask }) {
+  const [items, setItems] = useState<EvidenceView[]>([]);
+  const [active, setActive] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const { openProvenanceForRecord } = useProvenanceStore();
 
   useEffect(() => {
-    let isMounted = true;
-    async function loadRecord() {
-      setIsLoading(true);
-      try {
-        let matched: any = null;
-        if (task.primaryEvidenceId) {
-          // In a fully integrated backend, this fetches the evidence record linked to the candidate
-          const evidenceRes = await getEvidenceById(task.primaryEvidenceId);
-          if (evidenceRes.data) {
-            const ev = evidenceRes.data;
-            matched = {
-              recordId: ev.evidence_id,
-              relationshipId: task.id,
-              documentId: ev.evidence_id,
-              documentTitle: ev.filename,
-              documentType: (ev.filename.toLowerCase().includes("fir") ? "FIR_EXCERPT" : "CDR_RECORD") as any,
-              sourceType: ev.source_label || "FILE_UPLOAD",
-              sourceAgency: ev.jurisdiction || "DEMO-A",
-              ingestedAt: ev.created_at,
-              sha256Hash: ev.sha256,
-              rawArtifactId: ev.evidence_id,
-              rawArtifactSha256: ev.sha256,
-              evidenceTier: 2 as const,
-              boundingBoxes: [],
-              extractedTextSnippet: "",
-              extractionModel: ev.detected_type || "text/plain",
-              extractionConfidence: 0.9,
-              chainOfCustody: [],
-            };
-          }
-        }
-
-        if (isMounted) {
-          setRecord(matched);
-        }
-      } catch {
-        if (isMounted) {
-          setRecord(null);
-        }
-      } finally {
-        if (isMounted) setIsLoading(false);
-      }
-    }
-
-    loadRecord();
-    return () => {
-      isMounted = false;
-    };
-  }, [task]);
+    let alive = true;
+    const ids = (task.evidenceIds?.length ? task.evidenceIds : [task.primaryEvidenceId]).filter(Boolean).slice(0, 6);
+    setItems([]); setActive(0); setError(null);
+    if (!ids.length) return;
+    setIsLoading(true);
+    Promise.all(ids.map(loadOne))
+      .then((r) => { if (alive) setItems(r); })
+      .catch((e: any) => { if (alive) setError(e?.message || "Failed to load supporting evidence"); })
+      .finally(() => { if (alive) setIsLoading(false); });
+    return () => { alive = false; };
+  }, [task.id, task.primaryEvidenceId, task.evidenceIds]);
 
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-full bg-surface-2 p-6 text-center space-y-2">
         <div className="h-6 w-6 animate-spin rounded-full border-2 border-electric-blue border-t-transparent" />
-        <p className="text-xs font-mono text-text-muted">Loading supporting forensic evidence...</p>
+        <p className="text-xs font-mono text-text-muted">Loading supporting evidence…</p>
       </div>
     );
   }
-
-  if (!record) {
+  if (error) {
+    return (
+      <div role="alert" className="flex flex-col items-center justify-center h-full bg-surface-2 p-6 text-center space-y-2">
+        <AlertCircle className="h-8 w-8 text-critical-red" />
+        <p className="text-xs text-text-secondary">{error}</p>
+      </div>
+    );
+  }
+  if (!items.length) {
     return (
       <div className="flex flex-col items-center justify-center h-full bg-surface-2 p-6 text-center space-y-3">
         <FileText className="h-10 w-10 text-text-muted" />
-        <h4 className="text-sm font-semibold text-text-primary">No Direct Evidence Attached</h4>
-        <p className="text-xs text-text-secondary max-w-sm">
-          No primary forensic PDF record is directly linked to task {task.id}. Check evidence library.
-        </p>
+        <h4 className="text-sm font-semibold text-text-primary">No supporting evidence linked</h4>
+        <p className="text-xs text-text-secondary max-w-sm">The API returned no evidence ids for candidate {task.id}.</p>
       </div>
     );
   }
 
+  const cur = items[Math.min(active, items.length - 1)];
   return (
     <div className="flex flex-col h-full bg-surface-2 overflow-hidden">
-      {/* Evidence Pane Header */}
-      <div className="flex h-12 items-center justify-between px-4 bg-surface-1 border-b border-border-subtle shrink-0">
+      <div className="flex items-center gap-1 px-3 pt-2 bg-surface-1 border-b border-border-subtle shrink-0 overflow-x-auto" role="tablist">
+        {items.map((it, i) => (
+          <button key={it.evidence_id} type="button" role="tab" aria-selected={i === active} onClick={() => setActive(i)}
+            className={`px-2.5 py-1.5 text-micro font-mono rounded-t border-b-2 whitespace-nowrap ${i === active ? "border-electric-blue text-text-primary" : "border-transparent text-text-muted hover:text-text-secondary"}`}>
+            {it.filename}
+          </button>
+        ))}
+      </div>
+
+      <div className="flex h-11 items-center justify-between px-4 bg-surface-1 border-b border-border-subtle shrink-0 gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <FileText className="h-4 w-4 text-electric-blue-soft shrink-0" />
-          <span className="text-xs font-semibold text-text-primary truncate">
-            {maskPhoneNumbersInText(record.documentTitle)}
-          </span>
-          <EvidenceTierBadge tier={record.evidenceTier} className="shrink-0" />
-          <Badge tone="gray" className="text-micro font-mono shrink-0">
-            {record.documentType}
-          </Badge>
+          <span className="text-xs font-semibold text-text-primary truncate">{cur.filename}</span>
+          <Badge tone="gray" className="text-micro font-mono shrink-0">{cur.detected_type}</Badge>
+          <Badge tone="blue" className="text-micro font-mono shrink-0">{cur.status}</Badge>
         </div>
-
-        <div className="flex items-center gap-2 shrink-0">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-7 text-micro font-mono text-electric-blue-soft hover:text-text-primary px-2 gap-1"
-            onClick={() => openProvenanceForRecord(record.recordId)}
-            title="Expand in full-screen modal forensic viewer"
-          >
-            <ExternalLink className="h-3 w-3" />
-            <span>Full Inspector</span>
-          </Button>
-        </div>
+        <Button variant="ghost" size="sm" className="h-7 text-micro font-mono px-2 gap-1 shrink-0"
+          onClick={() => openProvenanceForRecord(cur.evidence_id)} title="Open the full source in the provenance viewer">
+          <ExternalLink className="h-3 w-3" /><span>Open source</span>
+        </Button>
       </div>
 
-      {/* Embedded Forensic PDF Viewer with Bounding Box Overlay */}
-      <div className="flex-1 min-h-0">
-        <PdfDocumentViewer record={record} />
-      </div>
-
-      {/* Bottom Forensic Dossier Metadata Strip */}
-      <div className="p-3 bg-surface-1 border-t border-border-subtle space-y-2 shrink-0 text-micro">
-        <div className="flex items-center justify-between gap-4 flex-wrap">
-          <div className="flex items-center gap-1.5 font-mono text-text-muted">
-            <Hash className="h-3 w-3 text-verified-emerald" />
-            <span>SHA-256:</span>
-            <span className="text-text-secondary truncate max-w-[200px]" title={record.sha256Hash}>
-              {record.sha256Hash.substring(0, 16)}...
-            </span>
-          </div>
-
-          <div className="flex items-center gap-1.5 font-mono text-text-muted">
-            <ShieldCheck className="h-3 w-3 text-electric-blue-soft" />
-            <span>Agency: {record.sourceAgency}</span>
-          </div>
-
-          <div className="flex items-center gap-1.5 font-mono text-text-muted">
-            <span>Ingested: {new Date(record.ingestedAt).toLocaleDateString("en-IN")}</span>
-          </div>
-        </div>
-
-        {record.analystSignoff && (
-          <div className="rounded bg-surface-2 p-2 border border-border-subtle/70 text-text-secondary flex items-center justify-between">
-            <div className="flex items-center gap-1.5">
-              <CheckCircle2 className="h-3.5 w-3.5 text-verified-emerald" />
-              <span>Prior Signoff: <strong>{record.analystSignoff.officerName}</strong> ({record.analystSignoff.role})</span>
-            </div>
-            <span className="font-mono text-text-muted">{record.analystSignoff.notes}</span>
-          </div>
+      <div className="flex-1 min-h-0 overflow-auto p-3">
+        <p className="text-micro text-text-muted mb-2">
+          Opening lines of the stored source (masked by default). This is the file the candidate cites; the specific
+          lines behind each signal are listed in the decision pane.
+        </p>
+        {cur.error ? (
+          <div role="alert" className="rounded border border-critical-red/40 bg-critical-red/10 p-3 text-xs text-text-secondary">{cur.error}</div>
+        ) : cur.lines.length === 0 ? (
+          <p className="text-xs text-text-muted">The source returned no text lines.</p>
+        ) : (
+          <pre className="text-[11px] leading-5 font-mono text-text-secondary whitespace-pre-wrap break-words">
+            {cur.lines.map((l) => (
+              <div key={l.n} className="flex gap-3"><span className="text-text-disabled select-none w-8 text-right shrink-0">{l.n}</span><span>{l.text}</span></div>
+            ))}
+          </pre>
         )}
+      </div>
+
+      <div className="p-3 bg-surface-1 border-t border-border-subtle shrink-0 text-micro flex items-center justify-between gap-4 flex-wrap font-mono text-text-muted">
+        <div className="flex items-center gap-1.5">
+          <Hash className="h-3 w-3" /><span>SHA-256 (integrity reference):</span>
+          <span className="text-text-secondary truncate max-w-[220px]" title={cur.sha256}>{cur.sha256.substring(0, 16)}…</span>
+        </div>
+        <span>Ingested: {new Date(cur.created_at).toLocaleDateString("en-IN")}</span>
       </div>
     </div>
   );

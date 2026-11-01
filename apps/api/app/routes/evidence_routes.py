@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import Response
 from sqlalchemy.orm import Session
 
@@ -45,7 +45,9 @@ async def upload(case_id: str, request: Request, file: UploadFile = File(...), s
     sha = storage.sha256_bytes(data)
     prior = db.query(Evidence).filter_by(case_id=case_id, sha256=sha).first()
     if prior:
-        record_audit(db, trace, user.user_id, "EVIDENCE_UPLOAD_DUPLICATE", "EVIDENCE", prior.evidence_id, case_id); return evidence_out(prior, db)
+        record_audit(db, trace, user.user_id, "EVIDENCE_UPLOAD_DUPLICATE", "EVIDENCE", prior.evidence_id, case_id)
+        db.commit()  # DEF-045: the audit row was never committed
+        return evidence_out(prior, db)
     version = 1
     ev = Evidence(case_id=case_id, version=version, filename=file.filename, extension=v.extension, detected_type=v.detected_type,
                   size_bytes=len(data), sha256=sha, status="UPLOADED", storage_path="pending", source_label=source_label,
@@ -64,9 +66,17 @@ async def upload(case_id: str, request: Request, file: UploadFile = File(...), s
         db.rollback()
         prior = db.query(Evidence).filter_by(case_id=case_id, sha256=sha).first()
         record_audit(db, trace, user.user_id, "EVIDENCE_UPLOAD_DUPLICATE", "EVIDENCE", prior.evidence_id, case_id)
+        db.commit()  # DEF-045
         return evidence_out(prior, db)
     ev.status = "HASHED"
-    ev.storage_path = storage.write_quarantine(case_id, ev.evidence_id, file.filename, data)
+    try:
+        ev.storage_path = storage.write_quarantine(case_id, ev.evidence_id, file.filename, data)
+    except Exception as exc:  # DEF-044: object store unreachable -> no row, controlled 503 (was an unhandled 500)
+        db.rollback()
+        record_audit(db, trace, user.user_id, "EVIDENCE_UPLOAD", "FILE", file.filename, case_id, outcome="ERROR",
+                     detail={"reason": "evidence storage unavailable", "error": type(exc).__name__})
+        db.commit()
+        raise HTTPException(503, "evidence storage is unavailable; the upload was not accepted")
     ev.status = "QUARANTINED"
     record_audit(db, trace, user.user_id, "EVIDENCE_UPLOAD", "EVIDENCE", ev.evidence_id, case_id,
                  detail={"filename": file.filename, "sha256": sha, "size": len(data), "duplicate_of": prior.evidence_id if prior else None})
@@ -111,7 +121,8 @@ def verify(evidence_id: str, request: Request, user: User = Depends(current_user
     """Recompute the stored file's SHA-256 and compare with the manifest."""
     ev = _get_ev(db, user, evidence_id, request, action="EVIDENCE_VERIFY")
     if not storage.exists(ev.storage_path):
-        return {"evidence_id": evidence_id, "match": False, "reason": "stored object missing"}
+        _mark_object_missing(db, ev, user, request)  # DEF-042: was reported without changing state
+        return {"evidence_id": evidence_id, "match": False, "status": ev.status, "reason": "stored object missing"}
     ok, actual = storage.verify_hash(ev.storage_path, ev.sha256)
     record_audit(db, request.state.trace_id, user.user_id, "HASH_VERIFY", "EVIDENCE", evidence_id, ev.case_id, outcome="OK" if ok else "ERROR",
                  detail={"expected": ev.sha256, "actual": actual})
@@ -127,7 +138,7 @@ def verify(evidence_id: str, request: Request, user: User = Depends(current_user
 
 @router.get("/evidence/{evidence_id}/context")
 def context(evidence_id: str, request: Request, row: int | None = None, page: int | None = None, line: int | None = None,
-            json_path: str | None = None, window: int = 2,
+            json_path: str | None = None, window: int = Query(2, ge=0, le=10),
             user: User = Depends(current_user), db: Session = Depends(get_db)):
     """Return the source lines around a locator (masked by default) so a graph edge can be traced to its origin."""
     ev = _authorize_evidence_read(db, user, evidence_id, request, action="EVIDENCE_CONTEXT")
@@ -136,7 +147,7 @@ def context(evidence_id: str, request: Request, row: int | None = None, page: in
     if ev.extension == ".pdf":
         import io
         from pypdf import PdfReader
-        pages = [(p.extract_text() or "").splitlines() for p in PdfReader(io.BytesIO(data)).pages]
+        pages = _pdf_pages(data)
         pno = page or 1
         lines = pages[pno - 1] if 0 < pno <= len(pages) else []
         centre = (line or 1) - 1
@@ -178,7 +189,7 @@ def context_reveal(evidence_id: str, body: ContextRevealIn, request: Request, us
     if ev.extension == ".pdf":
         import io
         from pypdf import PdfReader
-        pages = [(p.extract_text() or "").splitlines() for p in PdfReader(io.BytesIO(data)).pages]
+        pages = _pdf_pages(data)
         pno = page or 1
         lines = pages[pno - 1] if 0 < pno <= len(pages) else []
         centre = (line or 1) - 1
@@ -225,6 +236,27 @@ def evidence_claims(evidence_id: str, request: Request, limit: int = 100, user: 
     claims = db.query(Claim).filter_by(evidence_id=ev.evidence_id).order_by(Claim.created_at).limit(min(limit, 500)).all()
     return [claim_out(c, db) for c in claims]
 
+def _pdf_pages(data: bytes) -> list[list[str]]:
+    """Text lines per page. DEF-047: a corrupt PDF (it can only reach EXTRACTION_FAILED) raised inside pypdf -> 500."""
+    import io
+    from pypdf import PdfReader
+    try:
+        return [(p.extract_text() or "").splitlines() for p in PdfReader(io.BytesIO(data)).pages]
+    except Exception:
+        raise HTTPException(422, "source document could not be parsed; the original is preserved unchanged")
+
+
+def _mark_object_missing(db: Session, ev: Evidence, user: User, request: Request) -> None:
+    """A stored object that has disappeared is an integrity failure (docs/context.md §6.1): block normal use,
+    keep the record, audit it. Recorded as INTEGRITY_MISMATCH with an explicit reason (decision DEC-009)."""
+    if ev.status != "INTEGRITY_MISMATCH":
+        ev.status = "INTEGRITY_MISMATCH"
+        ev.error = "stored object missing"
+        record_audit(db, request.state.trace_id, user.user_id, "INTEGRITY_MISMATCH", "EVIDENCE", ev.evidence_id, ev.case_id,
+                     outcome="ERROR", detail={"expected": ev.sha256, "actual": None, "reason": "stored object missing"})
+    db.commit()
+
+
 def _authorize_evidence_read(db: Session, user: User, evidence_id: str, request: Request, action: str, require_clean: bool = True) -> Evidence:
     """Centralized authorization and integrity gateway for evidence source access."""
     ev = _get_ev(db, user, evidence_id, request, action=action)
@@ -234,7 +266,10 @@ def _authorize_evidence_read(db: Session, user: User, evidence_id: str, request:
             db.commit()
             raise HTTPException(409, f"evidence is {ev.status}; source content is only served for files that passed the scan gate and match their manifest")
     
-    # Always verify integrity on read
+    # Always verify integrity on read. DEF-042: a missing object used to raise inside verify_hash -> HTTP 500.
+    if not storage.exists(ev.storage_path):
+        _mark_object_missing(db, ev, user, request)
+        raise HTTPException(409, "evidence integrity verification failed: stored object missing")
     ok, actual_hash = storage.verify_hash(ev.storage_path, ev.sha256)
     if not ok:
         ev.status = "INTEGRITY_MISMATCH"

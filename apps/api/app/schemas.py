@@ -43,7 +43,7 @@ class ContextRevealIn(BaseModel):
     page: int | None = None
     line: int | None = None
     json_path: str | None = None
-    window: int = 2
+    window: int = Field(default=2, ge=0, le=10)  # DEF-046: unbounded window unmasked a whole file in one call
 
 class ReportIn(BaseModel):
     analyst_comments: str = ""

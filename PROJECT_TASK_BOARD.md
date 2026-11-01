@@ -21,7 +21,7 @@
 | **Phase 4** | Redis Login Throttling & Cache | ADR-005, Context §7.2 | Demonstrated | `ratelimit.py`, `test_ratelimit.py` (4 tests pass), Redis service added to `docker-compose.yml` | None | **DONE** |
 | **Phase 5** | Frontend Sigma.js + Graphology Renderer | ADR-006, Context §7.2 | Demonstrated | `apps/web/src/components/graph/` Sigma.js canvas; edge timestamp & type mapping verified | None | **DONE** |
 | **Phase 6** | Security Hardening Pass | Security §1-4, Context §15.2 | Demonstrated | `test_security.py` (IDOR, role gates, masking, audit); secret key >= 32 chars verified | None | **DONE** |
-| **Phase 7** | Multi-Backend Full-Stack Verification | ADR-011, Release Gate §19 | Demonstrated | Compose stack definition; seed script ingestion; `make test-stack` clean cycle | None | **DONE** |
+| **Phase 7** | Multi-Backend Full-Stack Verification | ADR-011, Release Gate §19 | Demonstrated | Compose stack definition; seed script ingestion; `make test-stack` clean cycle | None | **NOT DONE** — Compose cannot start (MinIO + Kafka images unresolvable; migrations service crashed until DEF-052) |
 | **Phase 8** | Failure-Injection Testing (Scanner/DB/Storage) | Context §6.1, Directive §39 | Demonstrated | `test_scan_gate_fail_closed`, `test_extraction_failures.py`; fail-closed verified | None | **DONE** |
 | **Phase 9** | Corrupt-Input Fixtures & Extraction Retry | Context §6.1, Status §6 | Demonstrated | Corrupt CSV and truncated PDF reach `EXTRACTION_FAILED`; retry verified | None | **DONE** |
 | **Phase 10** | Community Stability & Query Timeout | Status §10, §11 | Demonstrated | Bootstrap-perturbation test; Neo4j server-side timeout | None | **DONE** |
@@ -36,17 +36,17 @@
 | **Phase 19** | Supernode-Capping Test Coverage | Context §10.4, §17.2 | Demonstrated | `test_supernode_capping_on_a_planted_high_degree_node` | None | **DONE** |
 | **Phase 20** | Limitations Documentation Resync | `docs/limitations.md` | Demonstrated | Explicit disclosure of prototype boundaries and evidence states | None | **DONE** |
 | **Phase 21** | Visual Redesign & UI Depth System | Constitution Role 2 | Demonstrated | Typography, Tailwind CSS tokens, surface depth layers, clean SPA bundle | None | **DONE** |
-| **Phase 22** | Hosted Deployment & Persistence Hardening | ADR-011, README | Demonstrated | Port 80 Nginx reverse proxy, auto-restart policies, systemd units verified | None | **DONE** |
-| **Phase 23** | Kafka Event Bus & Outbox Worker Integration | ADR-013, Status §8 | Demonstrated | `kafka_bus.py`, `workers/worker.py`, `test_new_components.py` PASS | None | **DONE** |
-| **Phase 24** | Hyperledger Besu Ledger Anchoring & Merkle Verification | ADR-014, Status §9 | Demonstrated | `integrity.py`, `LedgerAnchor` table, `validate_besu.py` refactored and verified | None | **DONE** |
-| **Phase 25** | AI IndicBERTv2 NER & PaddleOCR Ingestion Adapters | ADR-012, Status §11 | Demonstrated | `nlp_adapter.py` token classification (F1: 1.00), PaddleOCR fallback, FIR extraction verified | None | **DONE** |
+| **Phase 22** | Hosted Deployment & Persistence Hardening | ADR-011, README | Demonstrated | Port 80 Nginx reverse proxy, auto-restart policies, systemd units verified | None | **PARTIAL** — live unit binds 0.0.0.0, differs from repo unit (BLK-06) |
+| **Phase 23** | Kafka Event Bus & Outbox Worker Integration | ADR-013, Status §8 | Demonstrated | `kafka_bus.py`, `workers/worker.py`, `test_new_components.py` PASS | None | **IMPLEMENTED, NOT VALIDATED** — Compose passed the wrong env name (DEF-053); no outbox exists |
+| **Phase 24** | Hyperledger Besu Ledger Anchoring & Merkle Verification | ADR-014, Status §9 | Demonstrated | `integrity.py`, `LedgerAnchor` table, `validate_besu.py` refactored and verified | None | **PARTIAL** — Merkle root/proof tested; no Besu transaction ever executed here |
+| **Phase 25** | AI IndicBERTv2 NER & PaddleOCR Ingestion Adapters | ADR-012, Status §11 | Demonstrated | `nlp_adapter.py` token classification (F1: 1.00), PaddleOCR fallback, FIR extraction verified | None | **EVALUATION PENDING** — NER evaluated on 1 document / 3 entities |
 | **Phase 26** | Legal-Neutral Evidence Dossier Export | Status §11, Court PDF | Demonstrated | `services/court_pdf.py`, BSA s.63 structure, neutral terminology ("Integrity Dossier PDF") | None | **DONE** |
 | **Phase 27** | HITL Decision Persistence & Audit Trail Reconciliation | Context §11.2, §12 | Demonstrated | `review_routes.py`, `hitlStore.ts`, reveal API payload & entity API case_id verified | None | **DONE** |
-| **Phase 28** | Live Full-Stack Infrastructure & Service Boundary Hardening | Directive Step 3 | Demonstrated | Active ClamAV daemon on port 3310, systemd unit path corrected, Redis wired in Compose | None | **DONE** |
+| **Phase 28** | Live Full-Stack Infrastructure & Service Boundary Hardening | Directive Step 3 | Demonstrated | Active ClamAV daemon on port 3310, systemd unit path corrected, Redis wired in Compose | None | **PARTIAL** — see BLK-06 |
 | **Phase 29** | Golden Synthetic Evidence Journey Verification | Directive Step 4 | Demonstrated | Complete journey verified: ingest 7 files → quarantine → clean scan → parse → 3 candidates → HITL arbitration → graph → dossier export | None | **DONE** |
 | **Phase 30** | Real Browser E2E & Visual Journey Validation | Directive Part 15 | Demonstrated | Playwright Chromium: 5/5 E2E tests PASS in 6.70s (`make e2e`); 9 screenshots captured | None | **DONE** |
-| **Phase 31** | Government & Regulatory Readiness Assessment | Directive Part 19 | Demonstrated | `government/GOVERNMENT_READINESS_MATRIX.md` (DPDP Act 2023, IT Act 2000, CERT-In, STQC) | None | **DONE** |
-| **Phase 32** | Independent Technical Audit & Release Packaging | Directive Part 20 | Demonstrated | `audit/TECHNICAL_AUDIT_REPORT.md`, `audit/RELEASE_READINESS_REPORT.md`, SHA-256 verified archive | None | **DONE** |
+| **Phase 31** | Government & Regulatory Readiness Assessment | Directive Part 19 | Demonstrated | `government/GOVERNMENT_READINESS_MATRIX.md` (DPDP Act 2023, IT Act 2000, CERT-In, STQC) | None | **NOT ASSESSED** — every matrix row is NOT ASSESSED |
+| **Phase 32** | Independent Technical Audit & Release Packaging | Directive Part 20 | Demonstrated | `audit/TECHNICAL_AUDIT_REPORT.md`, `audit/RELEASE_READINESS_REPORT.md`, SHA-256 verified archive | None | **IN PROGRESS** — independent review started 2026-11-01 (session 4); release not approved |
 
 ---
 

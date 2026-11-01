@@ -31,7 +31,7 @@ from ..schemas import ReportIn, CourtPdfIn
 from ..services import graph as graph_svc
 from ..services import integrity as integrity_svc
 from ..services.audit import record_audit
-from ..services.masking import mask_label, mask_text
+from ..services.masking import mask_analysis, mask_label, mask_text
 from ..services.court_pdf import generate_court_pdf
 from .case_routes import case_out
 from .evidence_routes import evidence_out
@@ -58,11 +58,16 @@ def _anchor_out(anchor) -> dict:
     }
 
 
+ANCHORABLE_STATES = ("CLEAN", "ACCEPTED", "PROCESSING", "EXTRACTED", "EXTRACTION_FAILED", "ENTITY_CANDIDATES", "HITL",
+                     "GRAPH_PROJECTED", "ACTIVE", "STALE")
+
+
 def _get_case_evidence_hashes(db: Session, case_id: str) -> list[str]:
-    """Return ordered list of SHA-256 hashes for all non-quarantined evidence in the case."""
+    """Ordered SHA-256 hashes of evidence that passed the scan gate (DEF-040: allowlist, not a denylist --
+    the old denylist let SCANNER_UNAVAILABLE / SCAN_FAILED / SCAN_TIMEOUT / MALWARE_SCANNING items into the root)."""
     evs = (db.query(Evidence)
              .filter(Evidence.case_id == case_id,
-                     Evidence.status.notin_(["QUARANTINED", "INFECTED", "REJECTED", "TOMBSTONED", "INTEGRITY_MISMATCH"]))
+                     Evidence.status.in_(ANCHORABLE_STATES))
              .order_by(Evidence.created_at)
              .all())
     return [e.sha256 for e in evs]
@@ -205,10 +210,7 @@ def export_court_pdf(
         e["target"] = mask_label(*_entity_kind_label(db, e.get("target", "")))
         e.pop("claim_ids", None)
 
-    analysis = graph_svc.analyze(G)
-    for key in ("degree", "weighted_degree", "bridge_candidates"):
-        for item in analysis.get(key, []):
-            item["label"] = mask_label(item.get("kind", ""), item.get("label", ""))
+    analysis = mask_analysis(graph_svc.analyze(G))  # DEF-039: rules/communities were printed unmasked
 
     # Most-recent anchor
     latest_anchor = (db.query(integrity_svc.LedgerAnchor)

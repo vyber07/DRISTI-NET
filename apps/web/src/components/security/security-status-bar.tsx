@@ -28,7 +28,6 @@ function SecurityStatusBar() {
     logout,
   } = useAuthStore();
 
-  const zeroTrustActive = true;
 
   if (!user) return null;
 
@@ -73,21 +72,7 @@ function SecurityStatusBar() {
 
         <Separator orientation="vertical" className="h-3.5" />
 
-        <StatusSegment
-          icon={
-            <span
-              className={cn(
-                "inline-block h-2 w-2 rounded-full shrink-0",
-                zeroTrustActive ? "bg-verified-emerald" : "bg-critical-red",
-              )}
-            />
-          }
-          className={zeroTrustActive ? "text-text-secondary" : "text-critical-red font-semibold"}
-        >
-          <span className="hidden lg:inline text-xs">
-            {zeroTrustActive ? "Zero-Trust Active" : "Policy Engine Down"}
-          </span>
-        </StatusSegment>
+        {/* DEF-070: a hard-coded `zeroTrustActive = true` status light was removed; it reported nothing real. */}
 
         <Separator orientation="vertical" className="h-3.5" />
 

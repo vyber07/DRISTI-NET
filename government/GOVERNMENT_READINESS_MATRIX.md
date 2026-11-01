@@ -1,4 +1,8 @@
-# DRISTI-NET — Government Readiness & Regulatory Compliance Matrix
+# DRISTI-NET — Government Readiness: Applicability Reference (not a compliance matrix)
+
+> 2026-11-01 (session 4): nothing in this document has been assessed by any authority. Rows describe *candidate*
+> controls only. Corrections: the audit trail is per-event HMAC-SHA256, **not chained** (a deleted event is not
+> detected); the PDF dossier is **not signed** and its certificate fields are blank by design; TLS is not configured.
 
 ## 1. Statutory & Regulatory Applicability
 

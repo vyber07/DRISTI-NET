@@ -220,7 +220,7 @@ def test_production_rejects_testgate(monkeypatch):
     from .. import config
     
     monkeypatch.setattr(config, "DATABASE_URL", "postgresql://user:pass@localhost/db")
-    monkeypatch.setattr(config, "SECRET_KEY", "real-secret")
+    monkeypatch.setattr(config, "SECRET_KEY", "r" * 64)  # >= 32 chars since DEF-057
     monkeypatch.setattr(config, "SCANNER_MODE", "testgate")
     monkeypatch.delenv("DRISHTI_ALLOW_TEST_SCANNER", raising=False)
     
@@ -231,7 +231,7 @@ def test_testgate_override_requires_explicit_flag(monkeypatch):
     from .. import config
     
     monkeypatch.setattr(config, "DATABASE_URL", "postgresql://user:pass@localhost/db")
-    monkeypatch.setattr(config, "SECRET_KEY", "real-secret")
+    monkeypatch.setattr(config, "SECRET_KEY", "r" * 64)  # >= 32 chars since DEF-057
     monkeypatch.setattr(config, "SCANNER_MODE", "testgate")
     monkeypatch.setenv("DRISHTI_ALLOW_TEST_SCANNER", "1")
     
@@ -353,3 +353,15 @@ def test_entity_card_does_not_leak_entities_or_attributes_from_other_cases(clien
     r = client.get(f"/api/v1/entities/{eid}?case_id=CASE-0002", headers=unassigned)
     assert r.status_code == 403, r.text
     assert "dob" not in r.text and "address" not in r.text
+
+
+def test_short_secret_key_rejected_even_on_sqlite(monkeypatch):
+    """DEF-057: any non-default key was accepted (DRISHTI_SECRET_KEY=x); the check was skipped for SQLite."""
+    import pytest
+    from .. import config
+    monkeypatch.setattr(config, "DATABASE_URL", "sqlite:///demo.db")
+    monkeypatch.setattr(config, "SECRET_KEY", "x")
+    with pytest.raises(ValueError, match="at least 32"):
+        config.validate_production_secrets()
+    monkeypatch.setattr(config, "SECRET_KEY", "k" * 64)
+    config.validate_production_secrets()  # success path: a strong key is accepted

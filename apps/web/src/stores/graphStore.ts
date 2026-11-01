@@ -122,12 +122,15 @@ export const useGraphStore = create<GraphState>((set, get) => ({
   isLayoutRunning: false,
 
   loadGraph: async (caseId: string) => {
-    set({ isLoading: true, error: null });
+    // DEF-061: clear the previous case's (or previous user's) graph before loading. On a 403 the old nodes,
+    // edges and selection used to stay on screen, attributed to the newly requested case.
+    set({ isLoading: true, error: null, caseId, nodes: [], edges: [], selectedNodeId: null, selectedEdgeId: null, selectedEntityDetail: null } as any);
     try {
       const response = await getCaseGraph(caseId);
       const {  nodes, edges, caseTitle } = response.data;
 
-      const edgeTimes = edges.map((e) => new Date(e.firstSeen || e.lastSeen || 0).getTime()).filter((t) => !isNaN(t));
+      // Undated edges are excluded from the time range (they used to become 1970-01-01 via `|| 0`).
+      const edgeTimes = edges.filter((e) => e.firstSeen || e.lastSeen).map((e) => new Date((e.firstSeen || e.lastSeen) as string).getTime()).filter((t) => !isNaN(t));
       const minT = edgeTimes.length > 0 ? Math.min(...edgeTimes) : INITIAL_MIN_TIME;
       const maxT = edgeTimes.length > 0 ? Math.max(...edgeTimes) : INITIAL_MAX_TIME;
 

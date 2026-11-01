@@ -34,7 +34,7 @@ def claim_out(c: Claim, db: Session, unmasked: bool = False) -> dict:
             "evidence": {"evidence_id": ev.evidence_id, "filename": ev.filename, "sha256": ev.sha256, "status": ev.status, "version": ev.version, "record_type": ev.record_type,
                         "jurisdiction": ev.jurisdiction, "access_class": ev.access_class, "authority_reference": ev.authority_reference},
             "provenance": [{"provenance_id": p.provenance_id, "locator": p.locator, "snippet": txt(p.snippet), "method": p.method, "method_version": p.method_version} for p in provs],
-            "reviews": [{"review_id": r.review_id, "decision": r.decision, "reason": r.reason, "reviewer_id": r.reviewer_id, "created_at": r.created_at.isoformat()} for r in reviews],
+            "reviews": [{"review_id": r.review_id, "decision": r.decision, "reason": mask_text(r.reason), "reviewer_id": r.reviewer_id, "created_at": r.created_at.isoformat()} for r in reviews],
             "access_class": src.access_class}
 
 
@@ -76,6 +76,7 @@ def graph(case_id: str, request: Request, center: str | None = None, hops: int =
     # page through. `next_offset` is null once there is nothing further to page to.
     next_offset = offset + len(nodes) if (center is None and truncated) else None
     return {"case_id": case_id, "nodes": nodes, "edges": edges, "candidate_edges": cands, "truncated": truncated,
+            "projection_stale": bool(G.graph.get("projection_stale")),
             "bounds": {"hops": min(hops, graph_svc.config.GRAPH_MAX_HOPS), "max_nodes": min(max_nodes, graph_svc.config.GRAPH_MAX_NODES), "supernode_degree": graph_svc.config.SUPERNODE_DEGREE},
             "reference_time": reference.isoformat(sep=" ") if reference else None, "total_nodes": G.number_of_nodes(), "total_edges": G.number_of_edges(),
             "snapshot_hash": snap_hash, "masked": True, "offset": offset, "next_offset": next_offset}
@@ -98,7 +99,7 @@ def locations(case_id: str, request: Request, user: User = Depends(current_user)
     ents = q.order_by(Entity.entity_id).limit(graph_svc.config.GRAPH_MAX_NODES).all()
     out = []
     for e in ents:
-        case_attrs = (e.attributes or {}).get(case_id, {}) if isinstance(e.attributes, dict) and case_id in (e.attributes or {}) else (e.attributes or {})
+        case_attrs = case_attributes(e.attributes, case_id)  # DEF-033b
         lat, lon = case_attrs.get("lat"), case_attrs.get("lon")
         try:
             lat_f, lon_f = float(lat), float(lon)

@@ -1,4 +1,4 @@
-import { post, type ApiResponse } from "./real_client";
+import { post, currentUser, type ApiResponse } from "./real_client";
 import type { RevealRequest, RevealResult } from "@/types/reveal";
 
 export async function requestPiiReveal(request: RevealRequest): Promise<ApiResponse<RevealResult>> {
@@ -15,9 +15,10 @@ export async function requestPiiReveal(request: RevealRequest): Promise<ApiRespo
     maskedValue: request.maskedValue,
     unmaskedValue: rawData.value || rawData.unmaskedValue || null,
     status: "APPROVED",
-    authorizedBy: "INVESTIGATOR",
+    // DEF-064: was a hard-coded "INVESTIGATOR" and a made-up 1-hour expiry; the server records no expiry.
+    authorizedBy: currentUser()?.role || "unknown",
     authorizedAt: new Date().toISOString(),
-    expiresAt: new Date(Date.now() + 3600 * 1000).toISOString(),
+    expiresAt: new Date().toISOString(),
     auditId: rawData.audit_id || "audit-unmask",
   };
   return { data: result, meta: { requestId: "req", timestamp: new Date().toISOString(), durationMs: 0, securityClassification: "REAL" } };

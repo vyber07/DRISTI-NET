@@ -104,17 +104,7 @@ export function InvestigationMapView() {
                     </g>
                   ))}
 
-                  {/* Connection lines between all points */}
-                  {withCoords.length > 1 && withCoords.map((loc, i) =>
-                    withCoords.slice(i + 1).map((loc2, j) => (
-                      <line
-                        key={`${i}-${j}`}
-                        x1={toSvgX(loc.lon!)} y1={toSvgY(loc.lat!)}
-                        x2={toSvgX(loc2.lon!)} y2={toSvgY(loc2.lat!)}
-                        stroke="#3b82f6" strokeWidth="0.5" strokeOpacity="0.2"
-                      />
-                    ))
-                  )}
+                  {/* DEF-066: lines between every pair of points implied relationships the API never returned; removed. */}
 
                   {/* Location dots */}
                   {withCoords.map((loc) => {

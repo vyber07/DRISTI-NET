@@ -23,10 +23,10 @@ export function GraphCanvas({ className }: GraphCanvasProps) {
     activeEntityTypes,
     activeRelationshipTypes,
     onlyContradictions,
+    minConfidence,
     dateRange,
     searchTerm,
     currentTimestamp,
-    showCoreConnectionsOnly,
     isLayoutRunning,
     selectNode,
     selectEdge,
@@ -79,7 +79,7 @@ export function GraphCanvas({ className }: GraphCanvasProps) {
         dateRange,
         searchTerm,
         currentTimestamp,
-        showCoreConnectionsOnly,
+        minConfidence,
       });
     }
   }, [
@@ -89,7 +89,7 @@ export function GraphCanvas({ className }: GraphCanvasProps) {
     dateRange,
     searchTerm,
     currentTimestamp,
-    showCoreConnectionsOnly,
+    minConfidence,
     engineReady,
   ]);
 

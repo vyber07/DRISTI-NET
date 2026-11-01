@@ -67,6 +67,13 @@ export interface HITLTask {
   updatedAt: string;
   slaDeadline: string;
   decision?: HITLTaskDecision;
+  /** Matcher explanation exactly as the API returns it (DEF-059: previously dropped). */
+  signals?: {
+    positive: { signal: string; detail?: string; weight?: number; caveat?: string }[];
+    counter: any[];
+    conflicts: any[];
+    missing: { attribute: string; missing_on?: string[] }[];
+  };
 }
 
 export interface HITLFilter {

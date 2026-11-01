@@ -1,48 +1,33 @@
-# DRISTI-NET — Continuation State & Handoff Record
+# DRISTI-NET — Continuation State (2026-11-01, session 4, second pass — stopped at usage limit)
 
-**Updated:** 2026-11-01 (session 4)
-**Release status:** ENGINEERING PREVIEW (unchanged — see `audit/RELEASE_READINESS_REPORT.md`)
-**Position:** Step 3 (infrastructure/release validation) partially complete → Step 4 (Golden Synthetic Journey)
-demonstrated on SQLite + real ClamAV + real NER, in the browser, and after a backup/restore.
-**Branch:** `audit/session-4-security-fixes` (local only, not pushed), branched from `main` @ `135edeb`.
+Release status: **ENGINEERING PREVIEW** (unchanged). Branch `audit/session-4-security-fixes` (local, not pushed).
 
-## What session 4 established
-- **P0 DEF-028 path traversal** in the SPA fallback (any file on the host readable, incl. `.env` signing key and the
-  DB). Reproduced on the live demo's port 8000. Fixed + tested; **live process still runs the vulnerable code**.
-- Object-level authorization gaps DEF-031/033 (cross-case task claim, stats, entity attributes) fixed + tested;
-  DEF-032 (HITL claim always 500) fixed.
-- Evidence page never loaded and Download never worked (DEF-029/030) — fixed, new E2E asserts the downloaded
-  bytes hash to the recorded SHA-256.
-- Dependency scans run for the first time: npm 0 advisories (unused `pdfjs-dist` removed), pip only paddlepaddle.
-- First backup/restore drill (SQLite path) PASS; negative journeys with real ClamAV all as required.
-- Full evidence: `audit/BUG_AND_DEFECT_REGISTER.md` (session 4 section), `audit/TEST_RESULTS.md`,
-  `operations/RESTORE_TEST_REPORT.md`.
+## Done this pass (each fix has a test that fails on the old code)
+- Independent review by 3 separate reviewers (backend security, frontend contract, infra/claims); findings verified before fixing.
+- Backend: malware gate recorded infected files with "OK" in the signature name as CLEAN (DEF-036/037); cross-case attributes
+  still leaking via graph + /locations (DEF-033b); block_key phones (038); court-PDF masking (039) + markup injection (041);
+  Merkle allowlist (040); missing object 500 -> INTEGRITY_MISMATCH (042); Neo4j outage 500 -> stale fallback (043);
+  storage outage 503 + S3 timeouts (044); dup-upload audit (045); reveal window cap (046); corrupt PDF 500 (047);
+  case list jurisdiction (048); role denials audited (049); review reasons masked (050); secret >= 32 chars (057).
+- 10 deleted workflow tests restored (DEF-051, `test_workflow_restored.py`).
+- Infra: migrations service missing secret (052), Kafka env name (053), `.dockerignore` (054), destructive test fixtures guarded (055/056).
+- Frontend: fabricated "Rajasthan SOG" CDR sheet in HITL removed, real source shown (058); matcher signals + decisions shown (059/060);
+  stale data after 403/logout (061); mock core-connections toggle (062); dead filters (063); fake reveal metadata (064);
+  claim decision "ALLOWED"->422 + canned reason (065); fake map lines (066); HITL stats 403 hid queue (067); misleading legal copy (068-070).
+- Docs: withdrew SECURITY_ASSESSMENT verdict; corrected GOV matrix, DR plan, status.md, 8 overclaimed task-board phases.
 
-## Verified at end of session 4
-`make test` 91 passed / 5 skipped; real-ClamAV test 1 passed; typecheck 0; `make build-web` OK; E2E 6/6 twice on an
-isolated server; restore drill PASS; restored instance E2E 6/6.
+## Verified at stop
+SQLite `make test` 124 passed/5 skipped; typecheck 0; build OK; E2E 6/6 x2 on live PG+Neo4j+S3+ClamAV; 14-route browser sweep 0 errors.
+Live-store pytest: **129 passed, 1 FAILED** — `test_workflow_restored.py::test_graph_is_bounded_and_edges_trace_to_source`
+(`assert ([])`) after the DEF-071 change in `services/graph.py::bounded_subgraph` (centered traversal now in-process on every backend).
+Uncommitted-before-this-commit DEF-071 is included; investigate that test first (it passes on SQLite).
 
-## Environment state
-- Live demo: `dristinet-api.service` (systemd) → uvicorn `0.0.0.0:8000`, nginx :80. **Not restarted.** It serves
-  `apps/web/dist`, which this session rebuilt from the branch (frontend fixes are therefore already live; backend
-  fixes are not).
-- Isolated verification server on 127.0.0.1:8001 (temp dir under the job directory) — disposable.
+## Not done
+DEF-041 escape of remaining PDF fields is complete; still open: download policy for officers/auditors (product decision),
+global Entity.label cross-case name exposure (design), Compose images (MinIO/Kafka) unresolvable, defect-register entries for
+DEF-036..071 not yet written into `audit/BUG_AND_DEFECT_REGISTER.md` (this file is the record), release archive not rebuilt,
+live demo still runs vulnerable code (BLK-06, needs owner restart).
 
-## Approval needed from the owner (in priority order)
-1. **Deploy the DEF-028 fix to the live demo** (restart picks up the code; the unit change also closes :8000):
-   `sudo cp infrastructure/dristinet-api.service /etc/systemd/system/ && sudo systemctl daemon-reload && sudo systemctl restart dristinet-api`
-   then `curl -s --path-as-is http://127.0.0.1:8000/%2e%2e/%2e%2e/%2e%2e/README.md | head -1` must print `<!doctype html>`.
-2. If port 8000 was reachable from the internet (check the EC2 security group), treat `.env` as disclosed: rotate
-   `DRISHTI_SECRET_KEY` (invalidates sessions; old audit HMACs need the old key kept in `DRISHTI_AUDIT_KEYS`).
-3. Merge `audit/session-4-security-fixes` into `main` (and whether to push).
-4. Carried over: BLK-04 (MinIO image choice), BLK-05 (isolated host), DEF-020 (tier semantics).
-
-## Next exact actions
-1. After approval 1: re-run the traversal probe and `make e2e` against the live demo **with**
-   `DRISHTI_DATABASE_URL` pointed at a copy — note `tests/e2e`'s fixture writes to whatever DB that variable names.
-2. Set `DRISHTI_REDIS_URL` on the live demo (login throttling is currently off there).
-3. TASK S4-07: split `requirements.txt` into core vs optional (ML/OCR/ledger/Kafka/test) — needs a decision on what the
-   API image must include.
-4. BLK-04 → `make test-stack`, then extend `scripts/backup_restore_drill.py` to `pg_dump`/`pg_restore` + object store.
-5. NER: pin model `revision=`, `HF_HUB_OFFLINE=1` (DEF-018); the real model downloaded from huggingface.co during
-   this session's ingest (synthetic text only).
+## Next exact action
+`source <live env>; pytest apps/api/app/tests/test_workflow_restored.py -k bounded` against live Neo4j; then add DEF-036..071 to the
+register, rebuild `scripts/make_release_archive.py`, re-run the restore drill.

@@ -1,5 +1,15 @@
 # Status against the blueprint (`docs/context.md` §3 vocabulary)
 
+> **Re-verification note (2026-11-01, session 4, second pass).** Ten tests cited below as evidence
+> (`test_analysis_uses_neutral_language`, `test_contradiction_is_flagged_not_hidden`, `test_graph_is_bounded_and_edges_trace_to_source`,
+> `test_graph_pagination_*`, `test_locations_endpoint_*`, `test_supernode_capping_on_a_planted_high_degree_node`,
+> `test_graph_edges_carry_jurisdiction_access_class_authority_reference`, `test_timeline_filters_and_cross_case`) were deleted in
+> commit `61e3437` while this file kept citing them. They were restored verbatim in `apps/api/app/tests/test_workflow_restored.py`
+> and pass (DEF-051). `TASK_BOARD.md`, `PROJECT_STATUS.md`, `task.md` and `LICENSE_OR_PROJECT_NOTICE.md` referenced below **do not exist**
+> in this repository; treat those references as historical. Graph projection failure is now Demonstrated: Neo4j errors fall back
+> to the authoritative in-process projection with `projection_stale: true` (DEF-043, `test_graph_degrades_to_authoritative_projection_when_neo4j_fails`).
+
+
 Last audited: 2026-09-25 against `main`; rows marked **(2026-11-01)** were re-verified against the working tree on that date
 (details: `audit/BUG_AND_DEFECT_REGISTER.md`, `audit/TEST_RESULTS.md`) (see also `PROJECT_STATUS.md` for day-by-day and in-progress view,
 and `TASK_BOARD.md` for the live-verification methodology behind each item marked Demonstrated below).
@@ -26,7 +36,7 @@ and `TASK_BOARD.md` for the live-verification methodology behind each item marke
 | Low-confidence extraction → candidate with uncertainty | Demonstrated | FIR regex claims carry confidence 0.6–0.9; missing amount lowers confidence |
 | Contradictory sources → both preserved, contradiction object | Demonstrated | `test_contradiction_is_flagged_not_hidden` (`CONTRADICTORY` claims + `flags.contradicts`) |
 | Resolution disagreement → defer | Demonstrated | DEFER decision path |
-| Graph projection failure → mark stale, rebuild | Demonstrated (rebuild) / **MVP target** (stale marker) | `test_projection_is_rebuildable`; projection is recomputed per request so there is no persisted stale state |
+| Graph projection failure → mark stale, rebuild | Demonstrated (rebuild + stale marker, 2026-11-01 s4) | `test_projection_is_rebuildable`; projection is recomputed per request so there is no persisted stale state |
 | Unauthorized → deny server-side + audit | Demonstrated | `test_unassigned_user_denied_server_side`, `test_jurisdiction_mismatch_denied`; **(2026-11-01 s4)** three object-level gaps found and closed: candidate assign, case stats, entity card cross-case read (DEF-031/033, `test_security.py`) |
 | Hash mismatch → `INTEGRITY_MISMATCH`, blocks acceptance | Demonstrated | `test_hash_manifest_and_tamper_detection`; also against a running instance (2026-11-01 s4, `audit/TEST_RESULTS.md`) |
 | Backup → restore (SQLite + local storage) | **Demonstrated (2026-11-01 s4)** — PostgreSQL/MinIO path: MVP target | `scripts/backup_restore_drill.py`, `operations/RESTORE_TEST_REPORT.md` |

@@ -1,5 +1,10 @@
 # DRISTI-NET — Disaster Recovery & Service Restoration Plan
 
+> **Status (2026-11-01): TARGET PLAN, not tested.** Only the SQLite + local-storage restore has been executed
+> (`operations/RESTORE_TEST_REPORT.md`). Several commands below do not exist as written (`integrity_routes` is not a CLI,
+> there is no `neo4j_store --rebuild-all` and no `GET /audit/verify`; the graph is rebuilt automatically from authoritative
+> rows on the next read). The audit log is per-event HMAC, not a hash chain. Review before any use.
+
 ## 1. Disaster Scenarios & Recovery Procedures
 
 ### Scenario A: Storage Media Failure (Object Store / Evidence Loss)

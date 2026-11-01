@@ -42,8 +42,9 @@ export function CaseGraphPage() {
     selectedEdgeId,
     loadGraph,
     isLoading,
-    showCoreConnectionsOnly,
-    toggleShowCoreConnectionsOnly,
+    error,
+    nodes,
+    edges,
   } = useGraphStore();
 
   const [isDrawerCollapsed, setIsDrawerCollapsed] = useState(false);
@@ -54,13 +55,18 @@ export function CaseGraphPage() {
     if (typeof window !== "undefined") {
       (window as any).__graphStore = useGraphStore;
     }
-  }, [ loadGraph]);
+  }, [loadGraph, caseId]);  // DEF-061: reload when the routed case changes
 
   return (
     <>
       <InvestigationShell
         header={
           <div className="flex flex-col bg-surface-1 select-none">
+            {error && (
+              <div role="alert" className="px-4 py-2 text-xs bg-critical-red/10 text-critical-red border-b border-critical-red/30">
+                Could not load the graph for {caseId}: {error}
+              </div>
+            )}
             <div className="flex h-14 items-center justify-between px-4 border-b border-border-subtle">
               <div className="flex items-center gap-3 min-w-0">
                 <Button asChild variant="ghost" size="sm" className="gap-1 text-xs">
@@ -87,26 +93,11 @@ export function CaseGraphPage() {
               </div>
 
               <div className="flex items-center gap-2 shrink-0">
-                {/* Clue Density Expansion Toggle */}
-                <Button
-                  variant="secondary"
-                  size="sm"
-                  onClick={toggleShowCoreConnectionsOnly}
-                  className={cn(
-                    "gap-1.5 text-xs font-semibold transition-colors",
-                    showCoreConnectionsOnly
-                      ? "bg-electric-blue/10 text-electric-blue border-electric-blue/30 hover:bg-electric-blue/20"
-                      : "bg-surface-2 text-text-primary",
-                  )}
-                  title={showCoreConnectionsOnly ? "Click to reveal all 16 case entities and 20 relationships" : "Click to focus on 7 core relationships"}
-                >
-                  <Eye className="h-3.5 w-3.5" />
-                  <span>
-                    {showCoreConnectionsOnly
-                      ? "+ Show all 20 connections"
-                      : "Show core connections (7)"}
-                  </span>
-                </Button>
+                {/* DEF-062: the "core connections (7)" toggle matched hard-coded mock edge ids and quoted fixed counts
+                    ("16 entities, 20 relationships"); on real data it hid everything. Real counts instead. */}
+                <span className="text-xs font-mono text-text-muted" data-testid="graph-counts">
+                  {isLoading ? "loading…" : `${nodes.length} entities · ${edges.length} relationships`}
+                </span>
 
                 <Button asChild variant="secondary" size="sm" className="gap-1.5 text-xs">
                   <Link to={`/cases/${caseId}`}>

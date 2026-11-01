@@ -18,6 +18,7 @@ export interface GraphEngineFilters {
   searchTerm: string;
   currentTimestamp: number;
   showCoreConnectionsOnly?: boolean;
+  minConfidence?: number;
 }
 
 export interface GraphEngineCallbacks {
@@ -33,12 +34,7 @@ export interface GraphEngineCallbacks {
 const KNOWN_RELATIONSHIP_TYPES: ReadonlySet<string> = new Set(RELATIONSHIP_TYPES);
 const KNOWN_ENTITY_TYPES: ReadonlySet<string> = new Set(["PERSON", "ORGANIZATION", "LOCATION", "EVENT", "FINANCIAL", "CYBER"]);
 
-export const CORE_RELATIONSHIP_IDS = new Set([
-  "R-01", // USED DEVICE (Vikram -> IMEI)
-  "R-04", // LOCATED AT (Vikram -> Tower 412 Mansarovar, Flagged Contradiction)
-  "R-05", // CONTROLS (Vikram -> Marwar Gold)
-  "R-17", // MAINTAINED AT (Bank Acct -> HDFC Branch)
-]);
+// DEF-062: CORE_RELATIONSHIP_IDS (hard-coded mock edge ids "R-01".."R-17") removed; real edge ids never matched them.
 
 const TIER_COLORS: Record<EvidenceTier, string> = {
   2: "#B9822B", // amber
@@ -239,9 +235,7 @@ export class GraphEngine {
         const cameraRatio = this.sigma ? this.sigma.getCamera().ratio : 1.0;
         const confidence = typeof data.minConfidence === "number" ? (data.minConfidence as number) : 0;
 
-        const isCoreOverviewLink =
-          isContradiction ||
-          (CORE_RELATIONSHIP_IDS.has(edge) && edge !== "R-17");
+        const isCoreOverviewLink = isContradiction;
 
         const shouldShowLabel =
           isSelected ||
@@ -460,15 +454,6 @@ export class GraphEngine {
       }
     }
 
-    // Filter by core connections only
-    if (this.filters.showCoreConnectionsOnly && this.selectedNodeId !== nodeId && this.hoveredNodeId !== nodeId) {
-      const incidentEdges = this.graph.edges(nodeId);
-      const hasCoreIncidentEdge = incidentEdges.some((edgeId) => CORE_RELATIONSHIP_IDS.has(edgeId));
-      if (!hasCoreIncidentEdge) {
-        return false;
-      }
-    }
-
     return true;
   }
 
@@ -521,13 +506,10 @@ export class GraphEngine {
       return false;
     }
 
-    // Filter by core connections only
-    if (
-      Boolean(this.filters.showCoreConnectionsOnly) &&
-      !CORE_RELATIONSHIP_IDS.has(edgeId) &&
-      this.selectedEdgeId !== edgeId &&
-      this.hoveredEdgeId !== edgeId
-    ) {
+    // Minimum extraction confidence (DEF-063: the slider existed but was never applied). Edges with no recorded
+    // confidence are kept rather than hidden.
+    const minConf = this.filters.minConfidence ?? 0;
+    if (minConf > 0 && typeof attr.minConfidence === "number" && (attr.minConfidence as number) < minConf) {
       return false;
     }
 

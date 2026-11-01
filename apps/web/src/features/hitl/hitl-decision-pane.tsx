@@ -81,6 +81,7 @@ export function HITLDecisionPane({
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 space-y-6">
+        <CandidateSignals task={task} />
 
         {isResolved ? (
           <div className="rounded-lg border border-verified-emerald/30 bg-verified-emerald/5 p-4 space-y-3">
@@ -110,7 +111,7 @@ export function HITLDecisionPane({
                 1. Select Supervisory Action
               </h3>
               <p className="text-xs text-text-muted">
-                Your decision will be immutably recorded in the case audit log.
+                Your decision and reason are recorded in the case audit log (each event HMAC-signed). It can be reversed later.
               </p>
               
               <div className="grid grid-cols-2 gap-2 mt-3 pt-1">
@@ -144,38 +145,11 @@ export function HITLDecisionPane({
               </div>
             </div>
 
-            <div className="space-y-1.5">
-              <span className="text-micro font-mono uppercase tracking-wider text-text-muted">
-                Statutory Reference Quick-Fills:
-              </span>
-              <div className="flex flex-wrap gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => handlePresetJustification("Corroborated under Sec 91 CrPC notice response from TSP.")}
-                  className="rounded bg-surface-1 hover:bg-surface-3 border border-border-subtle px-2 py-0.5 text-micro font-mono text-text-secondary hover:text-text-primary transition-colors"
-                >
-                  + Sec 91 CrPC Notice
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handlePresetJustification("Electronic evidence reference under BSA s.63 / IEA s.65B.")}
-                  className="rounded bg-surface-1 hover:bg-surface-3 border border-border-subtle px-2 py-0.5 text-micro font-mono text-text-secondary hover:text-text-primary transition-colors"
-                >
-                  + BSA s.63 Reference
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handlePresetJustification("Matches across primary identifiers.")}
-                  className="rounded bg-surface-1 hover:bg-surface-3 border border-border-subtle px-2 py-0.5 text-micro font-mono text-text-secondary hover:text-text-primary transition-colors"
-                >
-                  + Primary Identifiers
-                </button>
-              </div>
-            </div>
-
+            {/* DEF-069: "statutory quick-fills" inserted canned claims of legal process (e.g. "Corroborated under Sec 91
+                CrPC notice response from TSP") into the reviewer's reason. Removed: the reason must be the reviewer's own. */}
             <div className="space-y-1.5">
               <label className="text-micro font-mono uppercase tracking-wider text-text-muted flex items-center justify-between">
-                <span>Statutory Investigative Justification (Mandatory):</span>
+                <span>Reason for this decision (required, in your own words):</span>
                 <span className="text-text-muted">{justification.length} chars</span>
               </label>
               <textarea
@@ -210,11 +184,53 @@ export function HITLDecisionPane({
               className="w-full justify-center text-xs font-semibold gap-2 py-2.5 shadow-panel font-mono"
             >
               <Send className="h-3.5 w-3.5" />
-              <span>{isSubmitting ? "Committing to Audit Chain..." : "Commit Decision & Sign Off"}</span>
+              <span>{isSubmitting ? "Recording decision…" : "Record decision"}</span>
             </Button>
           </div>
         )}
       </div>
     </div>
+  );
+}
+
+
+/** What the matcher actually found, so a merge is never approved on a confidence number alone (DEF-059). */
+function CandidateSignals({ task }: { task: HITLTask }) {
+  const s = task.signals;
+  if (!s) return null;
+  const fmt = (x: any) => (typeof x === "string" ? x : [x.signal || x.attribute || x.kind, x.detail || x.value || x.note].filter(Boolean).join(": ") || JSON.stringify(x));
+  return (
+    <section className="rounded-lg border border-border-subtle bg-surface-2 p-4 space-y-3 text-xs" aria-label="Why this is a candidate">
+      <h3 className="font-semibold text-text-primary uppercase tracking-wider">Why this is a candidate (matcher output)</h3>
+      <div>
+        <p className="text-text-muted font-mono uppercase text-[10px] mb-1">Supporting signals</p>
+        {s.positive.length ? (
+          <ul className="space-y-1">
+            {s.positive.map((p, i) => (
+              <li key={i} className="text-text-secondary">
+                <span className="font-mono text-text-primary">{p.signal}</span>{p.detail ? ` — ${p.detail}` : ""}
+                {typeof p.weight === "number" ? <span className="text-text-muted"> (weight {p.weight})</span> : null}
+                {p.caveat ? <span className="block text-amber-400">Note: {p.caveat}</span> : null}
+              </li>
+            ))}
+          </ul>
+        ) : <p className="text-text-muted">None returned.</p>}
+      </div>
+      <div>
+        <p className="text-text-muted font-mono uppercase text-[10px] mb-1">Counter-evidence</p>
+        {s.counter.length ? <ul className="space-y-1">{s.counter.map((c, i) => <li key={i} className="text-text-secondary">{fmt(c)}</li>)}</ul> : <p className="text-text-muted">None found.</p>}
+      </div>
+      <div>
+        <p className="text-text-muted font-mono uppercase text-[10px] mb-1">Conflicts</p>
+        {s.conflicts.length ? <ul className="space-y-1">{s.conflicts.map((c, i) => <li key={i} className="text-text-secondary">{fmt(c)}</li>)}</ul> : <p className="text-text-muted">None found.</p>}
+      </div>
+      <div>
+        <p className="text-text-muted font-mono uppercase text-[10px] mb-1">Missing information</p>
+        {s.missing.length ? (
+          <ul className="space-y-1">{s.missing.map((m, i) => <li key={i} className="text-text-secondary">{m.attribute}{m.missing_on?.length ? ` (missing on ${m.missing_on.join(", ")})` : ""}</li>)}</ul>
+        ) : <p className="text-text-muted">Nothing reported missing.</p>}
+      </div>
+      <p className="text-text-muted">A shared identifier or similar name is a candidate relationship, not proof that two records are the same person.</p>
+    </section>
   );
 }
