@@ -9,12 +9,12 @@ import logging
 from web3 import Web3
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from apps.api.app.services.integrity import MerkleTree, LedgerAnchor
+from apps.api.app.services.integrity import merkle_root, submit_to_besu
 
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
 def main():
-    besu_url = os.environ.get("DRISHTI_BESU_ENDPOINT", "http://localhost:8545")
+    besu_url = os.environ.get("DRISTI_BESU_ENDPOINT", "http://localhost:8545")
     w3 = Web3(Web3.HTTPProvider(besu_url))
     
     if not w3.is_connected():
@@ -23,31 +23,25 @@ def main():
         
     logging.info(f"Connected to Besu node: {w3.client_version}")
     
-    # 1. Generate Merkle Tree
-    hashes = [b"evd1_hash", b"evd2_hash", b"evd3_hash"]
-    tree = MerkleTree(hashes)
-    root_hex = tree.root().hex()
+    # 1. Generate Merkle Tree root
+    hashes = ["e" * 64, "f" * 64, "a" * 64]
+    root_hex = merkle_root(hashes)
     logging.info(f"Generated Merkle Root: {root_hex}")
     
     # 2. Anchor to Besu
-    # Using a standard dev account for validation
-    dev_key = os.environ.get("DRISHTI_BESU_SIGNING_KEY", "0x8f2a55949038a9610f50fb23b5883af3b4ecb3c3bb792cbcefbd1542c692be63")
-    anchor = LedgerAnchor(besu_url, dev_key)
+    dev_key = os.environ.get("DRISTI_BESU_SIGNING_KEY", "0x8f2a55949038a9610f50fb23b5883af3b4ecb3c3bb792cbcefbd1542c692be63")
     
     try:
-        tx_hash = anchor.anchor_root("CASE-TEST", root_hex)
+        res = submit_to_besu(root_hex, besu_url, dev_key)
+        tx_hash = res["tx_hash"]
         logging.info(f"Transaction submitted. Hash: {tx_hash}")
         
-        # 3. Wait for Receipt
-        receipt = w3.eth.wait_for_transaction_receipt(tx_hash, timeout=30)
-        logging.info(f"Transaction mined in block {receipt.blockNumber}")
-        
-        # 4. Read back and verify
+        # 3. Read back and verify
         tx = w3.eth.get_transaction(tx_hash)
-        input_data = Web3.to_text(tx.input)
+        input_data = Web3.to_hex(tx.input)
         
         logging.info(f"Read back payload: {input_data}")
-        if root_hex in input_data and "CASE-TEST" in input_data:
+        if root_hex.lower() in input_data.lower():
             logging.info("SUCCESS: Merkle root verified on ledger.")
         else:
             logging.error("FAILURE: Payload does not match submitted root.")

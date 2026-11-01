@@ -31,7 +31,7 @@ export interface AuthState {
   restoreSession: () => Promise<void>;
 }
 
-const STORAGE_KEY = "dristi_auth_token";
+const STORAGE_KEY = "drishti.token";
 
 export const useAuthStore = create<AuthState>((set, get) => ({
   user: null,

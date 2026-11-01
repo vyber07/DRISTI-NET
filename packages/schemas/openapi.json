@@ -1,7 +1,7 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "DRISHTI-NET prototype API",
+    "title": "DRISHTI-NET",
     "description": "Evidence-linked relationship discovery for authorized human review. Synthetic data only. The system proposes; the investigator decides.",
     "version": "0.1.0"
   },
@@ -40,9 +40,7 @@
     },
     "/api/v1/auth/login": {
       "post": {
-        "tags": [
-          "auth"
-        ],
+        "tags": ["auth"],
         "summary": "Login",
         "operationId": "login_api_v1_auth_login_post",
         "requestBody": {
@@ -79,9 +77,7 @@
     },
     "/api/v1/auth/me": {
       "get": {
-        "tags": [
-          "auth"
-        ],
+        "tags": ["auth"],
         "summary": "Me",
         "operationId": "me_api_v1_auth_me_get",
         "responses": {
@@ -103,9 +99,7 @@
     },
     "/api/v1/users": {
       "get": {
-        "tags": [
-          "auth"
-        ],
+        "tags": ["auth"],
         "summary": "List Users",
         "operationId": "list_users_api_v1_users_get",
         "responses": {
@@ -127,9 +121,7 @@
     },
     "/api/v1/cases": {
       "get": {
-        "tags": [
-          "cases"
-        ],
+        "tags": ["cases"],
         "summary": "List Cases",
         "description": "Only cases the user is assigned to (ADMIN/AUDITOR see all).",
         "operationId": "list_cases_api_v1_cases_get",
@@ -150,9 +142,7 @@
         ]
       },
       "post": {
-        "tags": [
-          "cases"
-        ],
+        "tags": ["cases"],
         "summary": "Create Case",
         "operationId": "create_case_api_v1_cases_post",
         "requestBody": {
@@ -194,9 +184,7 @@
     },
     "/api/v1/cases/{case_id}": {
       "get": {
-        "tags": [
-          "cases"
-        ],
+        "tags": ["cases"],
         "summary": "Get Case",
         "operationId": "get_case_api_v1_cases__case_id__get",
         "security": [
@@ -239,9 +227,7 @@
     },
     "/api/v1/cases/{case_id}/assign": {
       "post": {
-        "tags": [
-          "cases"
-        ],
+        "tags": ["cases"],
         "summary": "Assign",
         "operationId": "assign_api_v1_cases__case_id__assign_post",
         "security": [
@@ -294,9 +280,7 @@
     },
     "/api/v1/cases/{case_id}/evidence": {
       "post": {
-        "tags": [
-          "evidence"
-        ],
+        "tags": ["evidence"],
         "summary": "Upload",
         "description": "Upload \u2192 validate \u2192 UPLOADED \u2192 HASHED \u2192 QUARANTINED (\u2192 optional immediate processing).",
         "operationId": "upload_api_v1_cases__case_id__evidence_post",
@@ -348,9 +332,7 @@
         }
       },
       "get": {
-        "tags": [
-          "evidence"
-        ],
+        "tags": ["evidence"],
         "summary": "List Evidence",
         "operationId": "list_evidence_api_v1_cases__case_id__evidence_get",
         "security": [
@@ -393,9 +375,7 @@
     },
     "/api/v1/evidence/{evidence_id}": {
       "get": {
-        "tags": [
-          "evidence"
-        ],
+        "tags": ["evidence"],
         "summary": "Get Evidence",
         "operationId": "get_evidence_api_v1_evidence__evidence_id__get",
         "security": [
@@ -438,9 +418,7 @@
     },
     "/api/v1/evidence/{evidence_id}/process": {
       "post": {
-        "tags": [
-          "evidence"
-        ],
+        "tags": ["evidence"],
         "summary": "Process",
         "operationId": "process_api_v1_evidence__evidence_id__process_post",
         "security": [
@@ -483,9 +461,7 @@
     },
     "/api/v1/evidence/{evidence_id}/verify": {
       "get": {
-        "tags": [
-          "evidence"
-        ],
+        "tags": ["evidence"],
         "summary": "Verify",
         "description": "Recompute the stored file's SHA-256 and compare with the manifest.",
         "operationId": "verify_api_v1_evidence__evidence_id__verify_get",
@@ -529,9 +505,7 @@
     },
     "/api/v1/evidence/{evidence_id}/context": {
       "get": {
-        "tags": [
-          "evidence"
-        ],
+        "tags": ["evidence"],
         "summary": "Context",
         "description": "Return the source lines around a locator (masked by default) so a graph edge can be traced to its origin.",
         "operationId": "context_api_v1_evidence__evidence_id__context_get",
@@ -649,9 +623,7 @@
     },
     "/api/v1/evidence/{evidence_id}/context/reveal": {
       "post": {
-        "tags": [
-          "evidence"
-        ],
+        "tags": ["evidence"],
         "summary": "Context Reveal",
         "description": "Authorized unmasking of evidence context. Requires a reason, is role-gated, and writes an UNMASK audit event.",
         "operationId": "context_reveal_api_v1_evidence__evidence_id__context_reveal_post",
@@ -705,9 +677,7 @@
     },
     "/api/v1/evidence/{evidence_id}/download": {
       "get": {
-        "tags": [
-          "evidence"
-        ],
+        "tags": ["evidence"],
         "summary": "Download",
         "operationId": "download_api_v1_evidence__evidence_id__download_get",
         "security": [
@@ -750,9 +720,7 @@
     },
     "/api/v1/evidence/{evidence_id}/claims": {
       "get": {
-        "tags": [
-          "evidence"
-        ],
+        "tags": ["evidence"],
         "summary": "Evidence Claims",
         "operationId": "evidence_claims_api_v1_evidence__evidence_id__claims_get",
         "security": [
@@ -805,9 +773,7 @@
     },
     "/api/v1/cases/{case_id}/candidates": {
       "get": {
-        "tags": [
-          "review"
-        ],
+        "tags": ["review"],
         "summary": "List Candidates",
         "operationId": "list_candidates_api_v1_cases__case_id__candidates_get",
         "security": [
@@ -866,9 +832,7 @@
     },
     "/api/v1/candidates/{candidate_id}": {
       "get": {
-        "tags": [
-          "review"
-        ],
+        "tags": ["review"],
         "summary": "Get Candidate",
         "operationId": "get_candidate_api_v1_candidates__candidate_id__get",
         "security": [
@@ -911,9 +875,7 @@
     },
     "/api/v1/candidates/{candidate_id}/decision": {
       "post": {
-        "tags": [
-          "review"
-        ],
+        "tags": ["review"],
         "summary": "Decide",
         "description": "Human decision on an identity-match candidate. APPROVE is the only path to a merged node in the projection.",
         "operationId": "decide_api_v1_candidates__candidate_id__decision_post",
@@ -967,9 +929,7 @@
     },
     "/api/v1/claims/{claim_id}/decision": {
       "post": {
-        "tags": [
-          "review"
-        ],
+        "tags": ["review"],
         "summary": "Decide Claim",
         "description": "Decisions on individual claims (e.g. resolving or flagging a contradiction, marking a claim STALE).",
         "operationId": "decide_claim_api_v1_claims__claim_id__decision_post",
@@ -1023,9 +983,7 @@
     },
     "/api/v1/cases/{case_id}/reviews": {
       "get": {
-        "tags": [
-          "review"
-        ],
+        "tags": ["review"],
         "summary": "List Reviews",
         "operationId": "list_reviews_api_v1_cases__case_id__reviews_get",
         "security": [
@@ -1068,9 +1026,7 @@
     },
     "/api/v1/cases/{case_id}/contradictions": {
       "get": {
-        "tags": [
-          "review"
-        ],
+        "tags": ["review"],
         "summary": "Contradictions",
         "operationId": "contradictions_api_v1_cases__case_id__contradictions_get",
         "security": [
@@ -1113,9 +1069,7 @@
     },
     "/api/v1/cases/{case_id}/graph": {
       "get": {
-        "tags": [
-          "graph"
-        ],
+        "tags": ["graph"],
         "summary": "Graph",
         "description": "Bounded projection. hops \u2264 GRAPH_MAX_HOPS and max_nodes \u2264 GRAPH_MAX_NODES are enforced server-side.\n`offset` pages through the node listing when `center` is unset \u2014 a centered hop-bounded traversal has\nno natural total order to page through (see bounded_subgraph's docstring), so `offset` is accepted\nbut has no effect once `center` is given.",
         "operationId": "graph_api_v1_cases__case_id__graph_get",
@@ -1247,9 +1201,7 @@
     },
     "/api/v1/cases/{case_id}/locations": {
       "get": {
-        "tags": [
-          "graph"
-        ],
+        "tags": ["graph"],
         "summary": "Locations",
         "description": "LOCATION entities that appear in this case's approved claims, for the map view (docs/status.md\nRole 2 backlog item). Bounded to config.GRAPH_MAX_NODES, the same server-side cap the graph endpoint\nitself uses \u2014 a map view is a different projection of the same claim data, not an unbounded query.\nEntities with no valid lat/lon (e.g. a cell tower row that only ever appeared via a calls.csv\ncell_id, before/without a matching locations.csv row) are still returned with `has_coords: false`\nrather than silently dropped, so the UI can report \"N locations without coordinates\" honestly.",
         "operationId": "locations_api_v1_cases__case_id__locations_get",
@@ -1293,9 +1245,7 @@
     },
     "/api/v1/cases/{case_id}/analysis": {
       "get": {
-        "tags": [
-          "graph"
-        ],
+        "tags": ["graph"],
         "summary": "Analysis",
         "operationId": "analysis_api_v1_cases__case_id__analysis_get",
         "security": [
@@ -1370,9 +1320,7 @@
     },
     "/api/v1/cases/{case_id}/timeline": {
       "get": {
-        "tags": [
-          "graph"
-        ],
+        "tags": ["graph"],
         "summary": "Timeline",
         "operationId": "timeline_api_v1_cases__case_id__timeline_get",
         "security": [
@@ -1473,9 +1421,7 @@
     },
     "/api/v1/cases/{case_id}/edge": {
       "get": {
-        "tags": [
-          "graph"
-        ],
+        "tags": ["graph"],
         "summary": "Edge Detail",
         "description": "Evidence drawer: every claim (with provenance) behind an aggregated graph edge \u2014 merged nodes included.",
         "operationId": "edge_detail_api_v1_cases__case_id__edge_get",
@@ -1556,9 +1502,7 @@
     },
     "/api/v1/claims/{claim_id}": {
       "get": {
-        "tags": [
-          "graph"
-        ],
+        "tags": ["graph"],
         "summary": "Get Claim",
         "operationId": "get_claim_api_v1_claims__claim_id__get",
         "security": [
@@ -1601,9 +1545,7 @@
     },
     "/api/v1/entities/{entity_id}": {
       "get": {
-        "tags": [
-          "graph"
-        ],
+        "tags": ["graph"],
         "summary": "Get Entity",
         "description": "Entity card incl. cross-case appearances \u2014 other cases are only named if the user may access them.",
         "operationId": "get_entity_api_v1_entities__entity_id__get",
@@ -1656,9 +1598,7 @@
     },
     "/api/v1/entities/{entity_id}/reveal": {
       "post": {
-        "tags": [
-          "graph"
-        ],
+        "tags": ["graph"],
         "summary": "Reveal",
         "description": "Authorized unmasking. Requires a reason, is role-gated, and always writes an UNMASK audit event.",
         "operationId": "reveal_api_v1_entities__entity_id__reveal_post",
@@ -1712,9 +1652,7 @@
     },
     "/api/v1/audit": {
       "get": {
-        "tags": [
-          "audit"
-        ],
+        "tags": ["audit"],
         "summary": "All Audit",
         "operationId": "all_audit_api_v1_audit_get",
         "security": [
@@ -1774,9 +1712,7 @@
     },
     "/api/v1/cases/{case_id}/audit": {
       "get": {
-        "tags": [
-          "audit"
-        ],
+        "tags": ["audit"],
         "summary": "Case Audit",
         "description": "Case-scoped audit trail: assigned users see decisions/access for their case; auditors see everything.",
         "operationId": "case_audit_api_v1_cases__case_id__audit_get",
@@ -1830,9 +1766,7 @@
     },
     "/api/v1/cases/{case_id}/report": {
       "post": {
-        "tags": [
-          "report"
-        ],
+        "tags": ["report"],
         "summary": "Export Report",
         "operationId": "export_report_api_v1_cases__case_id__report_post",
         "security": [
@@ -1885,9 +1819,7 @@
     },
     "/api/v1/demo/tamper/{evidence_id}": {
       "post": {
-        "tags": [
-          "demo"
-        ],
+        "tags": ["demo"],
         "summary": "Tamper",
         "description": "Append one byte to the stored object so /verify reports a hash mismatch. Demo only; audited.",
         "operationId": "tamper_api_v1_demo_tamper__evidence_id__post",
@@ -1945,9 +1877,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "username"
-        ],
+        "required": ["username"],
         "title": "AssignIn"
       },
       "Body_upload_api_v1_cases__case_id__evidence_post": {
@@ -1969,9 +1899,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "file"
-        ],
+        "required": ["file"],
         "title": "Body_upload_api_v1_cases__case_id__evidence_post"
       },
       "CaseIn": {
@@ -2082,9 +2010,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "reason"
-        ],
+        "required": ["reason"],
         "title": "ContextRevealIn"
       },
       "DecisionIn": {
@@ -2102,10 +2028,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "decision",
-          "reason"
-        ],
+        "required": ["decision", "reason"],
         "title": "DecisionIn"
       },
       "HTTPValidationError": {
@@ -2133,10 +2056,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "username",
-          "password"
-        ],
+        "required": ["username", "password"],
         "title": "LoginIn"
       },
       "ReportIn": {
@@ -2170,10 +2090,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "case_id",
-          "reason"
-        ],
+        "required": ["case_id", "reason"],
         "title": "RevealIn"
       },
       "ValidationError": {
@@ -2209,11 +2126,7 @@
           }
         },
         "type": "object",
-        "required": [
-          "loc",
-          "msg",
-          "type"
-        ],
+        "required": ["loc", "msg", "type"],
         "title": "ValidationError"
       }
     },

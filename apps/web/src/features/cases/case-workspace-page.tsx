@@ -1,12 +1,15 @@
 import { useEffect, useState } from "react";
 import { useParams, useSearchParams, useLocation, useNavigate, Link } from "react-router-dom";
-import { Layers, Network, FileCheck2, Clock, CheckSquare, ShieldCheck, Lock, Radio, Database, ArrowRight } from "lucide-react";
+import { Layers, Network, FileCheck2, Clock, CheckSquare, ShieldCheck, Lock, Radio, Database, ArrowRight, BarChart2, MapPin, Star } from "lucide-react";
 import { InvestigationShell } from "@/layouts/InvestigationShell/investigation-shell";
 import { CaseHeader } from "./components/case-header";
 import { CaseOverviewView } from "./components/case-overview-view";
 import { CaseEvidenceView } from "./evidence/case-evidence-view";
 import { CaseTimeline } from "./timeline/case-timeline";
 import { CaseAuditView } from "./audit/case-audit-view";
+import { CaseAnalysisPage } from "./analysis/case-analysis-page";
+import { InvestigationMapView } from "./map/investigation-map-view";
+import { CaseReviewsView } from "./reviews/case-reviews-view";
 import { CaseDetailSidebar } from "./components/case-detail-sidebar";
 import { ProvenanceViewer } from "@/components/evidence/ProvenanceViewer";
 import { useUIStore } from "@/stores/uiStore";
@@ -16,12 +19,15 @@ import type { CaseDetail } from "@/types/case";
 import { Button } from "@/components/ui/button";
 
 const CASE_NAV_TABS = [
-  { id: "overview", label: "Case Overview", icon: Layers },
-  { id: "graph", label: "Investigation Map", icon: Network, isRoute: true },
-  { id: "evidence", label: "Evidence & Records", icon: FileCheck2 },
-  { id: "timeline", label: "Event Timeline", icon: Clock },
-  { id: "hitl", label: "Analyst Review", icon: CheckSquare },
-  { id: "audit", label: "Audit Trail", icon: ShieldCheck },
+  { id: "overview",  label: "Case Overview",    icon: Layers },
+  { id: "graph",     label: "Investigation Map", icon: Network,  isRoute: true },
+  { id: "map",       label: "Location Map",      icon: MapPin },
+  { id: "evidence",  label: "Evidence & Records",icon: FileCheck2 },
+  { id: "timeline",  label: "Event Timeline",    icon: Clock },
+  { id: "analysis",  label: "Graph Analysis",    icon: BarChart2 },
+  { id: "hitl",      label: "Analyst Review",    icon: CheckSquare },
+  { id: "reviews",   label: "Decisions",         icon: Star },
+  { id: "audit",     label: "Audit Trail",       icon: ShieldCheck },
 ];
 
 function CasePlaceholderView({ tabId, caseId, onBackToOverview }: { tabId: string, caseId: string, onBackToOverview: () => void }) {
@@ -50,17 +56,14 @@ export function CaseWorkspacePage() {
   const navigate = useNavigate();
 
   let activeTab = "overview";
-  if (location.pathname.endsWith("/timeline")) {
-    activeTab = "timeline";
-  } else if (location.pathname.endsWith("/evidence")) {
-    activeTab = "evidence";
-  } else if (location.pathname.endsWith("/audit")) {
-    activeTab = "audit";
-  } else if (location.pathname.endsWith("/overview")) {
-    activeTab = "overview";
-  } else {
-    activeTab = searchParams.get("tab") || "overview";
-  }
+  if (location.pathname.endsWith("/timeline")) activeTab = "timeline";
+  else if (location.pathname.endsWith("/evidence")) activeTab = "evidence";
+  else if (location.pathname.endsWith("/audit")) activeTab = "audit";
+  else if (location.pathname.endsWith("/overview")) activeTab = "overview";
+  else if (location.pathname.endsWith("/map")) activeTab = "map";
+  else if (location.pathname.endsWith("/analysis")) activeTab = "analysis";
+  else if (location.pathname.endsWith("/reviews")) activeTab = "reviews";
+  else activeTab = searchParams.get("tab") || "overview";
 
   const [caseData, setCaseData] = useState<CaseDetail | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -89,30 +92,18 @@ export function CaseWorkspacePage() {
   }, [caseId]);
 
   const handleTabChange = (tabId: string) => {
-    if (tabId === "graph") {
-      navigate(`/cases/${caseId}/graph`);
-      return;
-    }
-    if (tabId === "timeline") {
-      navigate(`/cases/${caseId}/timeline`);
-      return;
-    }
-    if (tabId === "evidence") {
-      navigate(`/cases/${caseId}/evidence`);
-      return;
-    }
-    if (tabId === "hitl") {
-      navigate(`/cases/${caseId}/hitl`);
-      return;
-    }
-    if (tabId === "audit") {
-      navigate(`/cases/${caseId}/audit`);
-      return;
-    }
-    if (tabId === "overview") {
-      navigate(`/cases/${caseId}/overview`);
-      return;
-    }
+    const directRoutes: Record<string, string> = {
+      graph: `/cases/${caseId}/graph`,
+      timeline: `/cases/${caseId}/timeline`,
+      evidence: `/cases/${caseId}/evidence`,
+      hitl: `/cases/${caseId}/hitl`,
+      audit: `/cases/${caseId}/audit`,
+      overview: `/cases/${caseId}/overview`,
+      map: `/cases/${caseId}/map`,
+      analysis: `/cases/${caseId}/analysis`,
+      reviews: `/cases/${caseId}/reviews`,
+    };
+    if (directRoutes[tabId]) { navigate(directRoutes[tabId]); return; }
     setSearchParams({ tab: tabId });
   };
 
@@ -182,13 +173,18 @@ export function CaseWorkspacePage() {
           ) : activeTab === "timeline" ? (
             <CaseTimeline caseId={caseId} />
           ) : activeTab === "evidence" ? (
-            <CaseEvidenceView  />
+            <CaseEvidenceView />
           ) : activeTab === "audit" ? (
             <CaseAuditView caseId={caseId} />
+          ) : activeTab === "map" ? (
+            <InvestigationMapView />
+          ) : activeTab === "analysis" ? (
+            <CaseAnalysisPage />
+          ) : activeTab === "reviews" ? (
+            <CaseReviewsView />
           ) : (
             <CasePlaceholderView caseId={caseId}
               tabId={activeTab}
-              
               onBackToOverview={() => handleTabChange("overview")}
             />
           )

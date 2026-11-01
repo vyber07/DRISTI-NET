@@ -158,10 +158,10 @@ export function HITLDecisionPane({
                 </button>
                 <button
                   type="button"
-                  onClick={() => handlePresetJustification("Certified electronic evidence under Sec 65B Indian Evidence Act.")}
+                  onClick={() => handlePresetJustification("Electronic evidence reference under BSA s.63 / IEA s.65B.")}
                   className="rounded bg-surface-1 hover:bg-surface-3 border border-border-subtle px-2 py-0.5 text-micro font-mono text-text-secondary hover:text-text-primary transition-colors"
                 >
-                  + Sec 65B IEA Cert
+                  + BSA s.63 Reference
                 </button>
                 <button
                   type="button"

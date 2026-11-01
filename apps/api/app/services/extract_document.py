@@ -33,9 +33,46 @@ class DocumentExtractor(StructuredExtractor):
                 if doc_date is None and "Date:" in line:
                     dm = self.DATE_RE.search(line)
                     doc_date = dm.group(1) if dm else None
-                # regex passes for structural identifiers only: phone, account, vehicle reg
-                # We intentionally removed PERSON/ORGANIZATION regex (e.g. NAME_RE, ORG_SUFFIX_RE)
-                # to strictly rely on real NLP (IndicBERT) models as per architectural instruction.
+
+                # vehicle ownership asserted by the document → ATTRIBUTE claim (may contradict a registry).
+                # The sentence may wrap, so match against this line joined with the next one.
+                joined = line + " " + (lines[lno] if lno < len(lines) else "")
+                for m in self.OWNER_RE.finditer(re.sub(r"\s+", " ", joined)):
+                    if "registration" not in line:
+                        continue
+                    veh = self.entity("VEHICLE", norm_reg(m.group(1)), m.group(1))
+                    self.claim("ATTRIBUTE", veh, attribute="owner", original=m.group(2), normalized=norm_name(m.group(2)),
+                               method="document-parser", confidence=0.7, observed_time=doc_date,
+                               locator={"page": pno, "line": lno, "line_end": lno + 1, "char_offset": offset + line.find("registration")},
+                               snippet=re.sub(r"\s+", " ", joined).strip())
+
+                # person mentions: "Name: X" or lines in section 3/2, or "X, <org>, contact <phone>"
+                names = []
+                nm = re.search(r"Name:\s*([A-Z][a-z]+ [A-Z][a-z]+)", line)
+                if nm:
+                    names.append(nm)
+                elif section.startswith("3.") or section.startswith("2."):
+                    for m in self.NAME_RE.finditer(line):
+                        if m.group(1) not in self.STOP_NAMES and not self.ORG_SUFFIX_RE.match(m.group(1)):
+                            names.append(m)
+                for m in names:
+                    name = m.group(1)
+                    person = self.entity("PERSON", f"mention:{norm_name(name)}@{self.ev.evidence_id}", name,
+                                         {"mention_of": name, "source_document": self.ev.filename})
+                    self.claim("RELATIONSHIP", person, case, "NAMED_IN", original=name, normalized=norm_name(name),
+                               method="document-parser", confidence=0.8, observed_time=doc_date, locator=loc(m), snippet=stripped)
+                    self.claim("ATTRIBUTE", person, attribute="name", original=name, normalized=norm_name(name),
+                               method="document-parser", confidence=0.8, locator=loc(m), snippet=stripped)
+                    for om in self.ORG_SUFFIX_RE.finditer(line):
+                        org = self.entity("ORGANIZATION", norm_text(om.group(1)), om.group(1))
+                        self.claim("RELATIONSHIP", person, org, "MEMBER_OF", original=om.group(1), normalized=org.canonical,
+                                   method="document-parser", confidence=0.7, observed_time=doc_date, locator=loc(om), snippet=stripped)
+                    for pm in self.PHONE_RE.finditer(line):
+                        ph = self.entity("PHONE", norm_phone(pm.group(0)), pm.group(0))
+                        self.claim("RELATIONSHIP", person, ph, "USES_PHONE", original=pm.group(0), normalized=ph.canonical,
+                                   method="document-parser", confidence=0.75, observed_time=doc_date, locator=loc(pm), snippet=stripped)
+
+                # regex passes for structural identifiers: phone, account, vehicle reg
                 for pm in self.PHONE_RE.finditer(line):
                     ph = self.entity("PHONE", norm_phone(pm.group(0)), pm.group(0))
                     self.claim("MENTION", ph, original=pm.group(0), normalized=ph.canonical,
@@ -69,7 +106,8 @@ class DocumentExtractor(StructuredExtractor):
             if full_text.strip():
                 ner_candidates = _ner(full_text, evidence_id=self.ev.evidence_id, page=1, line_start=1)
                 for nc in ner_candidates:
-                    ent = self.entity(nc.kind, f"ner:{norm_name(nc.normalized_text)}@{self.ev.evidence_id}",
+                    canonical_id = f"mention:{norm_name(nc.normalized_text)}@{self.ev.evidence_id}" if nc.kind == "PERSON" else f"ner:{norm_name(nc.normalized_text)}@{self.ev.evidence_id}"
+                    ent = self.entity(nc.kind, canonical_id,
                                       nc.original_text, {"ner_source": "indic-bert"})
                     self.claim(
                         "MENTION", ent,

@@ -1,0 +1,33 @@
+[Unit]
+Description=DRISTI-NET FastAPI Application Server
+Documentation=file:///home/ubuntu/DRISTI-NET/README.md
+After=network-online.target clamav-daemon.service
+Wants=network-online.target clamav-daemon.service
+
+[Service]
+Type=simple
+User=ubuntu
+Group=ubuntu
+WorkingDirectory=/home/ubuntu/DRISTI-NET
+
+# Load all env vars from .env
+EnvironmentFile=/home/ubuntu/DRISTI-NET/.env
+
+# Use the venv311 Python interpreter
+ExecStart=/home/ubuntu/DRISTI-NET/.venv311/bin/python -m uvicorn apps.api.app.main:app --host 0.0.0.0 --port 8000
+
+# Auto-restart on crash
+Restart=always
+RestartSec=5s
+
+# Log to journald (view with: journalctl -u dristinet-api -f)
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=dristinet-api
+
+# Give it time to start (DB migrations run on startup)
+TimeoutStartSec=60
+TimeoutStopSec=30
+
+[Install]
+WantedBy=multi-user.target

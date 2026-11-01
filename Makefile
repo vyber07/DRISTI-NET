@@ -1,5 +1,5 @@
 .PHONY: setup data seed api web build-web test e2e clean db-upgrade db-revision test-unit test-integration test-infra-local test-stack-infra test-stack deploy deploy-down deploy-logs deploy-status deploy-restart
-PY=python3
+PY ?= $(shell if [ -f .venv311/bin/python ]; then echo .venv311/bin/python; else echo python3; fi)
 # `source scripts/env.sh` first on hosts that need the user-space Node/ClamAV/Chromium libs.
 setup:
 	$(PY) -m pip install -q -r apps/api/requirements.txt
@@ -49,7 +49,7 @@ test-stack-infra:
 
 test-stack:
 	set -e; trap 'docker compose down' EXIT; \
-	docker compose down -v; \
+	docker compose down; \
 	docker compose build --no-cache; \
 	docker compose up -d --wait; \
 	docker compose exec -T api bash -c "python3 tests/infrastructure/test_infrastructure.py"; \

@@ -21,6 +21,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
 
 def run_once(run_no: int) -> dict:
@@ -56,12 +58,18 @@ def run_once(run_no: int) -> dict:
     officer, reviewer, investigator, unassigned = (login(client, u) for u in ("officer", "reviewer", "investigator", "unassigned"))
     check("beat3_investigator_opens_case", client.get("/api/v1/cases/CASE-0001", headers=investigator).status_code == 200)
 
-    # beat 4/5: upload with a forced scan failure, retry recovers, then an EICAR upload is INFECTED
+    # beat 4/5: upload with a simulated scan failure, retry recovers, then an EICAR upload is INFECTED
+    from apps.api.app.services import scanner
+    orig_scan = scanner.scan_file
     p = SYNTHETIC_DIR / "locations.csv"
-    r1 = client.post("/api/v1/cases/CASE-0001/evidence", headers=officer, files={"file": (p.name, p.read_bytes())},
-                      data={"source_label": "dryrun", "force_scan_outcome": "SCAN_FAILED"})
-    check("beat5_forced_scan_failure_leaves_file_quarantined", r1.status_code == 201 and r1.json()["status"] == "SCAN_FAILED", str(r1.json().get("status")))
-    ev_id = r1.json()["evidence_id"]
+    try:
+        scanner.scan_file = lambda pth, mode=None: scanner.ScanOutcome("SCAN_FAILED", "clamscan", "simulated scanner failure")
+        r1 = client.post("/api/v1/cases/CASE-0001/evidence", headers=officer, files={"file": (p.name, p.read_bytes())}, data={"source_label": "dryrun"})
+        check("beat5_forced_scan_failure_leaves_file_quarantined", r1.status_code == 201 and r1.json()["status"] == "SCAN_FAILED", str(r1.json().get("status")))
+        ev_id = r1.json()["evidence_id"]
+    finally:
+        scanner.scan_file = orig_scan
+
     r2 = client.post(f"/api/v1/evidence/{ev_id}/process", headers=officer, json={})
     check("beat5_retry_recovers", r2.status_code == 200 and r2.json()["status"] not in ("SCAN_FAILED", "SCAN_TIMEOUT", "SCANNER_UNAVAILABLE"), str(r2.json().get("status")))
     eicar = SYNTHETIC_DIR / "documents" / "eicar_test.txt"

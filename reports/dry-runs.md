@@ -1,16 +1,16 @@
 # Dry runs — automated (mechanical part of the release checklist)
 
-Computed 2026-09-12T23:00:54+00:00 by `scripts/dry_run.py`, 5 consecutive runs, each against a fresh throwaway SQLite store (`DRISHTI_SCANNER_MODE=testgate`).
+Computed 2026-11-01T05:25:01+00:00 by `scripts/dry_run.py`, 5 consecutive runs, each against a fresh throwaway SQLite store (`DRISHTI_SCANNER_MODE=testgate`).
 
 **Scope**: this automates the mechanical sequence in `docs/demo-script.md` (every beat that is an API call) and proves it is deterministic and repeatable across fresh stores. It does **not** substitute for an actual human rehearsal of delivery/timing/screen-sharing for a live audience — beats 1, 2 and parts of 13 are UI/narration-only and are listed below as `not automatable`, not silently skipped. A person still needs to run through the real UI at least once before presenting.
 
 | run | elapsed (s) | steps passed | result |
 |---|---|---|---|
-| 1 | 1.08 | 29/29 | PASS |
-| 2 | 0.92 | 29/29 | PASS |
-| 3 | 1.01 | 29/29 | PASS |
-| 4 | 1.02 | 29/29 | PASS |
-| 5 | 0.98 | 29/29 | PASS |
+| 1 | 7.46 | 29/29 | PASS |
+| 2 | 3.77 | 29/29 | PASS |
+| 3 | 3.73 | 29/29 | PASS |
+| 4 | 3.91 | 29/29 | PASS |
+| 5 | 3.67 | 29/29 | PASS |
 
 ## Step detail (run 1; identical pass/fail pattern held across all runs unless noted)
 
@@ -25,7 +25,7 @@ Computed 2026-09-12T23:00:54+00:00 by `scripts/dry_run.py`, 5 consecutive runs, 
 | ingest_calls.csv | PASS | status=HITL |
 | ingest_transactions.csv | PASS | status=HITL |
 | ingest_vehicles.csv | PASS | status=HITL |
-| ingest_locations.csv | PASS | status=HITL |
+| ingest_locations.csv | PASS | status=GRAPH_PROJECTED |
 | ingest_documents/fir_001.pdf | PASS | status=HITL |
 | beat6_source_locator_on_extracted_claim | PASS |  |
 | beat7_all_three_planted_candidates_present | PASS |  |

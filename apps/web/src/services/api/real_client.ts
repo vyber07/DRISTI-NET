@@ -37,6 +37,9 @@ export async function api<T = any>(path: string, init: RequestInit = {}): Promis
     throw new ApiError(res.status, detail, trace)
   }
   const ct = res.headers.get('content-type') || ''
+  if (ct.includes('application/pdf') || ct.includes('application/octet-stream')) {
+    return res.blob() as unknown as Promise<T>
+  }
   return (ct.includes('application/json') ? res.json() : res.text()) as Promise<T>
 }
 

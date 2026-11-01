@@ -22,17 +22,17 @@ def create_zip(name, includes, excludes):
 def main():
     print("Generating REVIEWER PACKAGE...")
     create_zip("reviewer_package.zip", 
-               ["docs/", "audit/", "reports/", "README.md", "PROJECT_STATUS.md"],
+               ["docs/", "audit/", "reports/", "README.md", "STATUS.md", "PROJECT_TASK_BOARD.md"],
                ["*.git*", "*.venv*", "*__pycache__*"])
                
     print("Generating ENGINEERING PACKAGE...")
     create_zip("engineering_package.zip",
-               ["apps/", "workers/", "scripts/", "infrastructure/", "packages/", "policy/", "tests/", "docker-compose.yml", "Dockerfile", "Makefile", "requirements.txt", ".env.example"],
+               ["apps/", "workers/", "scripts/", "infrastructure/", "packages/", "policy/", "tests/", "docker-compose.yml", "Dockerfile", "Makefile", ".env.example"],
                ["*.git*", "*.venv*", "*node_modules*", "*__pycache__*", "*.pytest_cache*", "storage/*", "releases/*", "*.tar.gz", "*.zip"])
                
     print("Generating AI CONTEXT PACKAGE...")
     create_zip("ai_context_package.zip",
-               ["AGENTS.md", "CLAUDE.md", "docs/", "audit/", "TASK_BOARD.md", "PROJECT_STATUS.md"],
+               ["AGENTS.md", "CLAUDE.md", "docs/", "audit/", "PROJECT_TASK_BOARD.md", "STATUS.md"],
                ["*.git*", "*.venv*", "*__pycache__*"])
                
     print("All packages generated successfully.")

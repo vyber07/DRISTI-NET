@@ -27,7 +27,7 @@ S3_ACCESS_KEY = _env("S3_ACCESS_KEY", "drishti")
 S3_SECRET_KEY = _env("S3_SECRET_KEY", "drishti-minio-demo")
 S3_REGION = _env("S3_REGION", "us-east-1")
 DATABASE_URL = _env("DATABASE_URL", f"sqlite:///{STORAGE_ROOT / 'drishti.db'}")
-SECRET_KEY = _env("SECRET_KEY", "change-me-demo-only")
+SECRET_KEY = _env("SECRET_KEY", "change-me-demo-only-minimum-32-chars-for-dev-jwt")
 
 import json
 # Key registry for HMAC rotation. Maps key_id -> secret string
@@ -103,7 +103,7 @@ ARCHIVE_MAX_COMPRESSION_RATIO = int(_env("ARCHIVE_MAX_COMPRESSION_RATIO", "100")
 def validate_production_secrets():
     if DATABASE_URL.startswith("sqlite"):
         return
-    if SECRET_KEY == "change-me-demo-only":
+    if SECRET_KEY.startswith("change-me-demo-only"):
         raise ValueError("DRISHTI_SECRET_KEY must be changed from the default in production")
     if S3_ENDPOINT_URL and S3_SECRET_KEY == "drishti-minio-demo":
         raise ValueError("DRISHTI_S3_SECRET_KEY must be changed from the default in production")

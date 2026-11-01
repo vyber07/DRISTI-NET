@@ -1,6 +1,6 @@
 # Limitations — demonstrated vs roadmap
 
-Last synced against real system state: 2026-09-13 (see `docs/status.md` for the full section-by-section
+Last synced against real system state: 2026-10-16 (see `docs/status.md` for the full section-by-section
 audit and `TASK_BOARD.md` for the live-verification methodology behind each Demonstrated claim below).
 
 ## Demonstrated (measured by tests in this repo, or live-verified against a real running service)
@@ -40,16 +40,17 @@ audit and `TASK_BOARD.md` for the live-verification methodology behind each Demo
   (`reports/dry-runs.md`) — see the open item below for what this does *not* cover
 - Targeted accessibility fixes: keyboard-operable clickable rows, measured WCAG AA color-contrast fixes,
   accessible names on every previously placeholder-only form control (`TASK_BOARD.md` Phases 16, 18)
-- ClamAV: demonstrated on hosts with a working ClamAV daemon (real EICAR detection, real clean-file
-  pass). Falls back to the documented `testgate` substitute only where no scanner binary/daemon is
-  reachable — including this project's own automated evaluation/dry-run/performance scripts, which use
-  `testgate` deliberately so they measure pipeline logic, not filesystem antivirus availability
+- ClamAV: `clamav` + `clamav-daemon` 1.5.4 installed via apt; `clamd==1.0.2` Python package
+  installed in `.venv311`; daemon configured with `TCPSocket 3310 / TCPAddr 127.0.0.1` and
+  confirmed running (EICAR detected as INFECTED, clean file returns CLEAN via clamav-tcp).
+  `DRISHTI_SCANNER_MODE=clamav` is active in `.env`. Falls back to the documented `testgate`
+  substitute only where no daemon is reachable.
 
 ## Not demonstrated (targets)
 
 | Area | Status |
 |------|--------|
-| OCR / NER Domain Tuning | PaddleOCR and IndicBERT adapters are implemented and connected, but currently lack deep language-specific fine-tuning (e.g. for noisy Hindi/Devanagari texts) and require formal CER/WER evaluation. |
+| OCR / NER Domain Tuning | PaddleOCR 2.10.0 + PaddlePaddle 2.6.2 now installed in `.venv311` and end-to-end verified (inference passes on scanned PDFs, graceful fallback to pypdf text-layer extraction for text-based PDFs). `ocr_adapter.py` supports both 2.x (ocr() API) and 3.x (predict() API) transparently. Deep language-specific fine-tuning (e.g. for noisy Hindi/Devanagari texts) and formal CER/WER evaluation remain on the roadmap. IndicBERT adapter is connected but not formally evaluated. |
 | Production Kubernetes Deployment | Kafka and Besu are implemented in Docker Compose, but the system is not yet scaled to Kubernetes. |
 | Additional POLE+ node kinds (`Alias`, `Device`, `SIM`, `H3Cell`, `Communication`, `FinancialEvent`) | 9 of the blueprint's node/edge kinds are implemented; these six remain roadmap |
 | Coarse spatial overlap (H3) analytics | lat/lon is captured and a plain map view of the points now exists (see Demonstrated above) — H3 bucketing/overlap *analytics* is a separate, larger feature, not attempted |

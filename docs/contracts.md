@@ -11,10 +11,10 @@ Errors: `401` unauthenticated · `403` denied (audited, neutral message, does no
 | POST | `/cases` | INVESTIGATOR, ADMIN | create fictional case (own jurisdiction) |
 | GET | `/cases/{id}` | assigned | case card (audited CASE_VIEW) |
 | POST | `/cases/{id}/assign` | owner, ADMIN | `{username,purpose}` |
-| POST | `/cases/{id}/evidence` | EVIDENCE_OFFICER, INVESTIGATOR, ADMIN | multipart `file`, `source_label`, `process` (default true), `force_scan_outcome` (demo) |
+| POST | `/cases/{id}/evidence` | EVIDENCE_OFFICER, INVESTIGATOR, ADMIN | multipart `file`, `source_label`, `process` (default true) |
 | GET | `/cases/{id}/evidence` | assigned | manifest list |
 | GET | `/evidence/{eid}` | assigned | manifest + jobs + claim count |
-| POST | `/evidence/{eid}/process` | uploader roles | (re)run scan → extract → resolve; `{force_scan_outcome}` |
+| POST | `/evidence/{eid}/process` | uploader roles | (re)run scan → extract → resolve |
 | GET | `/evidence/{eid}/verify` | assigned | recompute SHA-256 vs manifest (audited) |
 | GET | `/evidence/{eid}/context?row=&page=&line=&json_path=` | assigned | masked source lines around a locator; refused while quarantined |
 | GET | `/evidence/{eid}/download` | officer/investigator/admin/auditor | raw bytes (audited; quarantined files admin-only) |

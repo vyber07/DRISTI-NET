@@ -91,7 +91,7 @@ export function GraphLegend({ className }: { className?: string }) {
             {EVIDENCE_TIER_ORDER.map((tier) => {
               const cfg = EVIDENCE_TIER_CONFIG[tier];
               const friendlyLabels: Record<number, string> = {
-                5: "T5 — Court-Ready Proof (BSA)",
+                5: "T5 — Cryptographic Reference (BSA)",
                 4: "T4 — Verified Records (Bank/CDR)",
                 3: "T3 — Strong Pattern Match",
                 2: "T2 — Extracted Clue Mention",

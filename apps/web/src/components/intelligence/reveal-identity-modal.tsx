@@ -24,20 +24,20 @@ import {
 
 const STATUTORY_JUSTIFICATION_PRESETS = [
   {
-    label: "BNSS §91 / NAFIS Requisition",
-    text: "Requisition under BNSS §91 for cross-matching suspect biometric data against National Automated Fingerprint Identification System (NAFIS).",
+    label: "Case Evidence Corroboration",
+    text: "Investigative verification to corroborate candidate relationship against primary case evidence records.",
   },
   {
-    label: "BNSS §35 / Suspect Apprehension",
-    text: "Notice under BNSS §35 for immediate suspect apprehension and flight risk mitigation following interstate syndicate movement.",
+    label: "Supervisor-Approved Subscriber Verification",
+    text: "Authorized review of subscriber identifier to resolve candidate link with supervisor approval.",
   },
   {
-    label: "BNSS §107 / Account Freezing",
-    text: "Financial tracking requisition under BNSS §107 to initiate freezing orders on illicit mule accounts and hawala routing nodes.",
+    label: "Financial Transaction Reconciliation",
+    text: "Verification of account identifier against case-filed synthetic bank statement to confirm transaction party.",
   },
   {
-    label: "CDR / CAF Subscriber Verification",
-    text: "Verification of CDR subscriber identity against Airtel/Jio CAF application forms to corroborate fraudulent KYC activation.",
+    label: "Contradiction Resolution",
+    text: "Inspection of masked identifier to reconcile flagged contradictions between conflicting evidence claims.",
   },
 ];
 
@@ -333,7 +333,7 @@ function RevealModalContent({ modalTarget }: RevealModalContentProps) {
                   className="mt-0.5 h-3.5 w-3.5 rounded border-border-subtle bg-surface-2 text-electric-blue focus:ring-0"
                 />
                 <span className="text-micro text-text-secondary leading-normal">
-                  I certify that this identity unmasking requisition is necessary for official investigation under the current Case. I acknowledge this transaction is permanently recorded in the tamper-evident audit ledger under Officer Officer.
+                  I confirm that this identity unmasking requisition is required for authorized investigation under the current Case. I acknowledge this action is recorded in the tamper-evident audit trail.
                 </span>
               </label>
 
