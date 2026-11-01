@@ -9,7 +9,7 @@ from ..models import CaseAssignment, Claim, Entity, Evidence, Provenance, Review
 from ..schemas import RevealIn
 from ..services import graph as graph_svc
 from ..services.audit import record_audit
-from ..services.masking import mask_label, mask_node, mask_text
+from ..services.masking import case_attributes, mask_label, mask_node, mask_text
 
 router = APIRouter(tags=["graph"])
 
@@ -190,12 +190,20 @@ def get_entity(entity_id: str, request: Request, case_id: str, user: User = Depe
     e = db.get(Entity, entity_id)
     if e is None:
         raise HTTPException(404, "unknown entity")
+    # DEF-033: authorizing case_id is not enough; the entity must actually appear in that case.
+    in_case = db.query(Claim.claim_id).filter(Claim.case_id == case_id,
+                                              (Claim.source_entity_id == entity_id) | (Claim.target_entity_id == entity_id)).first()
+    if in_case is None:
+        record_audit(db, request.state.trace_id, user.user_id, "ACCESS_DENIED", "ENTITY", entity_id, case_id, outcome="DENIED",
+                     detail={"reason": "entity not in case", "attempted_action": "ENTITY_VIEW"})
+        db.commit()
+        raise HTTPException(403, "entity does not belong to this case")
     all_cases = {r[0] for r in db.query(Claim.case_id).filter((Claim.source_entity_id == entity_id) | (Claim.target_entity_id == entity_id)).distinct()}
     mine = {a.case_id for a in db.query(CaseAssignment).filter_by(user_id=user.user_id).all()} if user.role not in ("ADMIN", "AUDITOR") else all_cases
     visible = sorted((all_cases & mine) - {case_id})
     hidden = len(all_cases - mine - {case_id})
     claims = db.query(Claim).filter(Claim.case_id == case_id, (Claim.source_entity_id == entity_id) | (Claim.target_entity_id == entity_id)).order_by(Claim.observed_time).limit(200).all()
-    case_attrs = (e.attributes or {}).get(case_id, {}) if isinstance(e.attributes, dict) and case_id in (e.attributes or {}) else (e.attributes or {})
+    case_attrs = case_attributes(e.attributes, case_id)
     return {"entity_id": e.entity_id, "kind": e.kind, "label": mask_label(e.kind, e.label), "masked": e.kind in ("PHONE", "ACCOUNT"),
             "attributes": {k: v for k, v in case_attrs.items()}, "access_class": e.access_class,
             "cross_case": {"visible_cases": visible, "restricted_case_count": hidden, "total_cases": len(all_cases)},

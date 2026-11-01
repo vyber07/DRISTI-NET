@@ -274,3 +274,82 @@ def test_audit_hmac_historical_key_rotation(monkeypatch):
     ev_unk = AuditEvent(audit_id="AUD-unk", trace_id="trace-3", action="TEST", outcome="OK")
     ev_unk.signature = f"k9-9999:hmac-sha256:{new_sig}"
     assert verify_audit_event(ev_unk) is False
+
+
+def test_spa_fallback_serves_only_files_inside_dist(tmp_path):
+    """DEF-028: the SPA fallback must never serve a file outside the web build directory."""
+    from apps.api.app.main import safe_dist_file
+
+    dist = tmp_path / "dist"
+    (dist / "assets").mkdir(parents=True)
+    (dist / "index.html").write_text("<!doctype html>")
+    (dist / "favicon.svg").write_text("<svg/>")
+    secret = tmp_path / ".env"
+    secret.write_text("DRISHTI_SECRET_KEY=not-a-real-key")
+    (dist / "escape-link").symlink_to(secret)
+
+    # success: a real file inside dist is returned
+    assert safe_dist_file(dist, "favicon.svg") == (dist / "favicon.svg").resolve()
+    # failure: traversal, absolute paths, symlink escape, directories and missing files are all refused
+    for bad in ("../.env", "assets/../../.env", "/etc/passwd", str(secret), "escape-link", "assets", "", "missing.js"):
+        assert safe_dist_file(dist, bad) is None, bad
+
+
+def test_spa_route_does_not_leak_repository_files(client):
+    """DEF-028 over HTTP: percent-encoded `..` reaches the route decoded; it must get the app shell, never the file."""
+    from apps.api.app import config
+
+    if not config.WEB_DIST.exists():
+        import pytest
+        pytest.skip("web build absent: the SPA route is not mounted")
+    for path in ("/%2e%2e/%2e%2e/%2e%2e/README.md", "/..%2f..%2f..%2f.env.example", "/%2e%2e%2f%2e%2e%2f%2e%2e%2fCLAUDE.md"):
+        r = client.get(path)
+        assert r.status_code == 200, path
+        assert r.text.lower().startswith("<!doctype html"), (path, r.text[:80])
+        assert "DRISHTI_" not in r.text and "DRISHTI-NET — working prototype" not in r.text, path
+
+
+def test_candidate_assign_and_stats_enforce_case_authorization(client, ingested, unassigned, reviewer, auditor):
+    """DEF-031: `POST /candidates/{id}/assign` and `GET /cases/{id}/stats` had a role check but no case check, so a
+    user not assigned to CASE-0001 could claim its review tasks (and read the candidate) and read its review stats."""
+    cands = client.get("/api/v1/cases/CASE-0001/candidates", headers=reviewer).json()
+    assert cands, "precondition: CASE-0001 has review candidates"
+    cid = cands[0]["candidate_id"]
+
+    # failure: unassigned investigator is denied on both, and the candidate is not modified
+    r = client.post(f"/api/v1/candidates/{cid}/assign", headers=unassigned)
+    assert r.status_code == 403, r.text
+    assert "signals" not in r.text and "left" not in r.json()
+    assert client.get(f"/api/v1/candidates/{cid}", headers=reviewer).json().get("assigned_to") in (None, "")
+    assert client.get("/api/v1/cases/CASE-0001/stats", headers=unassigned).status_code == 403
+    denials = [a for a in client.get("/api/v1/audit?action=ACCESS_DENIED", headers=auditor).json()
+               if a["case_id"] == "CASE-0001" and (a.get("detail") or {}).get("attempted_action") in ("HITL_TASK_ASSIGN", "HITL_STATS")]
+    assert len(denials) >= 2
+
+    # success: an assigned reviewer can still claim the task and read the stats
+    r = client.post(f"/api/v1/candidates/{cid}/assign", headers=reviewer)
+    assert r.status_code == 200, r.text
+    assert r.json()["assigned_to"]
+    assert client.get("/api/v1/cases/CASE-0001/stats", headers=reviewer).status_code == 200
+
+
+def test_entity_card_does_not_leak_entities_or_attributes_from_other_cases(client, ingested, investigator, unassigned):
+    """DEF-033: `GET /entities/{id}?case_id=X` authorized case X but never checked that the entity belongs to X, and
+    when the entity had no attributes for X it fell back to the whole per-case attribute map. `unassigned` is
+    legitimately assigned to CASE-0002, so it could read CASE-0001 people's DOB/address by passing case_id=CASE-0002."""
+    nodes = client.get("/api/v1/cases/CASE-0001/graph?limit=150", headers=investigator).json()["nodes"]
+    persons = [n["entity_id"] for n in nodes if n.get("kind") == "PERSON"]
+    case2 = {n["entity_id"] for n in client.get("/api/v1/cases/CASE-0002/graph?limit=150", headers=investigator).json()["nodes"]}
+    only_case1 = [p for p in persons if p not in case2]
+    assert only_case1, "precondition: a CASE-0001-only person"
+    eid = only_case1[0]
+
+    # success: within its own case the card is returned, with that case's attributes only
+    ok = client.get(f"/api/v1/entities/{eid}?case_id=CASE-0001", headers=investigator)
+    assert ok.status_code == 200, ok.text
+    assert "CASE-0001" not in ok.json()["attributes"], "attributes must be the flattened per-case view"
+
+    # failure: a user authorized only for CASE-0002 cannot read it through CASE-0002
+    r = client.get(f"/api/v1/entities/{eid}?case_id=CASE-0002", headers=unassigned)
+    assert r.status_code == 403, r.text
+    assert "dob" not in r.text and "address" not in r.text

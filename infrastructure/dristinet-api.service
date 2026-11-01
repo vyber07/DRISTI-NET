@@ -13,8 +13,9 @@ WorkingDirectory=/home/ubuntu/DRISTI-NET
 # Load all env vars from .env
 EnvironmentFile=/home/ubuntu/DRISTI-NET/.env
 
-# Use the venv311 Python interpreter
-ExecStart=/home/ubuntu/DRISTI-NET/.venv311/bin/python -m uvicorn apps.api.app.main:app --host 0.0.0.0 --port 8000
+# Use the venv311 Python interpreter. Bind to loopback only: nginx (infrastructure/nginx) is the sole entry
+# point. Binding 0.0.0.0 exposed the raw app on :8000, bypassing nginx (DEF-028 was reachable that way).
+ExecStart=/home/ubuntu/DRISTI-NET/.venv311/bin/python -m uvicorn apps.api.app.main:app --host 127.0.0.1 --port 8000
 
 # Auto-restart on crash
 Restart=always

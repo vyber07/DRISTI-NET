@@ -33,7 +33,7 @@ export function CaseStatsGrid({ stats }: CaseStatsGridProps) {
           <div key={c.label} className="p-3.5 rounded-xl border border-border-subtle bg-surface-1 shadow-xs flex flex-col justify-between min-h-[96px]">
             <div className="flex items-center justify-between gap-2 min-w-0">
               <span className="text-xs font-bold text-text-primary leading-tight">{c.label}</span>
-              <div className={`p-1.5 rounded-lg \${c.accent} shrink-0`}>
+              <div className={`p-1.5 rounded-lg ${c.accent} shrink-0`}>
                 <Icon className="h-3.5 w-3.5" />
               </div>
             </div>

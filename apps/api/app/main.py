@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import logging
 import uuid
+from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, JSONResponse
@@ -77,6 +78,26 @@ if config.DATABASE_URL.startswith("sqlite"):
 for r in routers:
     app.include_router(r.router, prefix="/api/v1")
 
+def safe_dist_file(dist: Path, path: str) -> Path | None:
+    """Return the file under `dist` that `path` names, or None if it is missing or outside `dist`.
+
+    The path parameter arrives percent-decoded, so `/%2e%2e/%2e%2e/.env` reaches here as `../../.env`.
+    Before 2026-11-01 (DEF-028) the fallback joined it onto WEB_DIST unchecked and served any readable
+    file on the host -- `.env` (JWT signing key), the SQLite database, stored evidence. Resolving both
+    sides and requiring containment also rejects symlinks inside dist that point outside it.
+    """
+    if not path:
+        return None
+    root = dist.resolve()
+    try:
+        target = (root / path).resolve()
+    except (OSError, RuntimeError, ValueError):
+        return None
+    if not target.is_relative_to(root) or not target.is_file():
+        return None
+    return target
+
+
 if config.WEB_DIST.exists():
     app.mount("/assets", StaticFiles(directory=config.WEB_DIST / "assets"), name="assets")
 
@@ -84,8 +105,8 @@ if config.WEB_DIST.exists():
     def spa(path: str):
         if path.startswith("api/"):  # unknown API paths must 404, never fall through to the app shell
             raise HTTPException(404, "not found")
-        target = config.WEB_DIST / path
-        if path and target.is_file():
+        target = safe_dist_file(config.WEB_DIST, path)
+        if target is not None:
             return FileResponse(target)
         return FileResponse(config.WEB_DIST / "index.html")
 # trigger rebuild
