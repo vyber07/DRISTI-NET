@@ -17,5 +17,5 @@ Release hashes:
 - `4c41db989fd69a3fea9d89e59e0ef8033ce9c6b9c6207207fb6c7136b5b2a817` (dristi-net-reviewer-package.zip)
 - `065dccfb105d3e61ac9fa0651f66324b6724126915f34e5ef1f345fabdb7124e` (dristi-net-engineering-archive.zip)
 
-Release hash: `5f6767cfe1a92af8090ba516eb80f805c00552501b736b2f90678cfdeefe6a7d` **(working-tree snapshot — uncommitted changes present at build time; not an official tagged release; re-run after committing and reviewing)**
-(archive: `drishti-net-e969324-working-tree-snapshot-20261101T055602Z.tar.gz`, 1.84 MiB, built 20261101T055602Z from HEAD e969324)
+Release hash: `45595bfc371063b1c419483d9c8b29997f451f1062d3a684b8c2f449dcd48d05`
+(archive: `drishti-net-ebd5faa-clean-20261101T075442Z.tar.gz`, 2.13 MiB, built 20261101T075442Z from HEAD ebd5faa)

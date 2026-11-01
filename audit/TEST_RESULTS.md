@@ -99,3 +99,4 @@ probed read-only (one request for `README.md`) and was not restarted or written 
 | Path traversal via SPA fallback | never serve files outside `dist/` | before fix: file served (DEF-028); after: app shell |
 | Upload filename `../../../accepted/...` | rejected | 422 "unsafe file name" (already handled) |
 | Scanner unavailable / DB / storage outage | not clean / controlled | covered by unit tests only (`test_scan_gate_fail_closed`, failure-injection tests); host clamd is shared, so not stopped |
+| Release archive | unpack `drishti-net-ebd5faa-clean-*.tar.gz` → `npm ci`, typecheck, build, `make test`-equivalent | 0 / OK / 91 passed, 5 skipped; no secrets or runtime data in archive |
