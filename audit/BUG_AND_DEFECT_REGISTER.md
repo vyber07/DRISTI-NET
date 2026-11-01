@@ -48,3 +48,47 @@ This register catalogues all defects, regressions, contract mismatches, and vuln
 | DEF-025 | P2 | Tests | `test_hash_manifest_and_tamper_detection` ignored the tamper call's response; on PostgreSQL `/demo/*` is (correctly) not mounted, so it tampered nothing and failed misleadingly. `test_clamav_live` created a case as EVIDENCE_OFFICER (correctly 403) and had never passed. | FIXED: tamper via storage layer with precondition assert; new test asserts demo routes absent outside SQLite; ClamAV test uses seeded case. | Live run PASS |
 | DEF-026 | P1 | Deployment | Pinned MinIO digest `quay.io/minio/minio@sha256:14cea4…` does not resolve (also `:latest` on quay.io and Docker Hub) → Compose cannot start. Only MinIO and ClamAV are digest-pinned. | OPEN (BLK-04) — needs a choice of replacement image | `docker manifest inspect` |
 | DEF-027 | P3 | Tests | `conftest.py` globally replaces the NER pipeline with a fake keyed to five golden-dataset names (with debug prints); no backend test exercises the real model. | OPEN — add an opt-in real-model test | — |
+
+## Findings of 2026-11-01, session 4 (independent re-check of HEAD `135edeb`)
+
+All fixes below have a regression test that was run **failing without the fix and passing with it** (except
+DEF-034/035, which are config/script changes with no runtime test). Branch: `audit/session-4-security-fixes`.
+
+| ID | Sev | Component | Finding (evidence) | Fix / status | Verification |
+|---|---|---|---|---|---|
+| DEF-028 | **P0** | API / static serving | SPA fallback `GET /{path}` joined the percent-decoded path onto `WEB_DIST` unchecked: `/%2e%2e/%2e%2e/%2e%2e/<file>` served any readable file — `.env` (JWT/audit signing key), `storage/drishti.db`, stored evidence. Reproduced in-process and **on the live demo's port 8000** (bound `0.0.0.0`) with a request for the non-secret `README.md`. nginx on :80 rejects these encodings (400), so exposure depends on whether :8000 is reachable from outside (AWS security group not visible from the host). | FIXED: `main.safe_dist_file()` resolves and requires containment in `dist/` (also blocks symlink escape). Repo unit `infrastructure/dristinet-api.service` now binds `127.0.0.1`. **Live process not restarted (needs owner approval).** | `test_spa_fallback_serves_only_files_inside_dist`, `test_spa_route_does_not_leak_repository_files` (both fail on `135edeb`) |
+| DEF-029 | P1 | Evidence UI | Download buttons in `evidence-card.tsx`/`evidence-row.tsx` built the URL from an escaped template literal (`\${item.evidence_id}` → literal text) and used `window.open()`, which cannot send the Bearer token. Download never worked. Same escaping in the SHA-256 tooltip and the stats-card accent class. (Historical lead #3, in different files than reported.) | FIXED: `evidenceApi.downloadEvidence()` (authenticated fetch → blob); 409/other errors shown with `role="alert"`. | E2E `test_evidence_download_saves_exact_bytes`: saved file's SHA-256 equals the API's `sha256` (fails on `135edeb`) |
+| DEF-030 | P1 | Evidence UI | `CaseEvidenceView` loaded only when the store's `caseId` was set; it starts as `""` and nothing set it → the Evidence page showed "No evidence artifacts" for every case, and Upload posted to `/cases//evidence`. Existing E2E only checked the page heading. (Historical lead #4, confirmed.) | FIXED: case id from the route; previous case's list hidden while loading. | same E2E (needs a populated list) |
+| DEF-031 | **P1 (security)** | Review API | `POST /candidates/{id}/assign` and `GET /cases/{id}/stats` had a role check but **no case authorization**: any REVIEWER/INVESTIGATOR in any case/jurisdiction could claim another case's review task and read its stats. | FIXED: `authorize_case` on both (denials audited as `HITL_TASK_ASSIGN` / `HITL_STATS`). | `test_candidate_assign_and_stats_enforce_case_authorization` |
+| DEF-032 | P1 | Review API | `assign_candidate` called `candidate_out(m)` (signature is `(db, m)`) → TypeError → HTTP 500 **after** committing the assignment. The HITL "claim task" action (`hitlApi.ts:69`) has never worked. | FIXED; response now includes `assigned_to`/`assigned_at`. | same test (success path) |
+| DEF-033 | **P1 (security)** | Graph API | `GET /entities/{id}?case_id=X` authorized X but never checked the entity is in X, and when the entity had no attributes for X it returned the whole per-case attribute map. A user assigned only to CASE-0002 read a CASE-0001 person's name, DOB and address (reproduced). | FIXED: membership check (403 + audit) as in the reveal route; `masking.case_attributes()` never falls back to other cases' attributes (also used by the review queue). Candidate summary labels now pass through `mask_label`. | `test_entity_card_does_not_leak_entities_or_attributes_from_other_cases` |
+| DEF-034 | P2 | Scripts | `scripts/validate_besu.py` fell back to a hard-coded signing key (Besu's public dev-genesis key) and read `DRISTI_*` instead of `DRISHTI_*` env names. (Historical lead #12, confirmed in the script; the service itself has no fallback.) | FIXED: key must be supplied; exits 2 otherwise. | `py_compile`; not run against a Besu node |
+| DEF-035 | P2 | Dependencies | `npm audit --omit=dev`: 7 advisories (1 critical) — all via `pdfjs-dist@3.11`, which **is never imported**. `pip-audit`: kafka-python 2.0.2 (2 advisories), paddlepaddle 2.6.2 (2; fix only in 3.0 beta). `.env.example` ended with a stray `kiro-cli --resume-id …` line. | FIXED: removed `pdfjs-dist`; `npm audit fix` (dev: vite, source-map-js) → 0 advisories; kafka-python → 2.3.2; stray line removed. OPEN: paddlepaddle (optional OCR) — see TASK S4-07. | `npm audit` 0; `pip-audit` only paddlepaddle; backend suite green |
+
+### Historical leads from the takeover prompt (§11) — disposition on `135edeb`
+| # | Lead | Disposition |
+|---|---|---|
+| 1 | Missing brace `integrityApi.ts` | FIXED earlier (DEF-002); `tsc -b` 0 errors |
+| 2 | Typecheck false pass | FIXED earlier; re-verified: a planted type error makes `npm run typecheck` exit 2 |
+| 3 | Escaped interpolation | CONFIRMED in other files → DEF-029 |
+| 4 | Evidence not loading on mount | CONFIRMED → DEF-030 |
+| 5 | Reveal payload | FIXED earlier (DEF-009/017); `revealStore` sends `case_id` from the graph store |
+| 6 | Entity `case_id` | FIXED earlier (`entityApi.ts:5`); backend gap found → DEF-033 |
+| 7–8 | Graph vocabulary / temporal | FIXED earlier (DEF-010/022) |
+| 9 | PDF parsed as text | NOT_REPRODUCIBLE: `real_client.ts` returns a Blob for `application/pdf`; browser PDF download verified in session 3 |
+| 10 | `e.response?.status` | NOT_REPRODUCIBLE: no occurrences in `apps/web/src` |
+| 11 | `storage.s3()` in test | FIXED earlier (DEF-016) |
+| 12 | Besu script / dev key | `MerkleTree` import FIXED earlier (DEF-006); hard-coded key CONFIRMED → DEF-034 |
+| 13 | `force_scan_outcome` | FIXED: only remaining use is the negative security test asserting it is rejected |
+| 14 | `make clean` deletes storage | CONFIRMED, by design for dev; **never run on the demo host** (it would delete the live demo DB). Left as is; documented here |
+| 15 | `down -v` | FIXED earlier (DEF-008) |
+| 16 | `deploy.sh` secrets/sed | OBSOLETE: no `deploy.sh` in the tree |
+| 17 | Hard-coded service path | FIXED earlier (DEF-013); bind address fixed → DEF-028 |
+| 18 | HTTP-only Compose | CONFIRMED (open, part of BLK-04/05 staging work) |
+| 19–20 | Readiness / migration ordering | Compose uses `service_healthy` + `service_completed_successfully`; not runnable (BLK-04) → NEEDS_VERIFICATION |
+| 21 | SQLite init vs PostgreSQL | FIXED earlier (DEF-021) |
+| 22 | Redis throttling | Compose wires `DRISHTI_REDIS_URL`; **the live demo has no `DRISHTI_REDIS_URL`, so login throttling is off there** |
+| 23 | Heavy runtime deps | CONFIRMED: `requirements.txt` installs torch, transformers, paddle, web3, kafka, pytest, moto into the API image → TASK S4-07 |
+| 24–27 | Overstated legal copy / reveal presets | FIXED earlier (DEF-011R/017) |
+| 28 | `make_packages.py` missing files | FIXED earlier (session 3) |
+| 29–31 | Doc conflicts / checksum / scaffolding docs | PARTIAL: `CHANGELOG.md`'s Phase 5 entry still overclaims ("production application", "100% test reliability"); `operations/BACKUP_POLICY.md` describes untested controls (annotated) |

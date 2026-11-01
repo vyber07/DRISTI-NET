@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import type { EvidenceItem } from "@/types/evidence";
 import { useState } from "react";
 import { useProvenanceStore } from "@/stores/provenanceStore";
+import { downloadEvidence } from "@/services/api/evidenceApi";
 
 interface EvidenceCardProps {
   item: EvidenceItem;
@@ -24,6 +25,16 @@ export function EvidenceCard({ item, caseId, onScopeEntity, currentEntityScope }
   const navigate = useNavigate();
   const { openProvenanceForRecord } = useProvenanceStore();
   const [copiedHash, setCopiedHash] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+
+  const handleDownload = async () => {
+    setDownloadError(null);
+    try {
+      await downloadEvidence(item.evidence_id, item.filename);
+    } catch (e: any) {
+      setDownloadError(e?.status === 409 ? "Download blocked: item has not passed the scan gate" : `Download failed: ${e?.message || "unknown error"}`);
+    }
+  };
 
   const handleCopyHash = () => {
     navigator.clipboard.writeText(item.sha256);
@@ -75,7 +86,7 @@ export function EvidenceCard({ item, caseId, onScopeEntity, currentEntityScope }
 
       <div className="space-y-1.5 text-xs min-w-0">
         <div className="flex items-center justify-between gap-2 rounded bg-surface-2 px-2.5 py-1.5 font-mono text-micro text-text-muted border border-border-subtle/50 min-w-0">
-          <div className="flex items-center gap-1.5 min-w-0" title={`SHA-256: \${item.sha256}`}>
+          <div className="flex items-center gap-1.5 min-w-0" title={`SHA-256: ${item.sha256}`}>
             <Hash className="h-3 w-3 text-border-strong shrink-0" />
             <span className="truncate text-text-primary min-w-0">{item.sha256.slice(0, 20)}...</span>
           </div>
@@ -90,13 +101,12 @@ export function EvidenceCard({ item, caseId, onScopeEntity, currentEntityScope }
           <FileText className="h-3.5 w-3.5 shrink-0" />
           <span>Inspect Document</span>
         </Button>
-        <Button variant="secondary" size="sm" onClick={() => {
-           window.open(`/api/v1/evidence/\${item.evidence_id}/download`, '_blank');
-        }} className="text-xs gap-1 text-text-secondary hover:text-text-primary shrink-0 whitespace-nowrap">
+        <Button variant="secondary" size="sm" onClick={handleDownload} aria-label="Download original evidence file" className="text-xs gap-1 text-text-secondary hover:text-text-primary shrink-0 whitespace-nowrap">
           <Download className="h-3.5 w-3.5 shrink-0" />
           <span>Download</span>
         </Button>
       </div>
+      {downloadError && <p role="alert" className="text-[11px] text-red-400">{downloadError}</p>}
     </div>
   );
 }

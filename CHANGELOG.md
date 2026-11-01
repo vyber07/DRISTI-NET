@@ -1,3 +1,14 @@
+# Unreleased — session 4 security fixes (branch `audit/session-4-security-fixes`, 2026-11-01)
+- SECURITY (P0): SPA fallback no longer serves files outside `apps/web/dist` (path traversal, DEF-028).
+- SECURITY: case authorization on `POST /candidates/{id}/assign`, `GET /cases/{id}/stats`; entity card no longer
+  returns entities or attributes from other cases (DEF-031/033). Candidate claim no longer returns HTTP 500 (DEF-032).
+- Evidence page loads the routed case; Download now works (authenticated blob) (DEF-029/030).
+- Removed unused `pdfjs-dist`; kafka-python 2.3.2; `npm audit` 0 advisories. Besu validator requires an explicit key.
+- New `scripts/backup_restore_drill.py`; first restore test (`operations/RESTORE_TEST_REPORT.md`).
+- systemd unit binds uvicorn to 127.0.0.1.
+- Note: the "Phase 5" entry below overstates its results ("production application", "100% test reliability");
+  see `audit/RELEASE_READINESS_REPORT.md` for the evidence-based status.
+
 # DRISTI-NET: Comprehensive Frontend-Backend Integration & Hardening (Phase 5)
 
 ## Overview

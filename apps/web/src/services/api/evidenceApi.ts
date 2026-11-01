@@ -1,4 +1,4 @@
-import { get, post, postForm, type ApiResponse } from "./real_client";
+import { get, post, postForm, ApiError, TOKEN_KEY, type ApiResponse } from "./real_client";
 import type { EvidenceItem, EvidenceFilter } from "@/types/evidence";
 
 export async function listEvidence(caseId: string, _filter?: EvidenceFilter): Promise<ApiResponse<EvidenceItem[]>> {
@@ -52,4 +52,34 @@ export async function getEvidenceContext(evidenceId: string, params?: { row?: nu
 export async function revealEvidenceContext(evidenceId: string, reason: string, params?: { row?: number; page?: number; line?: number }): Promise<ApiResponse<any>> {
   const data = await post(`/evidence/${evidenceId}/context/reveal`, { reason, ...params });
   return { data, meta: { requestId: "req", timestamp: new Date().toISOString(), durationMs: 0, securityClassification: "REAL" } };
+}
+
+/**
+ * Authenticated download of the original evidence bytes (DEF-029).
+ * `window.open()` cannot send the Bearer token, and the previous call sites also built the URL from an
+ * escaped template literal, so the request went to the literal path `/evidence/${item.evidence_id}/download`.
+ * The server returns 409 while the item is quarantined; that error surfaces to the caller as an ApiError.
+ */
+export async function downloadEvidence(evidenceId: string, fallbackName: string): Promise<void> {
+  const headers: Record<string, string> = {};
+  try {
+    const t = localStorage.getItem(TOKEN_KEY);
+    if (t) headers.Authorization = `Bearer ${t}`;
+  } catch { /* storage unavailable: request goes unauthenticated and the server answers 401 */ }
+  const base = import.meta.env.VITE_API_BASE_URL || "/api/v1";
+  const res = await fetch(`${base}/evidence/${encodeURIComponent(evidenceId)}/download`, { headers });
+  if (!res.ok) {
+    let detail = res.statusText;
+    try { const j = await res.json(); if (typeof j.detail === "string") detail = j.detail; } catch { /* non-JSON error body */ }
+    throw new ApiError(res.status, detail, res.headers.get("X-Trace-Id") || undefined);
+  }
+  const blob = await res.blob();
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = fallbackName || evidenceId;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 1000);
 }

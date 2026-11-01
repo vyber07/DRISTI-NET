@@ -14,7 +14,7 @@ from apps.api.app.services.integrity import merkle_root, submit_to_besu
 logging.basicConfig(level=logging.INFO, format="%(levelname)s: %(message)s")
 
 def main():
-    besu_url = os.environ.get("DRISTI_BESU_ENDPOINT", "http://localhost:8545")
+    besu_url = os.environ.get("DRISHTI_BESU_ENDPOINT", "http://localhost:8545")
     w3 = Web3(Web3.HTTPProvider(besu_url))
     
     if not w3.is_connected():
@@ -29,7 +29,12 @@ def main():
     logging.info(f"Generated Merkle Root: {root_hex}")
     
     # 2. Anchor to Besu
-    dev_key = os.environ.get("DRISTI_BESU_SIGNING_KEY", "0x8f2a55949038a9610f50fb23b5883af3b4ecb3c3bb792cbcefbd1542c692be63")
+    # No in-source fallback key (DEF-034): a hard-coded default is how a dev key ends up signing on a real network.
+    # For a local Besu `--network=dev` node, export the dev account key from the Besu documentation yourself.
+    dev_key = os.environ.get("DRISHTI_BESU_SIGNING_KEY", "")
+    if not dev_key:
+        logging.error("DRISHTI_BESU_SIGNING_KEY is not set; refusing to sign with a built-in key.")
+        sys.exit(2)
     
     try:
         res = submit_to_besu(root_hex, besu_url, dev_key)

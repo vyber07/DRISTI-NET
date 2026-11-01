@@ -37,3 +37,20 @@ def mask_node(node: dict) -> dict:
     node["masked"] = node.get("kind") in ("PHONE", "ACCOUNT")
     node["merged_from"] = [mask_label(node.get("kind", ""), x) for x in node.get("merged_from", [])]
     return node
+
+
+def case_attributes(attributes: dict | None, case_id: str) -> dict:
+    """The attributes an entity carries for one case.
+
+    Attributes are stored per case (`{"CASE-0001": {...}}`). DEF-033: the old inline expression fell back to the
+    whole map when `case_id` was absent, returning every other case's attributes. Only an un-keyed legacy map (no
+    `CASE-` keys at all) is returned as-is.
+    """
+    if not isinstance(attributes, dict) or not attributes:
+        return {}
+    if case_id in attributes:
+        value = attributes[case_id]
+        return dict(value) if isinstance(value, dict) else {}
+    if any(isinstance(k, str) and k.startswith("CASE-") for k in attributes):
+        return {}
+    return dict(attributes)

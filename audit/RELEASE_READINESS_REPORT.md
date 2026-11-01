@@ -14,19 +14,19 @@
 
 | Gate | Result | Evidence / reason |
 |---|---|---|
-| Backend suite (SQLite) | PASS | 87 passed, 5 skipped, 1 deselected |
+| Backend suite (SQLite) | PASS | s4: 91 passed, 5 skipped, 1 deselected (+4 security regression tests) |
 | Backend suite (live PostgreSQL + Neo4j + S3 + ClamAV) | PASS | 93 passed, 0 failed, 0 skipped, `REQUIRE_LIVE_TESTS=1` |
 | Migrations (fresh PostgreSQL, upgrade → model diff → downgrade) | PASS after fix | Two migrations were missing (DEF-021); `5bcde1234569` added |
 | Web typecheck + build | PASS | `tsc -b --noEmit` 0 errors |
-| Browser E2E | PASS | 5/5, with strengthened graph and provenance assertions (DEF-022, DEF-024) |
+| Browser E2E | PASS | s4: 6/6 ×2 on an isolated instance (new download-integrity test, DEF-029/030); 6/6 on a restored instance |
 | Browser sweep (12 case routes) | PASS | 0 console errors, 0 HTTP ≥400, valid PDF download |
 | Golden-journey dry runs | PASS | 5/5 runs × 29/29 steps (testgate scanner) |
 | Evidence gate (§19: edge opens exact source) | PASS after fix | Edge drawer lists per-claim locators; viewer opens at page 1 / line 11 (DEF-024) |
 | Safety language (§16) | PASS after fix | "Court Ready", "Admissibility Verification", "Emergency Bypass", fabricated 100 % / 90 % confidence removed (DEF-011R, DEF-019, DEF-023) |
 | Compose / deployment start | **FAIL** | MinIO image digest unresolvable (BLK-04); `postgres`, `neo4j`, `redis`, `kafka`, `besu`, `nginx` use mutable tags |
-| Backup / restore | **NOT RUN** | No restore has ever been executed |
-| Security scanning (SAST / deps / containers / secrets) | **NOT RUN** | — |
-| TLS / network exposure | **NOT VERIFIED** | Host serves HTTP on :80; uvicorn binds 0.0.0.0:8000, bypassing nginx headers |
+| Backup / restore | **PARTIAL (2026-11-01 s4)** | SQLite + local storage: PASS (`operations/RESTORE_TEST_REPORT.md`). PostgreSQL/MinIO: not run (BLK-04/05) |
+| Security scanning (SAST / deps / containers / secrets) | **PARTIAL (s4)** | npm audit 0; pip-audit: paddlepaddle only; regex secret scan of tree + history (one public Besu dev key, removed). No SAST tool, no container scan. Manual review found P0 DEF-028 and P1 DEF-031/033 (fixed on branch) |
+| TLS / network exposure | **FAIL (live)** | Host serves HTTP on :80; live uvicorn still binds 0.0.0.0:8000 and runs code vulnerable to DEF-028 (BLK-06). Repo unit now binds 127.0.0.1 |
 | NER evaluation | **INSUFFICIENT** | 1 document / 3 entities; real-model probe shows recall gaps (DEF-018) |
 | Independent review | **NOT DONE** | This assessment is a single-agent review |
 | Organisational / government approval | **NOT APPLICABLE YET** | Separate gate; no approvals exist |
@@ -40,7 +40,8 @@ is **superseded**. A new archive should be built only after these changes are co
 
 1. Resolve BLK-04 (choose and pin an obtainable S3-compatible image) and pin every Compose image by digest.
 2. Bring the full Compose stack up on an isolated host and run `make test-stack`.
-3. Execute and document a backup → restore → integrity-verify → graph-rebuild → golden-journey cycle.
+0. **Deploy the DEF-028 fix to the live demo (BLK-06).**
+3. Repeat the backup/restore drill on the PostgreSQL + object-store path (SQLite path done in s4).
 4. Run SAST, dependency, secret and container scans; triage findings.
 5. Bind uvicorn to 127.0.0.1 behind nginx and verify TLS.
 6. Have a second reviewer re-check the P0/P1 fixes in `audit/BUG_AND_DEFECT_REGISTER.md`.

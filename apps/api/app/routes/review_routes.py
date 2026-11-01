@@ -8,7 +8,7 @@ from ..models import Claim, Entity, MatchCandidate, Review, User
 from ..schemas import DecisionIn
 from ..services import pipeline
 from ..services.audit import record_audit
-from ..services.masking import mask_label, mask_text
+from ..services.masking import case_attributes, mask_label, mask_text
 from ..services.resolution import _profile
 
 router = APIRouter(tags=["review"])
@@ -16,7 +16,7 @@ router = APIRouter(tags=["review"])
 
 def entity_summary(db: Session, ent: Entity, case_id: str) -> dict:
     prof = _profile(db, case_id, ent)
-    case_attrs = (ent.attributes or {}).get(case_id, {}) if isinstance(ent.attributes, dict) and case_id in (ent.attributes or {}) else (ent.attributes or {})
+    case_attrs = case_attributes(ent.attributes, case_id)
     return {"entity_id": ent.entity_id, "kind": ent.kind, "label": mask_label(ent.kind, ent.label),
             "attributes": {k: v for k, v in case_attrs.items() if k in ("dob", "address", "person_id", "source_document", "mention_of")},
             "names": sorted(prof["names"]), "aliases": sorted(prof["aliases"]),
@@ -30,7 +30,9 @@ def candidate_out(db: Session, m: MatchCandidate, detailed: bool = True) -> dict
     d = {"candidate_id": m.candidate_id, "case_id": m.case_id, "state": m.state, "confidence": m.confidence, "matcher_version": m.matcher_version,
          "block_key": m.block_key, "positive_signals": m.positive_signals, "counter_evidence": m.counter_evidence, "conflicts": m.conflicts,
          "missing": m.missing, "evidence_ids": m.evidence_ids, "created_at": m.created_at.isoformat(),
-         "left": {"entity_id": left.entity_id, "label": left.label, "kind": left.kind}, "right": {"entity_id": right.entity_id, "label": right.label, "kind": right.kind},
+         "assigned_to": m.assigned_to, "assigned_at": m.assigned_at,
+         "left": {"entity_id": left.entity_id, "label": mask_label(left.kind, left.label), "kind": left.kind},
+         "right": {"entity_id": right.entity_id, "label": mask_label(right.kind, right.label), "kind": right.kind},
          "reviews": [{"review_id": r.review_id, "decision": r.decision, "reason": r.reason, "reviewer_id": r.reviewer_id, "created_at": r.created_at.isoformat(), "supersedes_id": r.supersedes_id} for r in reviews]}
     if detailed:
         d["left"] = entity_summary(db, left, m.case_id)
@@ -88,17 +90,20 @@ def assign_candidate(candidate_id: str, request: Request, user: User = Depends(r
     m = db.get(MatchCandidate, candidate_id)
     if m is None:
         raise HTTPException(404, "unknown candidate")
-    
+    # DEF-031: role alone is not enough -- the candidate's case must be authorized for this user.
+    authorize_case(db, user, m.case_id, request, action="HITL_TASK_ASSIGN")
+
     import datetime
     m.assigned_to = user.user_id
     m.assigned_at = datetime.datetime.now(datetime.UTC).isoformat()
     record_audit(db, request.state.trace_id, user.user_id, "HITL_TASK_ASSIGNED", "MATCH_CANDIDATE", candidate_id, m.case_id)
     db.commit()
-    return candidate_out(m)
+    return candidate_out(db, m)  # DEF-032: was candidate_out(m) -> TypeError -> HTTP 500 after the commit
 
 @router.get("/cases/{case_id}/stats")
 def hitl_stats(case_id: str, request: Request, user: User = Depends(require_roles("REVIEWER", "INVESTIGATOR", "ADMIN")), db: Session = Depends(get_db)):
     """Returns HITL statistics for a case."""
+    authorize_case(db, user, case_id, request, action="HITL_STATS")  # DEF-031
     cands = db.scalars(select(MatchCandidate).where(MatchCandidate.case_id == case_id)).all()
     total = len(cands)
     pending = sum(1 for c in cands if c.state == "REVIEW_REQUIRED")

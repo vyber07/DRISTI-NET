@@ -27,8 +27,10 @@ and `TASK_BOARD.md` for the live-verification methodology behind each item marke
 | Contradictory sources → both preserved, contradiction object | Demonstrated | `test_contradiction_is_flagged_not_hidden` (`CONTRADICTORY` claims + `flags.contradicts`) |
 | Resolution disagreement → defer | Demonstrated | DEFER decision path |
 | Graph projection failure → mark stale, rebuild | Demonstrated (rebuild) / **MVP target** (stale marker) | `test_projection_is_rebuildable`; projection is recomputed per request so there is no persisted stale state |
-| Unauthorized → deny server-side + audit | Demonstrated | `test_unassigned_user_denied_server_side`, `test_jurisdiction_mismatch_denied` |
-| Hash mismatch → `INTEGRITY_MISMATCH`, blocks acceptance | Demonstrated | `test_hash_manifest_and_tamper_detection` |
+| Unauthorized → deny server-side + audit | Demonstrated | `test_unassigned_user_denied_server_side`, `test_jurisdiction_mismatch_denied`; **(2026-11-01 s4)** three object-level gaps found and closed: candidate assign, case stats, entity card cross-case read (DEF-031/033, `test_security.py`) |
+| Hash mismatch → `INTEGRITY_MISMATCH`, blocks acceptance | Demonstrated | `test_hash_manifest_and_tamper_detection`; also against a running instance (2026-11-01 s4, `audit/TEST_RESULTS.md`) |
+| Backup → restore (SQLite + local storage) | **Demonstrated (2026-11-01 s4)** — PostgreSQL/MinIO path: MVP target | `scripts/backup_restore_drill.py`, `operations/RESTORE_TEST_REPORT.md` |
+| Web server serves only the web build | **Demonstrated (2026-11-01 s4)** after DEF-028 (path traversal) | `test_spa_*` in `test_security.py` |
 
 ## §8 Secure ingestion
 

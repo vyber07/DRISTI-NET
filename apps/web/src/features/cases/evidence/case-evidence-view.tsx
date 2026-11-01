@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useParams } from "react-router-dom";
 import { LayoutGrid, List, FilterX, RotateCcw, AlertCircle, HardDrive, ShieldCheck, FileCheck, Search, Radio, Landmark, Lock, Scale, AlertOctagon } from "lucide-react";
 import { useEvidenceStore } from "@/stores/evidenceStore";
 import { Button } from "@/components/ui/button";
@@ -8,8 +9,11 @@ import { EvidenceCard } from "./evidence-card";
 import { EvidenceRow } from "./evidence-row";
 
 export function CaseEvidenceView() {
+  // DEF-030: the case comes from the route. The store's caseId starts as "" and nothing else set it, so the
+  // list never loaded and Upload posted to `/cases//evidence`.
+  const { caseId: routeCaseId = "" } = useParams<{ caseId: string }>();
   const {
-    caseId,
+    caseId: storeCaseId,
     entityScope,
     evidence,
     isLoading,
@@ -25,13 +29,18 @@ export function CaseEvidenceView() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadMsg, setUploadMsg] = useState("");
 
+  const caseId = routeCaseId;
+
   useEffect(() => {
     if (caseId) {
       loadEvidence(caseId, entityScope);
     }
   }, [caseId, entityScope, loadEvidence]);
 
-  const filteredEvidence = getFilteredEvidence();
+  // Never show the previous case's evidence while the new case is loading.
+  const showingOtherCase = storeCaseId !== caseId;
+
+  const filteredEvidence = showingOtherCase ? [] : getFilteredEvidence();
 
   const handleScopeEntity = (entId: string) => {
     setEntityScope(entId === entityScope ? null : entId);
@@ -41,7 +50,7 @@ export function CaseEvidenceView() {
     setEntityScope(null);
   };
 
-  const statusMap = evidence.reduce((acc, curr) => {
+  const statusMap = (showingOtherCase ? [] : evidence).reduce((acc, curr) => {
     acc[curr.status] = (acc[curr.status] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
@@ -84,12 +93,12 @@ export function CaseEvidenceView() {
           <div className="flex items-center gap-2 mt-4 w-full">
             <input type="file" onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} className="text-sm border border-border-subtle p-1 rounded" />
             <Button onClick={async () => {
-              if (!selectedFile) return;
+              if (!selectedFile || !caseId) return;
               const fd = new FormData();
               fd.append("file", selectedFile);
               fd.append("source_label", "manual");
               const tok = localStorage.getItem("drishti.token");
-              const res = await fetch(`/api/v1/cases/${caseId}/evidence`, {
+              const res = await fetch(`/api/v1/cases/${encodeURIComponent(caseId)}/evidence`, {
                 method: "POST",
                 headers: tok ? { Authorization: `Bearer ${tok}` } : {},
                 body: fd

@@ -21,3 +21,10 @@ counts only what has evidence in `audit/TEST_RESULTS.md`.
 | Security & operational validation | Not started | No scans, no backup/restore, no failure injection beyond scanner states |
 | Government readiness | Not assessed | Compliance verdicts withdrawn; applicability not determined |
 | Release package | Superseded | Existing archive predates all fixes; rebuild after commit |
+
+## 2026-11-01 — session 4
+- Completed: S4-01…S4-06 (see `PROJECT_TASK_BOARD.md`). P0 path traversal and three object-level authorization gaps
+  fixed with failing-first regression tests; evidence page/download repaired; first dependency scans; first restore drill.
+- Tests: `make test` 91 passed / 5 skipped; E2E 6/6 ×2; restore drill PASS.
+- Blocked: BLK-06 (live demo restart), BLK-04/05 (Compose, isolated host).
+- Release status unchanged: ENGINEERING PREVIEW.

@@ -62,6 +62,30 @@ def test_evidence_and_scan_gate(page):
     page.wait_for_selector("text=Evidence Repository")
     
     page.screenshot(path=str(SHOTS / "02-evidence-quarantine.png"))
+
+
+def test_evidence_download_saves_exact_bytes(page):
+    """DEF-029: the Download button used an escaped template literal and window.open() (no Bearer token).
+    A real click must save the original bytes, and their SHA-256 must equal the server's integrity reference."""
+    import hashlib
+    login(page, "officer")
+    page.goto(f"{BASE}/cases/CASE-0001/evidence")
+    page.wait_for_selector("text=Evidence Repository")
+    button = page.locator("[aria-label='Download original evidence file']").first
+    button.wait_for(state="attached")
+    with page.expect_download() as info:
+        button.click(force=True)
+    dl = info.value
+    path = dl.path()
+    data = Path(path).read_bytes()
+    assert data, "downloaded file is empty"
+    tok = page.evaluate("localStorage.getItem('drishti.token')")
+    import json, urllib.request
+    req = urllib.request.Request(f"{BASE}/api/v1/cases/CASE-0001/evidence", headers={"Authorization": f"Bearer {tok}"})
+    items = json.loads(urllib.request.urlopen(req).read())
+    by_name = {i["filename"]: i for i in items}
+    assert dl.suggested_filename in by_name, (dl.suggested_filename, list(by_name))
+    assert hashlib.sha256(data).hexdigest() == by_name[dl.suggested_filename]["sha256"]
     
 
 

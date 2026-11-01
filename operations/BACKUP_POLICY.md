@@ -1,5 +1,11 @@
 # DRISTI-NET — Backup Policy & Data Protection Guide
 
+> **Status (2026-11-01): TARGET POLICY, not implemented.** None of the PostgreSQL/MinIO procedures below (WAL archiving,
+> `pg_dump` schedule, bucket versioning, `mc mirror`, weekly automated test restore) exist in this repository or have been
+> run. The only verified restore is the SQLite + local-storage drill in `operations/RESTORE_TEST_REPORT.md`
+> (`scripts/backup_restore_drill.py`). The signing key (`DRISHTI_SECRET_KEY` / `DRISHTI_AUDIT_KEYS`) must be escrowed
+> separately: without it the restored audit trail cannot be verified.
+
 ## 1. Scope & Objective
 
 This policy defines the backup schedule, retention rules, encryption standards, and verification procedures for all authoritative data assets managed by DRISTI-NET.

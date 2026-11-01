@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import type { EvidenceItem } from "@/types/evidence";
 import { useState } from "react";
 import { useProvenanceStore } from "@/stores/provenanceStore";
+import { downloadEvidence } from "@/services/api/evidenceApi";
 
 interface EvidenceRowProps {
   item: EvidenceItem;
@@ -24,6 +25,16 @@ export function EvidenceRow({ item, caseId, onScopeEntity, currentEntityScope }:
   const navigate = useNavigate();
   const { openProvenanceForRecord } = useProvenanceStore();
   const [copiedHash, setCopiedHash] = useState(false);
+  const [downloadError, setDownloadError] = useState<string | null>(null);
+
+  const handleDownload = async () => {
+    setDownloadError(null);
+    try {
+      await downloadEvidence(item.evidence_id, item.filename);
+    } catch (e: any) {
+      setDownloadError(e?.status === 409 ? "Download blocked: item has not passed the scan gate" : `Download failed: ${e?.message || "unknown error"}`);
+    }
+  };
 
   const handleCopyHash = () => {
     navigator.clipboard.writeText(item.sha256);
@@ -73,12 +84,11 @@ export function EvidenceRow({ item, caseId, onScopeEntity, currentEntityScope }:
           <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-text-secondary hover:text-text-primary hover:bg-surface-3" onClick={handleViewSource}>
              Inspect
           </Button>
-          <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-text-secondary hover:text-text-primary hover:bg-surface-3" onClick={() => {
-           window.open(`/api/v1/evidence/\${item.evidence_id}/download`, '_blank');
-          }}>
+          <Button variant="ghost" size="sm" className="h-7 px-2 text-xs text-text-secondary hover:text-text-primary hover:bg-surface-3" onClick={handleDownload} aria-label="Download original evidence file">
              <Download className="h-3.5 w-3.5" />
           </Button>
         </div>
+        {downloadError && <p role="alert" className="text-[11px] text-red-400 mt-1">{downloadError}</p>}
       </td>
     </tr>
   );

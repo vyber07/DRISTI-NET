@@ -65,3 +65,37 @@ fresh SQLite store per run, `testgate` scanner. The real-ClamAV path is covered 
 ## 7. Not run (and therefore not claimed)
 Full `docker compose` stack (BLK-04) · backup/restore · failure injection beyond the scanner states ·
 performance/load · SAST / dependency / secret / container scans · TLS · accessibility audit · independent review.
+
+## Session 4 (2026-11-01) — branch `audit/session-4-security-fixes` on top of `135edeb`
+Isolated instance for all runtime tests: uvicorn on `127.0.0.1:8001`, temp SQLite + storage, random secret, host
+ClamAV 1.4 via TCP (`DRISHTI_SCANNER_MODE=clamav`), seeded with `seed --ingest`. The live demo (:8000) was only
+probed read-only (one request for `README.md`) and was not restarted or written to.
+
+| Stage | Command | Result |
+|---|---|---|
+| Baseline (before changes) | `make test` | 87 passed, 5 skipped, 1 deselected |
+| Baseline | `npm run typecheck` / `npm run build` | 0 / OK; a planted type error makes typecheck exit 2 (no false pass) |
+| Baseline | `npm run lint` | 15 warnings (unused imports), 0 errors |
+| Baseline browser | `pytest tests/e2e` against fresh isolated instance | 5/5 — but see DEF-029/030: the evidence page was empty and the suite did not notice |
+| Final | `make test` | **91 passed**, 5 skipped (live PostgreSQL/Neo4j/S3 tests), 1 deselected |
+| Final | `pytest test_clamav_live.py` with host clamd | 1 passed |
+| Final | `npm run typecheck`, `make build-web` | 0, OK |
+| Final | `npm audit` (all deps) / `pip-audit -r requirements.txt` | 0 / paddlepaddle 2.6.2 only (2 advisories, optional OCR) |
+| Final browser | `pytest tests/e2e` (Playwright Chromium), two consecutive runs | 6/6, 6/6 |
+| New regression tests vs `135edeb` code | DEF-028 ×2, DEF-031/032, DEF-033, E2E DEF-029/030 | all **fail** on old code, pass on new |
+| Golden journey (real stack minus PG/Neo4j/S3) | `seed --ingest` | 8/8 files → real ClamAV clean → extraction → real IndicBERT NER → HITL / GRAPH_PROJECTED |
+| Backup → restore | `scripts/backup_restore_drill.py --wrong-key-check` | PASS — see `operations/RESTORE_TEST_REPORT.md` |
+| Restored instance browser | `pytest tests/e2e` on :8002 | 6/6 |
+
+### Negative / adversarial journeys (API, isolated instance, real ClamAV)
+| Scenario | Expected | Actual |
+|---|---|---|
+| EICAR upload | INFECTED, not promoted | 201, `INFECTED`, `scan_engine=clamav-tcp`, stays in `quarantine/`; download 409, context 409 |
+| No / garbage / expired / forged-key / `alg=none` token | 401 | 401 ×5 |
+| 28 MB upload (limit 25) | controlled rejection | 422 "file exceeds 25 MB" |
+| Cross-case download (user assigned only to CASE-0002) | 403 | 403 |
+| 8 concurrent uploads of identical bytes | one authoritative row | 8×201, 1 distinct evidence id, 1 row (**SQLite only**; PostgreSQL concurrency untested) |
+| Stored object altered, then `/verify` | INTEGRITY_MISMATCH, reads blocked | `match=false`, `INTEGRITY_MISMATCH`; `/context` 409 |
+| Path traversal via SPA fallback | never serve files outside `dist/` | before fix: file served (DEF-028); after: app shell |
+| Upload filename `../../../accepted/...` | rejected | 422 "unsafe file name" (already handled) |
+| Scanner unavailable / DB / storage outage | not clean / controlled | covered by unit tests only (`test_scan_gate_fail_closed`, failure-injection tests); host clamd is shared, so not stopped |

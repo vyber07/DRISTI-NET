@@ -73,3 +73,17 @@
 - **P1-12:** Neutralize UI copy: replace "Court-Ready", "Certified" with neutral "Integrity Dossier (BSA s.63(4)(c) Reference)".
 - **P1-13:** Neutralize statutory justification presets in `reveal-identity-modal.tsx` to eliminate prohibited enforcement claims.
 - **P1-14:** Make `Makefile` safe: eliminate `-v` from `test-stack` to prevent volume data destruction.
+
+## Session 4 tasks (2026-11-01)
+| ID | P | Task | Acceptance | Status | Evidence |
+|---|---|---|---|---|---|
+| S4-01 | P0 | Fix SPA path traversal (DEF-028) | traversal returns app shell; unit + HTTP tests | DONE (code) / live deploy BLOCKED on BLK-06 | `test_spa_*` |
+| S4-02 | P1 | Case authorization on candidate assign + stats (DEF-031/032) | 403 + audit for unassigned; assigned user works | DONE | `test_candidate_assign_and_stats_enforce_case_authorization` |
+| S4-03 | P1 | Entity card cross-case leak (DEF-033) | 403 for entity not in case; no other-case attributes | DONE | `test_entity_card_does_not_leak_*` |
+| S4-04 | P1 | Evidence list load + authenticated download (DEF-029/030) | download bytes hash to recorded SHA-256 in browser | DONE | E2E `test_evidence_download_saves_exact_bytes` |
+| S4-05 | P2 | Dependency + secret scans (DEF-034/035) | npm 0; pip findings triaged; no hard-coded keys | DONE (paddle open → S4-07) | `audit/TEST_RESULTS.md` |
+| S4-06 | P1 | Backup/restore drill, SQLite path | restore byte-identical, audit verifies, graph identical, E2E on restore | DONE | `operations/RESTORE_TEST_REPORT.md` |
+| S4-07 | P2 | Split runtime vs optional Python deps; decide paddle/torch in API image | image without test/ML deps unless enabled | BACKLOG (needs decision) | lead #23 |
+| S4-08 | P1 | Restore drill for PostgreSQL + object store | same checks as S4-06 | BLOCKED (BLK-04/05) | — |
+| S4-09 | P2 | E2E fixture must refuse to run against the demo DB | fixture aborts unless DB is a test DB | BACKLOG | `tests/e2e/test_ui_demo.py::reset_demo_candidates` |
+| S4-10 | P2 | Logout/token revocation; login throttling on live demo | revoked token → 401; Redis set | BACKLOG | `auth.py` has no revocation |
