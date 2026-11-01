@@ -34,7 +34,12 @@
 ## 3. Release artifact
 
 `releases/drishti-net-e969324-working-tree-snapshot-20261101T055602Z.tar.gz` predates every fix listed above and
-is **superseded**. A new archive should be built only after these changes are committed, then unpacked and re-tested.
+is **superseded**.
+
+**Session 4:** `releases/drishti-net-ebd5faa-clean-20261101T075442Z.tar.gz` (clean tree at `ebd5faa`, 2.13 MiB,
+SHA-256 `45595bfc371063b1c419483d9c8b29997f451f1062d3a684b8c2f449dcd48d05`). Unpacked into an empty directory and
+re-tested from there: no `.env`, `*.db`, `storage/`, `node_modules/`, `.git/` inside; `npm ci` + typecheck 0 + build OK +
+`npm audit` 0; backend suite 91 passed / 5 skipped. Local file only — not published. No SBOM generated. A new archive should be built only after these changes are committed, then unpacked and re-tested.
 
 ## 4. Path to STAGING CANDIDATE
 
