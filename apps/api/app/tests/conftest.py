@@ -59,6 +59,14 @@ from apps.api.app.services import neo4j_store  # noqa: E402
 def _reset_non_sqlite_schema() -> None:
     from apps.api.app.db import Base, engine
 
+    # DEF-055: this drops every table (and the session fixture also wipes Neo4j). `make test-stack` runs the
+    # suite inside the deployed api container, whose DATABASE_URL is the deployment's own database. Refuse
+    # unless the database name says it is a test database.
+    db_name = engine.url.database or ""
+    if "test" not in db_name.lower():
+        raise RuntimeError(f"refusing to reset non-test database {db_name!r}: point DRISHTI_DATABASE_URL at a "
+                           "dedicated database whose name contains 'test'")
+
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
 
@@ -68,6 +76,10 @@ def client():
     if not DATABASE_URL.startswith("sqlite"):
         _reset_non_sqlite_schema()
     if neo4j_store.available():
+        # DEF-055: wipe_all() deletes every node. Only with an explicit opt-in for a disposable Neo4j.
+        if os.environ.get("DRISHTI_ALLOW_NEO4J_WIPE") != "1":
+            raise RuntimeError("DRISHTI_NEO4J_URI is set: refusing to wipe it. Set DRISHTI_ALLOW_NEO4J_WIPE=1 only for a "
+                               "disposable test Neo4j.")
         neo4j_store.wipe_all()
     seed()
     return TestClient(app)

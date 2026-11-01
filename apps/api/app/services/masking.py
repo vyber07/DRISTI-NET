@@ -54,3 +54,28 @@ def case_attributes(attributes: dict | None, case_id: str) -> dict:
     if any(isinstance(k, str) and k.startswith("CASE-") for k in attributes):
         return {}
     return dict(attributes)
+
+
+def mask_analysis(analysis: dict) -> dict:
+    """Mask every identifier an analysis payload can carry. Shared by the HTML/JSON report and the court PDF:
+    DEF-039 -- the PDF masked degree/bridge labels but printed rule subjects (phones, accounts) raw."""
+    for key in ("degree", "weighted_degree", "bridge_candidates"):
+        for item in analysis.get(key, []):
+            item["label"] = mask_label(item.get("kind", ""), item.get("label", ""))
+    for comm in analysis.get("communities", []):
+        for m in comm.get("members", []):
+            m["label"] = mask_label(m.get("kind", ""), m.get("label", ""))
+    for r in analysis.get("rules", []):
+        for k in ("subject", "object"):
+            if k in r and isinstance(r[k], str):
+                r[k] = mask_text(r[k])
+        if "sources" in r:
+            r["sources"] = [mask_text(x) if isinstance(x, str) else x for x in r["sources"]]
+    return analysis
+
+
+def mask_block_key(block_key: str | None) -> str | None:
+    """`phone:<normalized number>` components of a resolution block key, masked (DEF-038)."""
+    if not block_key:
+        return block_key
+    return "|".join(f"phone:{mask_phone(p[6:])}" if p.startswith("phone:") else p for p in block_key.split("|"))

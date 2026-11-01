@@ -101,6 +101,10 @@ ARCHIVE_MAX_TOTAL_UNCOMPRESSED_MB = int(_env("ARCHIVE_MAX_TOTAL_UNCOMPRESSED_MB"
 ARCHIVE_MAX_COMPRESSION_RATIO = int(_env("ARCHIVE_MAX_COMPRESSION_RATIO", "100"))
 
 def validate_production_secrets():
+    # DEF-057: strength applies to every deployment, including the SQLite demo (the default dev key is 51 chars,
+    # so local development is unaffected). Previously `DRISHTI_SECRET_KEY=x` was accepted.
+    if len(SECRET_KEY) < 32:
+        raise ValueError("DRISHTI_SECRET_KEY must be at least 32 characters (HMAC-SHA256 JWT and audit signing key)")
     if DATABASE_URL.startswith("sqlite"):
         return
     if SECRET_KEY.startswith("change-me-demo-only"):

@@ -10,7 +10,6 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useGraphStore } from "@/stores/graphStore";
 import { EntityTypeFilter } from "./EntityTypeFilter";
 import { RelationshipTypeFilter } from "./RelationshipTypeFilter";
-import { TierFilter } from "./TierFilter";
 import { ConfidenceRangeFilter } from "./ConfidenceRangeFilter";
 import { DateRangeFilter } from "./DateRangeFilter";
 import { cn } from "@/lib/utils";
@@ -32,7 +31,6 @@ export function GraphFilterPanel() {
 
   // Calculate active filter count
   let activeFilterCount = 0;
-  if (activeTiers.size < 5) activeFilterCount++;
   if (activeEntityTypes.size < 6) activeFilterCount++;
   if (activeRelationshipTypes.size < 6) activeFilterCount++;
     if (minConfidence > 0) activeFilterCount++;
@@ -115,10 +113,7 @@ export function GraphFilterPanel() {
           <RelationshipTypeFilter />
         </div>
 
-        {/* Proof Levels */}
-        <div className="pt-3">
-          <TierFilter />
-        </div>
+        {/* Tier filter removed (DEF-020): the API assigns no evidence tier, so it filtered nothing. */}
 
         {/* Connection Strength */}
         <div className="pt-3">

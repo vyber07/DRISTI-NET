@@ -114,8 +114,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       if (typeof window !== "undefined") {
         localStorage.removeItem(STORAGE_KEY);
       }
-      import("../services/api/real_client").then(({ setSession }) => {
-        setSession("" as any, undefined as any);
+      import("../services/api/real_client").then(({ clearSession }) => {
+        clearSession();  // was setSession("", undefined): wrote an empty token and the string "undefined"
       });
     } catch {
       // Storage fallback
@@ -126,5 +126,10 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       token: null,
       isAuthenticated: false,
     });
+    // DEF-061: every zustand store (graph, evidence, HITL, audit, reveal) is in memory. A full page load is the
+    // only reset that cannot miss one, so the next user never sees the previous user's case data or reveals.
+    if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
+      window.location.assign("/login");
+    }
   },
 }));

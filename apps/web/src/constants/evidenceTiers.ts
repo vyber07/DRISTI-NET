@@ -81,7 +81,7 @@ export const EVIDENCE_TIER_CONFIG: Record<EvidenceTier, EvidenceTierConfig> = {
   },
   6: {
     tier: 6,
-    code: "COURT_READY",
+    code: "INTEGRITY_REFERENCED_EXPORT",
     label: "Integrity-Referenced Export",
     shortLabel: "Tier 6",
     description:

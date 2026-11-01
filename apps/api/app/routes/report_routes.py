@@ -8,7 +8,7 @@ from ..models import Claim, Entity, Evidence, MatchCandidate, Review, Snapshot, 
 from ..schemas import ReportIn
 from ..services import graph as graph_svc
 from ..services.audit import record_audit
-from ..services.masking import mask_label, mask_text
+from ..services.masking import mask_analysis, mask_label, mask_text
 from ..services.report import build_report, render_html
 from .case_routes import case_out
 from .evidence_routes import evidence_out
@@ -46,18 +46,7 @@ def export_report(case_id: str, body: ReportIn, request: Request, user: User = D
         e["source"], e["target"] = labels.get(e["source"], e["source"]), labels.get(e["target"], e["target"])
         e.pop("claim_ids", None)
     analysis = graph_svc.analyze(G)
-    for key in ("degree", "weighted_degree", "bridge_candidates"):
-        for item in analysis[key]:
-            item["label"] = mask_label(item["kind"], item["label"])
-    for comm in analysis["communities"]:
-        for mm in comm.get("members", []):
-            mm["label"] = mask_label(mm["kind"], mm["label"])
-    for r in analysis["rules"]:
-        for k in ("subject", "object"):
-            if k in r:
-                r[k] = mask_text(r[k])
-        if "sources" in r:
-            r["sources"] = [mask_text(s) for s in r["sources"]]
+    mask_analysis(analysis)
 
     aud = record_audit(db, request.state.trace_id, user.user_id, "EXPORT", "CASE", case_id, case_id, detail={"format": body.format, "snapshot_id": snap.snapshot_id})
     db.flush()

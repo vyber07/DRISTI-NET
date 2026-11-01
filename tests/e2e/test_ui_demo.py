@@ -16,6 +16,13 @@ SHOTS.mkdir(parents=True, exist_ok=True)
 
 @pytest.fixture(scope="module", autouse=True)
 def reset_demo_candidates():
+    # DEF-056: this writes straight to the database (no API, no audit). Without an explicit
+    # DRISHTI_DATABASE_URL it resolved to storage/drishti.db -- the live demo's database on this host.
+    url = os.environ.get("DRISHTI_DATABASE_URL", "")
+    default_db = str(Path(__file__).resolve().parents[2] / "storage" / "drishti.db")
+    if not url or default_db in url or url.endswith("./storage/drishti.db"):
+        pytest.exit("E2E needs DRISHTI_DATABASE_URL pointing at the disposable database of the server under test "
+                    "(never the demo's storage/drishti.db)", returncode=2)
     from apps.api.app.db import SessionLocal
     from apps.api.app.models import MatchCandidate
     db = SessionLocal()
@@ -96,10 +103,21 @@ def test_review_queue(page):
     # Queue cards are titled "Candidate Match: <left> <-> <right>" (services/api/hitlApi.ts); left/right order
     # depends on ingest order, so match on a substring unique to the pair rather than the full title.
     page.click("text=Arjun Malhotara")
+    # DEF-058/059: the reviewer sees the matcher's real reasons and the real source file -- never the static
+    # fabricated "CDR" sheet (agency letterhead, invented call rows) that used to render here.
+    page.wait_for_selector("text=Why this is a candidate (matcher output)")
+    page.wait_for_selector("text=Supporting signals")
+    body = page.inner_text("body")
+    for fabricated in ("Rajasthan", "Special Operations Group", "EXTORTION", "Whisper-NER", "SOG INVESTIGATION"):
+        assert fabricated not in body, f"fabricated content on review page: {fabricated}"
+    page.wait_for_selector("[role=tab]")
+    tabs = page.locator("[role=tab]").all_inner_texts()
+    assert tabs and all(t.strip().split(".")[-1] in ("json", "csv", "pdf", "txt", "zip") for t in tabs), tabs
+    page.wait_for_selector("pre >> text=1")  # numbered real source lines
     page.screenshot(path=str(SHOTS / "03-review-candidate.png"))
     page.fill("textarea", "same phone and organisation; spelling variation")
     page.click("button:has-text('Approve Merge')")
-    page.click("button:has-text('Commit Decision')")
+    page.click("button:has-text('Record decision')")
     page.click("button:has-text('Confirm & Sign Off')")
     page.click("button:has-text('Back to Queue')")
     page.wait_for_selector("span:has-text('APPROVED')")
@@ -107,14 +125,14 @@ def test_review_queue(page):
     page.click("text=Candidate Match: Rahul Verma <-> Rahul Verma >> nth=-1")
     page.fill("textarea", "different dob, address, district")
     page.click("button:has-text('Reject (Distinct)')")
-    page.click("button:has-text('Commit Decision')")
+    page.click("button:has-text('Record decision')")
     page.click("button:has-text('Confirm & Sign Off')")
     page.click("button:has-text('Back to Queue')")
     page.wait_for_selector("span:has-text('REJECTED')")
     page.click("text=Tanvi Bhatt")
     page.fill("textarea", "shared household phone only")
     page.click("button:has-text('Escalate to Supervisory Officer')")
-    page.click("button:has-text('Commit Decision')")
+    page.click("button:has-text('Record decision')")
     page.click("button:has-text('Confirm & Sign Off')")
     page.click("button:has-text('Back to Queue')")
     page.wait_for_selector("span:has-text('ESCALATED')")
@@ -233,6 +251,7 @@ def test_timeline_analysis_report(page):
     page.wait_for_selector("text=Download started successfully")
     page.screenshot(path=str(SHOTS / "08-report.png"))
     page.goto(f"{BASE}/cases/CASE-0001/audit")
-    page.wait_for_selector("text=Statutory Tamper-Evident System Log")
+    page.wait_for_selector("text=Case audit log:")
+    assert "Statutory Tamper-Evident" not in page.inner_text("body")  # DEF-068: misleading statutory mapping removed
     page.screenshot(path=str(SHOTS / "09-audit.png"))
 

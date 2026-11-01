@@ -26,6 +26,7 @@ def list_cases(user: User = Depends(current_user), db: Session = Depends(get_db)
     if user.role not in ("ADMIN", "AUDITOR"):
         ids = [a.case_id for a in db.query(CaseAssignment).filter_by(user_id=user.user_id).all()]
         q = q.filter((Case.case_id.in_(ids)) | (Case.owner_id == user.user_id))
+        q = q.filter(Case.jurisdiction == user.jurisdiction)  # DEF-048: same rule as authorize_case
     return [case_out(c, db) for c in q.order_by(Case.case_id).all()]
 
 

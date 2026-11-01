@@ -45,7 +45,7 @@ export function AuditIntegrityHeader({ caseId }: AuditIntegrityHeaderProps) {
           </Badge>
         </div>
         <p className="text-xs text-text-secondary max-w-xl leading-relaxed">
-          Permanent chronological log of all interactions and data state changes within Case {caseId}.
+          Most recent audit events for Case {caseId} (latest 200 loaded).
         </p>
       </div>
 

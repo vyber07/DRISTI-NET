@@ -105,7 +105,7 @@ export function HITLWorkspacePage() {
               </Badge>
             </div>
             <p className="text-micro font-mono text-text-muted mt-0.5">
-              Arbitration Band: 0.60–0.95 Confidence &bull; Human review of candidate matches &bull; Case:{" "}
+              Human review of candidate matches &bull; Case:{" "}
               {caseIdFilter}
             </p>
           </div>
@@ -170,7 +170,7 @@ export function HITLWorkspacePage() {
           </span>
           <span className="flex items-center gap-1.5 text-electric-blue-soft">
             <GitMerge className="h-3 w-3" />
-            Identity Merges: <strong>{stats?.identityMergesCount ?? 0}</strong>
+            Candidates: <strong>{stats?.totalTasks ?? 0}</strong>
           </span>
           <span className="flex items-center gap-1.5 text-verified-emerald">
             <CheckCircle2 className="h-3 w-3" />
@@ -179,7 +179,7 @@ export function HITLWorkspacePage() {
         </div>
 
         <div className="text-micro text-text-muted">
-          <span>Target SLA: &lt; 24h &bull; Statutory Authority: CrPC / IEA</span>
+          <span>Every merge requires a human decision with a reason</span>
         </div>
       </div>
 

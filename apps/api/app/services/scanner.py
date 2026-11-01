@@ -50,16 +50,21 @@ def _scan_clamav_tcp(path: Path) -> ScanOutcome:
                 if not resp_chunk:
                     break
                 result += resp_chunk
-        decoded = result.replace(b"\x00", b"").decode().strip()
-        if "OK" in decoded:
-            return ScanOutcome("CLEAN", "clamav-tcp", decoded)
-        if "FOUND" in decoded:
+        # DEF-036/037: parse strictly. clamd answers exactly `stream: OK` or `stream: <signature> FOUND`. The old
+        # check `"OK" in decoded` ran first, so `stream: Win.Trojan.OKbot FOUND` was recorded as CLEAN, and an
+        # undecodable reply raised UnicodeDecodeError and left the evidence stuck in MALWARE_SCANNING.
+        decoded = result.replace(b"\x00", b"").decode("utf-8", errors="replace").strip()
+        if decoded.startswith("stream: ") and decoded.endswith(" FOUND"):
             return ScanOutcome("INFECTED", "clamav-tcp", decoded)
-        return ScanOutcome("SCAN_FAILED", "clamav-tcp", decoded)
+        if decoded == "stream: OK":
+            return ScanOutcome("CLEAN", "clamav-tcp", decoded)
+        return ScanOutcome("SCAN_FAILED", "clamav-tcp", decoded[:300] or "empty reply from scanner")
     except socket.timeout:
         return ScanOutcome("SCAN_TIMEOUT", "clamav-tcp", f"timeout after {timeout}s")
     except OSError as exc:
         return ScanOutcome("SCANNER_UNAVAILABLE", "clamav-tcp", str(exc))
+    except Exception as exc:  # fail closed on anything unexpected; never let a scan error escape as success or a 500
+        return ScanOutcome("SCAN_FAILED", "clamav-tcp", f"{type(exc).__name__}: {exc}"[:300])
 
 
 def _scan_testgate(path: Path) -> ScanOutcome:

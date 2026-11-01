@@ -82,7 +82,9 @@ def _client():
             aws_access_key_id=config.S3_ACCESS_KEY,
             aws_secret_access_key=config.S3_SECRET_KEY,
             region_name=config.S3_REGION,
-            config=BotoConfig(signature_version="s3v4"),
+            # Bounded timeouts (DEF-044): without them a stalled object store hung requests indefinitely in live
+            # failure-injection testing.
+            config=BotoConfig(signature_version="s3v4", connect_timeout=5, read_timeout=30, retries={"max_attempts": 3, "mode": "standard"}),
         )
         _s3_client_key = key
         _ensure_bucket(_s3_client)
@@ -115,8 +117,12 @@ def _s3_exists(rel: str) -> bool:
     try:
         _client().head_object(Bucket=config.S3_BUCKET, Key=rel)
         return True
-    except ClientError:
-        return False
+    except ClientError as exc:
+        # Only "not found" means missing. Access-denied/throttling must not be mistaken for a vanished object
+        # (that would mark evidence INTEGRITY_MISMATCH on a credentials problem).
+        if str(exc.response.get("Error", {}).get("Code")) in ("404", "NoSuchKey", "NotFound"):
+            return False
+        raise
 
 
 def _s3_move(src_rel: str, dst_rel: str) -> None:

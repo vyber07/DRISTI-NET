@@ -8,7 +8,7 @@ from ..models import Claim, Entity, MatchCandidate, Review, User
 from ..schemas import DecisionIn
 from ..services import pipeline
 from ..services.audit import record_audit
-from ..services.masking import case_attributes, mask_label, mask_text
+from ..services.masking import case_attributes, mask_block_key, mask_label, mask_text
 from ..services.resolution import _profile
 
 router = APIRouter(tags=["review"])
@@ -28,12 +28,12 @@ def candidate_out(db: Session, m: MatchCandidate, detailed: bool = True) -> dict
     left, right = db.get(Entity, m.left_entity_id), db.get(Entity, m.right_entity_id)
     reviews = db.query(Review).filter_by(target_kind="MATCH", target_id=m.candidate_id).order_by(Review.created_at).all()
     d = {"candidate_id": m.candidate_id, "case_id": m.case_id, "state": m.state, "confidence": m.confidence, "matcher_version": m.matcher_version,
-         "block_key": m.block_key, "positive_signals": m.positive_signals, "counter_evidence": m.counter_evidence, "conflicts": m.conflicts,
+         "block_key": mask_block_key(m.block_key), "positive_signals": m.positive_signals, "counter_evidence": m.counter_evidence, "conflicts": m.conflicts,
          "missing": m.missing, "evidence_ids": m.evidence_ids, "created_at": m.created_at.isoformat(),
          "assigned_to": m.assigned_to, "assigned_at": m.assigned_at,
          "left": {"entity_id": left.entity_id, "label": mask_label(left.kind, left.label), "kind": left.kind},
          "right": {"entity_id": right.entity_id, "label": mask_label(right.kind, right.label), "kind": right.kind},
-         "reviews": [{"review_id": r.review_id, "decision": r.decision, "reason": r.reason, "reviewer_id": r.reviewer_id, "created_at": r.created_at.isoformat(), "supersedes_id": r.supersedes_id} for r in reviews]}
+         "reviews": [{"review_id": r.review_id, "decision": r.decision, "reason": mask_text(r.reason), "reviewer_id": r.reviewer_id, "created_at": r.created_at.isoformat(), "supersedes_id": r.supersedes_id} for r in reviews]}
     if detailed:
         d["left"] = entity_summary(db, left, m.case_id)
         d["right"] = entity_summary(db, right, m.case_id)

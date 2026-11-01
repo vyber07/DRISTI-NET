@@ -60,8 +60,15 @@ def current_user(request: Request, creds: HTTPAuthorizationCredentials | None = 
 
 # ------------------------------------------------------------------ policy checks
 def require_roles(*roles: str):
-    def _dep(user: User = Depends(current_user)) -> User:
+    def _dep(request: Request, user: User = Depends(current_user), db: Session = Depends(get_db)) -> User:
         if user.role not in roles and user.role != "ADMIN":
+            # DEF-049: docs/context.md §6.1 "Unauthorized request -> deny server-side and audit". Role denials
+            # were raised without an audit row (case denials were audited).
+            case_id = request.path_params.get("case_id")
+            record_audit(db, getattr(request.state, "trace_id", "-"), user.user_id, "ACCESS_DENIED", "ROUTE",
+                         f"{request.method} {request.url.path}", case_id, outcome="DENIED",
+                         detail={"reason": "role not permitted", "role": user.role, "required": sorted(roles)})
+            db.commit()
             raise HTTPException(status.HTTP_403_FORBIDDEN, f"Role {user.role} may not perform this action")
         return user
     return _dep

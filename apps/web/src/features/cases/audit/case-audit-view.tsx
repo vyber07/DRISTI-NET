@@ -62,9 +62,11 @@ export function CaseAuditView({ caseId }: CaseAuditViewProps) {
         <ShieldCheck className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
         <div className="space-y-0.5 leading-relaxed">
           <span className="font-semibold text-text-secondary">
-            Statutory Tamper-Evident System Log (BSA §63 / IT Act §79A — Demo Policy Mapping):
+            Case audit log:
           </span>{" "}
-          All digital forensic interactions, note creations/edits, and evidentiary examinations are automatically recorded with SHA-256 cryptographic linkage. Demo entries illustrate permanent, tamper-evident audit logging principles.
+          Access, uploads, reviews, reveals and exports are recorded server-side. Each event carries its own HMAC-SHA256
+          signature, so an edited event fails verification; events are not hash-chained, so a deleted event is not
+          detected by the signature alone. This is an integrity reference, not a legal certification.
         </div>
       </div>
 

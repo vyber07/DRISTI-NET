@@ -1,0 +1,23 @@
+# DEF-054: without this file `COPY . .` baked .env (signing key), storage/ (demo DB + evidence), virtualenvs,
+# .git and release archives into the image layers. Mirrors scripts/make_release_archive.py exclusions.
+.env
+.env.*
+!.env.example
+storage/
+releases/
+.git/
+.venv/
+.venv311/
+venv/
+**/node_modules/
+**/__pycache__/
+*.pyc
+.pytest_cache/
+.cache/
+.claude/
+apps/web/dist/
+*.db
+*.db-wal
+*.db-shm
+*.zip
+reports/screenshots/

@@ -206,7 +206,7 @@ export function CaseOverviewView({ caseData }: Props) {
           <ShieldCheck className="h-3.5 w-3.5 text-verified-emerald" />
           <span>All sensitive attributes masked per PII protocols.</span>
         </div>
-        <span className="font-mono text-[11px]">BNSS Compliant · SHA-256 Manifest</span>
+        <span className="font-mono text-[11px]">SHA-256 manifest (integrity reference)</span>
       </div>
     </div>
   );
