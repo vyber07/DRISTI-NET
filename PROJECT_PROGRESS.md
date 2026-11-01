@@ -1,34 +1,23 @@
 # DRISTI-NET — Master Project Progress
 
-**Document ID:** DRISTI-PROG-001  
-**Last Updated:** 2026-11-01  
-**Current Milestone:** Stage 1 (Discovery & Verification Baseline) → Stage 2 (Engineering & Remediation)  
-**Execution Stage:** Step 3 (Infrastructure Validation) → Step 4 (Golden Synthetic Evidence Journey)  
+**Last Updated:** 2026-11-01 (session 3 re-verification)
+**Release status:** ENGINEERING PREVIEW
+**Execution position:** Step 3 (infrastructure/release validation) partially complete → Step 4 (Golden Synthetic Journey) demonstrated
 
----
+The previous version of this file reported every workstream at 100 % and "Staging Candidate / Production Ready".
+Re-verification found two P0 defects behind those claims (a graph view drawing 0 of 117 relationships, and a
+PostgreSQL migration chain missing two tables' worth of schema), plus withdrawn compliance claims. The table below
+counts only what has evidence in `audit/TEST_RESULTS.md`.
 
-## 1. Overall Progress Summary
-
-| Workstream | Total Tasks | Completed | In Progress | Blocked | Readiness Score |
-|---|---|---|---|---|---|
-| **Phase 0: Discovery & Baseline** | 4 | 4 | 0 | 0 | 100% |
-| **Phase 1: Task Management & Roadmap** | 3 | 3 | 0 | 0 | 100% |
-| **Phase 2: Code & Contract Audit** | 4 | 4 | 0 | 0 | 100% |
-| **Priority Remediation (P0/P1)** | 18 | 0 | 18 | 0 | In Progress |
-| **Step 3: Infrastructure Hardening** | 6 | 3 | 3 | 0 | 50% |
-| **Step 4: Golden Synthetic Journey** | 5 | 0 | 1 | 0 | Ready |
-| **Browser E2E & Visual Testing** | 4 | 1 | 1 | 0 | 25% |
-| **Security & Operational Validation** | 6 | 4 | 2 | 0 | 67% |
-| **Government & Public Sector Readiness**| 4 | 0 | 1 | 0 | Ready |
-| **Release Package & Verification** | 5 | 2 | 1 | 0 | 40% |
-
----
-
-## 2. Milestone Accomplishments
-
-- [x] Read and internalized the Project Constitution (`docs/context.md`) and Blueprint Status (`docs/status.md`).
-- [x] Established forensic baseline across repository history, Export 11 release artifacts, and active Git commits.
-- [x] Reconstructed the canonical 32-phase roadmap traceability matrix in `PROJECT_TASK_BOARD.md`.
-- [x] Confirmed backend baseline: 83 tests passing in `.venv311` pytest suite.
-- [x] Installed Playwright and downloaded Chromium browser binaries for headless and real-browser E2E testing.
-- [x] Identified and confirmed all 18 historical defects across frontend, backend, contracts, operations, and governance copy.
+| Workstream | State | Evidence / gap |
+|---|---|---|
+| Discovery & baseline | Done | Baseline 83 passed / 5 skipped; skipped = every live-store test |
+| Task board & roadmap | Done (reconstructed) | Original 32-phase roadmap not in repo; matrix is a reconstruction (DEC-003) |
+| Code & contract audit | Partial | Graph, reveal, provenance, NER, migrations audited in depth; full API contract audit not done |
+| P0/P1 remediation | 2 P0 + 3 P1 fixed this session; 1 P1 open | Fixed: DEF-021, DEF-022 (P0); DEF-011R, 019, 024 (P1). Open: DEF-026 (P1, BLK-04) |
+| Step 3: live infrastructure | Partial | Live PostgreSQL/Neo4j/S3/ClamAV suite 93/93; Compose stack blocked (BLK-04) |
+| Step 4: golden journey | Demonstrated | Dry runs 5×29/29; browser E2E 5/5 incl. edge → exact source line |
+| Browser testing | Done for implemented case routes | 12 routes, 0 console/HTTP errors; admin/settings pages not swept |
+| Security & operational validation | Not started | No scans, no backup/restore, no failure injection beyond scanner states |
+| Government readiness | Not assessed | Compliance verdicts withdrawn; applicability not determined |
+| Release package | Superseded | Existing archive predates all fixes; rebuild after commit |

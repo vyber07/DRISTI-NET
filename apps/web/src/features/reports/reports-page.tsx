@@ -64,7 +64,7 @@ export function ReportsPage() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement("a");
       a.href = url;
-      a.download = `CourtDossier_${caseId}_${Date.now()}.pdf`;
+      a.download = `IntegrityDossier_${caseId}_${Date.now()}.pdf`;
       document.body.appendChild(a); a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);

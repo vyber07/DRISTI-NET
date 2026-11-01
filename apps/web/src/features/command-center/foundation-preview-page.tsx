@@ -118,8 +118,8 @@ function FoundationPreviewPage() {
             <EntityBadge type="CYBER" />
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-3">
-            <RelationshipBadge type="COMMUNICATED_WITH" />
-            <RelationshipBadge type="CO_LOCATED_AT" hasContradiction />
+            <RelationshipBadge type="CALLED" />
+            <RelationshipBadge type="OBSERVED_AT" hasContradiction />
           </div>
         </Section>
 

@@ -1,16 +1,7 @@
 import { Checkbox } from "@/components/ui/checkbox";
 import { RelationshipBadge } from "@/components/intelligence/relationship-badge";
 import { useGraphStore } from "@/stores/graphStore";
-import type { RelationshipType } from "@/types/entity";
-
-const RELATIONSHIP_TYPES: RelationshipType[] = [
-  "COMMUNICATED_WITH",
-  "TRANSFERRED_FUNDS",
-  "USED_DEVICE",
-  "USED_PHONE",
-  "CO_LOCATED_AT",
-  "ASSOCIATED_IN_CASE",
-];
+import { RELATIONSHIP_TYPES, type RelationshipType } from "@/types/entity";
 
 export function RelationshipTypeFilter() {
   const { 

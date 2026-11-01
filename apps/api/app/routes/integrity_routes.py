@@ -12,7 +12,8 @@ GET /cases/{case_id}/integrity/anchors/{anchor_id}/proof/{evidence_sha256}
   Returns the Merkle inclusion proof for a specific evidence SHA-256 hash in the anchor.
 
 POST /cases/{case_id}/report/court-pdf
-  Generates a court-ready evidence dossier PDF (BSA s.63(4)(c) reference structure).
+  Generates an integrity-reference evidence dossier PDF (BSA s.63(4)(c) reference fields; not a legal certificate).
+  The route path and COURT_PDF_EXPORT audit action keep their historical names for API/audit compatibility.
   Returns the PDF binary.
 
 All routes are case-scoped and authorization-gated.
@@ -165,7 +166,7 @@ def export_court_pdf(
     user: User = Depends(require_roles("INVESTIGATOR", "REVIEWER", "ANALYST", "ADMIN")),
     db: Session = Depends(get_db),
 ):
-    """Generate a court-ready evidence dossier PDF with BSA s.63(4)(c) reference fields.
+    """Generate an integrity-reference evidence dossier PDF with BSA s.63(4)(c) reference fields.
 
     Returns the PDF binary (Content-Type: application/pdf).
     The dossier includes a prominent disclaimer: it is NOT a legal certificate.
@@ -245,7 +246,7 @@ def export_court_pdf(
     return Response(
         content=pdf_bytes,
         media_type="application/pdf",
-        headers={"Content-Disposition": f'attachment; filename="dristinet-court-dossier-{case_id}.pdf"',
+        headers={"Content-Disposition": f'attachment; filename="dristinet-integrity-dossier-{case_id}.pdf"',
                  "X-Trace-Id": request.state.trace_id,
                  "X-Merkle-Root": merkle_root_val or ""},
     )

@@ -12,7 +12,6 @@ export interface RevealRequest {
   requesterName: string;
   requesterRole: string;
   officerClearance: number;
-  emergencyBypass?: boolean;
 }
 
 export interface RevealResult {

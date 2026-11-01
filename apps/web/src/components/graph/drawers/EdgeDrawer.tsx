@@ -83,28 +83,57 @@ export function EdgeDrawer() {
           </div>
         </div>
 
-        {/* Supporting Evidence Card */}
-        {rel.evidenceIds && rel.evidenceIds.length > 0 && (
-          <div className="rounded-md border border-border-subtle bg-surface-2 p-3 space-y-2.5">
-            <div className="flex items-center justify-between">
-              <span className="text-micro font-semibold uppercase tracking-wider text-text-muted">
-                Source Evidence
-              </span>
-            </div>
-            <p className="text-xs text-text-secondary">
-              This connection was extracted from {rel.evidenceIds.length} verified case document(s).
+        {/* Supporting claims, each with its exact source locator (constitution §19 Evidence gate) */}
+        <div data-testid="edge-claims" className="rounded-md border border-border-subtle bg-surface-2 p-3 space-y-2.5">
+          <span className="text-micro font-semibold uppercase tracking-wider text-text-muted">
+            Supporting Claims &amp; Source Locations
+          </span>
+          <p className="text-xs text-text-secondary">
+            Candidate relationship supported by {rel.count} claim(s) from {rel.evidenceIds?.length ?? 0} source
+            document(s). Extracted claims are candidates for review, not established facts.
+          </p>
+          {rel.claims === undefined && <p className="text-xs text-text-muted">Loading provenance…</p>}
+          {rel.claimsError && (
+            <p role="alert" className="text-xs text-red-500">Provenance could not be loaded: {rel.claimsError}</p>
+          )}
+          {rel.claims && rel.claims.length === 0 && !rel.claimsError && (
+            <p role="alert" className="text-xs text-amber-500">
+              No supporting claims were returned for this edge. Treat it as unverified and report the discrepancy.
             </p>
-            <Button
-              variant="primary"
-              size="md"
-              className="w-full justify-center text-xs font-semibold gap-2 py-2 shadow-sm"
-              onClick={() => openProvenanceForRecord(rel.evidenceIds[0])}
-            >
-              <FileText className="h-4 w-4" />
-              <span>INSPECT PROVENANCE FOR PRIMARY DOCUMENT</span>
-            </Button>
-          </div>
-        )}
+          )}
+          {rel.claims?.map((c) => {
+            const prov = c.provenance?.[0];
+            const loc = prov?.locator ?? {};
+            const where = loc.json_path
+              ? `record ${loc.json_path}`
+              : [loc.page != null && `page ${loc.page}`, loc.line != null && `line ${loc.line}`, loc.row != null && `row ${loc.row}`]
+                  .filter(Boolean)
+                  .join(", ") || "location not recorded";
+            return (
+              <div key={c.claim_id} data-testid="edge-claim" className="rounded border border-border-subtle bg-surface-1 p-2.5 space-y-1.5">
+                <div className="flex items-center justify-between gap-2 text-xs">
+                  <span className="font-mono text-text-primary truncate" title={c.evidence.evidence_id}>
+                    {c.evidence.filename} · {c.evidence.evidence_id}
+                  </span>
+                  <Badge tone="neutral">{Math.round(c.confidence * 100)}%</Badge>
+                </div>
+                <p className="text-[11px] text-text-muted">
+                  {c.method} v{c.method_version} · {where} · {c.state}
+                </p>
+                {prov?.snippet && <p className="text-[11px] text-text-secondary italic break-words">“{prov.snippet}”</p>}
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="w-full justify-center text-xs gap-2"
+                  onClick={() => openProvenanceForRecord(c.evidence.evidence_id, loc)}
+                >
+                  <FileText className="h-3.5 w-3.5" />
+                  <span>Open source at {where}</span>
+                </Button>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

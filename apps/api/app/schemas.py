@@ -51,5 +51,5 @@ class ReportIn(BaseModel):
 
 
 class CourtPdfIn(BaseModel):
-    """Request body for the court-ready PDF dossier endpoint."""
+    """Request body for the integrity-reference PDF dossier endpoint."""
     analyst_comments: str = ""

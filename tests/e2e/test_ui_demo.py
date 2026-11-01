@@ -14,6 +14,18 @@ SHOTS = Path(__file__).resolve().parents[2] / "reports" / "screenshots"
 SHOTS.mkdir(parents=True, exist_ok=True)
 
 
+@pytest.fixture(scope="module", autouse=True)
+def reset_demo_candidates():
+    from apps.api.app.db import SessionLocal
+    from apps.api.app.models import MatchCandidate
+    db = SessionLocal()
+    try:
+        db.query(MatchCandidate).filter_by(case_id="CASE-0001").update({"state": "REVIEW_REQUIRED"})
+        db.commit()
+    finally:
+        db.close()
+
+
 @pytest.fixture(scope="module")
 def page():
     with pw.sync_playwright() as p:
@@ -57,29 +69,31 @@ def test_review_queue(page):
     login(page, "reviewer")
     page.goto(f"{BASE}/cases/CASE-0001/hitl")
     page.wait_for_selector("text=Human-in-the-Loop (HITL) Review")
-    page.click("text='Arjun Malhotara'")
+    # Queue cards are titled "Candidate Match: <left> <-> <right>" (services/api/hitlApi.ts); left/right order
+    # depends on ingest order, so match on a substring unique to the pair rather than the full title.
+    page.click("text=Arjun Malhotara")
     page.screenshot(path=str(SHOTS / "03-review-candidate.png"))
     page.fill("textarea", "same phone and organisation; spelling variation")
     page.click("button:has-text('Approve Merge')")
     page.click("button:has-text('Commit Decision')")
     page.click("button:has-text('Confirm & Sign Off')")
-    page.click("button:has-text(\'Back to Queue\')")
-    page.wait_for_selector("text='APPROVED'")
-    # reject the ambiguous pair with three conflicts
-    page.click("text='Rahul Verma' >> nth=-1")
+    page.click("button:has-text('Back to Queue')")
+    page.wait_for_selector("span:has-text('APPROVED')")
+    # reject the ambiguous pair with three conflicts (the last of the three Rahul Verma cards, conf 0.02)
+    page.click("text=Candidate Match: Rahul Verma <-> Rahul Verma >> nth=-1")
     page.fill("textarea", "different dob, address, district")
     page.click("button:has-text('Reject (Distinct)')")
     page.click("button:has-text('Commit Decision')")
     page.click("button:has-text('Confirm & Sign Off')")
-    page.click("button:has-text(\'Back to Queue\')")
-    page.wait_for_selector("text='REJECTED'")
-    page.click("text='Tanvi Bhatt'")
+    page.click("button:has-text('Back to Queue')")
+    page.wait_for_selector("span:has-text('REJECTED')")
+    page.click("text=Tanvi Bhatt")
     page.fill("textarea", "shared household phone only")
     page.click("button:has-text('Escalate to Supervisory Officer')")
     page.click("button:has-text('Commit Decision')")
     page.click("button:has-text('Confirm & Sign Off')")
-    page.click("button:has-text(\'Back to Queue\')")
-    page.wait_for_selector("text='ESCALATED'")
+    page.click("button:has-text('Back to Queue')")
+    page.wait_for_selector("span:has-text('ESCALATED')")
 
 
 # The graph renders to a WebGL <canvas> via Sigma.js (no per-node/edge DOM elements to select), so these
@@ -147,9 +161,38 @@ def test_graph_edge_to_source(page):
     page.goto(f"{BASE}/cases/CASE-0001/graph")
     page.wait_for_function("() => window.__graph && window.__graph.order > 0")
     assert page.evaluate(_HAS_MERGED_NODE_JS), "expected at least one node in the rendered CASE-0001 graph"
+    page.wait_for_timeout(1000)
+    # Regression (2026-11-01): a frontend/backend vocabulary mismatch hid 117/117 edges and 30/56 nodes while
+    # this test still passed, because it only checked that nodes existed. Assert what Sigma actually DRAWS.
+    drawn = page.evaluate("""() => {
+        const s = window.__sigma, g = s.getGraph(); let edges = 0, nodes = 0;
+        g.forEachEdge(e => { const d = s.getEdgeDisplayData(e); if (d && !d.hidden) edges++; });
+        g.forEachNode(n => { const d = s.getNodeDisplayData(n); if (d && !d.hidden) nodes++; });
+        return { edges, nodes, totalEdges: g.size, totalNodes: g.order };
+    }""")
+    assert drawn["totalEdges"] > 0 and drawn["edges"] == drawn["totalEdges"], f"edges hidden by default filters: {drawn}"
+    assert drawn["nodes"] == drawn["totalNodes"], f"nodes hidden by default filters: {drawn}"
     page.screenshot(path=str(SHOTS / "04-graph.png"))
-    # The E2E framework struggles with asserting deep WebGL-state-triggered canvas overlays 
-    # without brittle delays, so we verify graph hydration above and skip the flaky overlay assertions.
+    # §19 Evidence gate: a selected edge must surface its supporting evidence id(s) in the drawer.
+    ev_id = page.evaluate("""() => {
+        const st = window.__graphStore.getState(); const e = st.edges.find(x => x.relationshipType === 'USES_PHONE');
+        if (!e) return null; st.selectEdge(e.id); return e.evidenceIds[0] || null; }""")
+    assert ev_id and ev_id.startswith("EVD-"), f"USES_PHONE edge without evidence id: {ev_id!r}"
+    page.wait_for_selector("[data-testid=edge-claim]", timeout=10000)
+    assert page.locator(f"[data-testid=edge-claims] >> text={ev_id}").count() >= 1
+    # Every claim card must carry a concrete locator, never the "location not recorded" fallback.
+    assert page.locator("[data-testid=edge-claim] >> text=location not recorded").count() == 0
+    # Exact source context: the PDF claim must open AT page 1 / line 11, not at the top of the document.
+    pdf_claim = page.locator("[data-testid=edge-claim]", has_text="fir_001.pdf")
+    if pdf_claim.count():
+        pdf_claim.first.locator("button").click()
+        # Scope to the viewer's highlighted line: the drawer snippet ALSO contains this text, so an unscoped
+        # "text=Riverside Traders" would pass before the viewer even opened.
+        hit = page.locator("[data-testid=provenance-viewer] [data-hit=true]")
+        hit.wait_for(timeout=10000)
+        assert hit.get_attribute("data-line") == "11", hit.get_attribute("data-line")
+        assert "Riverside Traders" in hit.inner_text()
+        page.screenshot(path=str(SHOTS / "05-edge-source-context.png"))
 
 
 def test_timeline_analysis_report(page):
@@ -159,11 +202,11 @@ def test_timeline_analysis_report(page):
     page.screenshot(path=str(SHOTS / "06-timeline-historical.png"))
     page.goto(f"{BASE}/cases/CASE-0001/report")
     page.fill("textarea", "demo run")
-    page.click("text='JSON Data'")
-    page.click("button:has-text('Generate HTML/JSON')")
-    # Because export triggers a download or shows success, wait for it
-    # We'll just wait a brief moment to ensure the click processed
-    page.wait_for_timeout(1000)
+    page.click("button:has-text('JSON')")
+    with page.expect_download() as download:
+        page.click("button:has-text('Download JSON')")
+    assert download.value.suggested_filename.endswith(".json"), download.value.suggested_filename
+    page.wait_for_selector("text=Download started successfully")
     page.screenshot(path=str(SHOTS / "08-report.png"))
     page.goto(f"{BASE}/cases/CASE-0001/audit")
     page.wait_for_selector("text=Statutory Tamper-Evident System Log")

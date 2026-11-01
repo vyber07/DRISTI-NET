@@ -7,6 +7,7 @@ import type {
   RelationshipDetail,
   RelationshipType,
 } from "@/types/entity";
+import { RELATIONSHIP_TYPES } from "@/types/entity";
 import type { EvidenceTier } from "@/constants/evidenceTiers";
 import { getEntityDetails } from "@/services/api/entityApi";
 import { getCaseGraph, getEdgeDetails } from "@/services/api/graphApi";
@@ -83,14 +84,7 @@ const ALL_ENTITY_TYPES: EntityType[] = [
   "FINANCIAL",
   "CYBER",
 ];
-const ALL_RELATIONSHIP_TYPES: RelationshipType[] = [
-  "COMMUNICATED_WITH",
-  "TRANSFERRED_FUNDS",
-  "USED_DEVICE",
-  "USED_PHONE",
-  "CO_LOCATED_AT",
-  "ASSOCIATED_IN_CASE",
-];
+const ALL_RELATIONSHIP_TYPES: RelationshipType[] = [...RELATIONSHIP_TYPES];
 
 const INITIAL_MIN_TIME = new Date("2026-02-10T00:00:00Z").getTime();
 const INITIAL_MAX_TIME = new Date("2026-02-25T00:00:00Z").getTime();
@@ -204,9 +198,22 @@ export const useGraphStore = create<GraphState>((set, get) => ({
           claimIds: edge.claimIds,
           firstSeen: edge.firstSeen,
           lastSeen: edge.lastSeen,
-          relevance: edge.relevance
+          relevance: edge.relevance,
+          claims: undefined,
+          claimsError: null,
         } as any 
       });
+      // Fetch per-claim provenance (exact page/line/row/json_path) for the evidence drawer.
+      try {
+        const res = await getEdgeDetails(get().caseId, edge.source, edge.target, edge.relationshipType);
+        if (get().selectedEdgeId !== edgeId) return; // selection changed while loading
+        const cur = get().selectedRelationshipDetail;
+        if (cur) set({ selectedRelationshipDetail: { ...cur, claims: res.data?.claims ?? [] } });
+      } catch (err: unknown) {
+        if (get().selectedEdgeId !== edgeId) return;
+        const cur = get().selectedRelationshipDetail;
+        if (cur) set({ selectedRelationshipDetail: { ...cur, claims: [], claimsError: (err as Error).message || "Failed to load provenance" } });
+      }
     }
   },
 
@@ -268,7 +275,7 @@ export const useGraphStore = create<GraphState>((set, get) => ({
   selectAllRelationshipTypes: () =>
     set({ activeRelationshipTypes: new Set(ALL_RELATIONSHIP_TYPES) }),
   clearRelationshipTypes: () =>
-    set({ activeRelationshipTypes: new Set(["COMMUNICATED_WITH"]) }),
+    set({ activeRelationshipTypes: new Set<RelationshipType>(["CALLED"]) }),
 
   setOnlyContradictions: (only) => set({ onlyContradictions: only }),
   setMinConfidence: (conf) => set({ minConfidence: conf }),

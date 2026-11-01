@@ -1,16 +1,17 @@
-import { AlertTriangle, ArrowLeftRight, MapPinned, Phone, ShieldHalf, Users } from "lucide-react";
+import { AlertTriangle, ArrowLeftRight, Car, Landmark, Link2, MapPinned, Phone, Users } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { RelationshipType } from "@/types/entity";
 import { cn } from "@/lib/utils";
 
 const RELATIONSHIP_TYPE_CONFIG: Record<RelationshipType, { label: string; icon: typeof Phone }> = {
-  COMMUNICATED_WITH: { label: "Communicated With", icon: Phone },
-  TRANSFERRED_FUNDS: { label: "Transferred Funds", icon: ArrowLeftRight },
-  USED_DEVICE: { label: "Used Device", icon: ShieldHalf },
-  USED_PHONE: { label: "Used Phone", icon: Phone },
-  CO_LOCATED_AT: { label: "Co-Located At", icon: MapPinned },
-  ASSOCIATED_IN_CASE: { label: "Associated In Case", icon: Users },
+  CALLED: { label: "Called", icon: Phone },
+  OBSERVED_AT: { label: "Observed At", icon: MapPinned },
+  TRANSFERRED_TO: { label: "Transferred To", icon: ArrowLeftRight },
+  USES_PHONE: { label: "Uses Phone", icon: Phone },
+  HOLDS_ACCOUNT: { label: "Holds Account", icon: Landmark },
+  MEMBER_OF: { label: "Member Of", icon: Users },
+  OWNS_VEHICLE: { label: "Owns Vehicle", icon: Car },
 };
 
 interface RelationshipBadgeProps {
@@ -21,7 +22,8 @@ interface RelationshipBadgeProps {
 }
 
 function RelationshipBadge({ type, hasContradiction = false, className }: RelationshipBadgeProps) {
-  const config = RELATIONSHIP_TYPE_CONFIG[type];
+  // Unknown backend rel_types render generically instead of crashing.
+  const config = RELATIONSHIP_TYPE_CONFIG[type] ?? { label: String(type).replace(/_/g, " "), icon: Link2 };
   const Icon = config.icon;
 
   return (

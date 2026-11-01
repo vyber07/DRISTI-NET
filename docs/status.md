@@ -1,6 +1,7 @@
 # Status against the blueprint (`docs/context.md` §3 vocabulary)
 
-Last audited: 2026-09-25 against `main` (see also `PROJECT_STATUS.md` for day-by-day and in-progress view,
+Last audited: 2026-09-25 against `main`; rows marked **(2026-11-01)** were re-verified against the working tree on that date
+(details: `audit/BUG_AND_DEFECT_REGISTER.md`, `audit/TEST_RESULTS.md`) (see also `PROJECT_STATUS.md` for day-by-day and in-progress view,
 and `TASK_BOARD.md` for the live-verification methodology behind each item marked Demonstrated below).
 "Demonstrated" means a test in `apps/api/app/tests` or `tests/e2e` exercises it.
 
@@ -49,7 +50,7 @@ and `TASK_BOARD.md` for the live-verification methodology behind each item marke
 | Resolution candidate (signals, positive/counter evidence, missingness, reversible) | Demonstrated | `MatchCandidate` + `Review` |
 | Relationship: observed time, valid interval, relevance, method, version, review state, provenance | Demonstrated | `Claim` + `Provenance`; valid_to is always null in current fixtures |
 | Event/audit record with idempotency key | Demonstrated | `Job.idempotency_key`, `AuditEvent` |
-| Merkle root + ledger anchor (`LedgerAnchor` model) | **Demonstrated** | `services/integrity.py`; `LedgerAnchor` PostgreSQL table; `POST /cases/{id}/integrity/anchor`; Besu EVM adapter (import-guarded, opt-in); `test_new_components.py::TestMerkleTree` (10 tests) + `TestIntegrityRoutes`; `docs/adr/014-merkle-besu-anchor.md` |
+| Merkle root + ledger anchor (`LedgerAnchor` model) | **Demonstrated (2026-11-01: on PostgreSQL only after migration `5bcde1234569`; before it, no migration created `ledger_anchors`, so anchoring could not work on a migrated database — DEF-021)** | `services/integrity.py`; `LedgerAnchor` PostgreSQL table; `POST /cases/{id}/integrity/anchor`; Besu EVM adapter (import-guarded, opt-in); `test_new_components.py::TestMerkleTree` (10 tests) + `TestIntegrityRoutes`; `docs/adr/014-merkle-besu-anchor.md` |
 
 ## §10 Graph
 
@@ -71,8 +72,8 @@ and `TASK_BOARD.md` for the live-verification methodology behind each item marke
 | Coarse spatial overlap (H3) analytics | **Roadmap** (lat/lon captured; a plain map view of the points is now Demonstrated above — H3 bucketing/overlap analytics is a separate, larger analytical feature, not attempted) |
 | Observed / valid / ingestion time stored separately | Demonstrated (`observed_time`, `valid_from/to`, `created_at`) |
 | LLM / GraphRAG | Not used (by design, docs/context.md §11.5) |
-| Model-backed NER (IndicBERT) | **Implemented (Evaluation Pending)** | `services/nlp_adapter.py`; AI4Bharat IndicBERTv2-MLM-only-NER; PERSON/ORGANIZATION/LOCATION extraction; candidates state=REVIEW_REQUIRED; fallback to empty list when transformers absent; `test_new_components.py::TestNlpAdapter`; `docs/adr/012-nlp-adapter.md` |
-| Court-ready evidence dossier (BSA s.63(4)(c) reference) | **Demonstrated** | `services/court_pdf.py`; `POST /cases/{id}/report/court-pdf`; Part A/Part B reference fields; prominent disclaimer (not a legal certificate); Merkle root + ledger reference included; `test_new_components.py::TestCourtPdfRoute` |
+| Model-backed NER (IndicBERT) | **Implemented (Evaluation Pending)** — 2026-11-01: the evaluation set is 1 document / 3 entities, so its F1 = 1.00 is not a quality measure; a real-model probe still misses some names (DEF-018). The backend test suite replaces the model with a fake (DEF-027). | `services/nlp_adapter.py`; AI4Bharat IndicBERTv2-MLM-only-NER; PERSON/ORGANIZATION/LOCATION extraction; candidates state=REVIEW_REQUIRED; fallback to empty list when transformers absent; `test_new_components.py::TestNlpAdapter`; `docs/adr/012-nlp-adapter.md` |
+| Integrity-reference evidence dossier PDF (BSA s.63(4)(c) reference fields; not a legal certificate) | **Demonstrated** (2026-11-01: real browser download verified as a valid PDF) | `services/court_pdf.py`; `POST /cases/{id}/report/court-pdf`; Part A/Part B reference fields; prominent disclaimer (not a legal certificate); Merkle root + ledger reference included; `test_new_components.py::TestCourtPdfRoute` |
 
 ## §17 Testing
 
@@ -81,7 +82,7 @@ and `TASK_BOARD.md` for the live-verification methodology behind each item marke
 | Unit + integration (workflow) | Demonstrated — `test_workflow.py` |
 | §17.2 golden-dataset requirement: "one high-degree supernode" | Demonstrated — `test_supernode_capping_on_a_planted_high_degree_node`. Real gap found this session: the actual `data/synthetic/` dataset plants no node anywhere near `SUPERNODE_DEGREE` (verified directly: 0 nodes ever get `flags.supernode` on CASE-0001/0002), and no test anywhere exercised the supernode-capping code path — despite the constitution requiring one since it was written. Closed with a dedicated isolated hub-and-spoke scenario (not a golden-dataset regeneration, which would have risked the many other tests coupled to its exact counts) proving both the `flags.supernode` detection and the actual neighbourhood-fan-out cap on a centered traversal. |
 | Security | Demonstrated — `test_security.py` |
-| E2E from clean start | Demonstrated — `tests/e2e/test_ui_demo.py` (Playwright) |
+| E2E from clean start | Demonstrated — `tests/e2e/test_ui_demo.py` (Playwright). 2026-11-01: the graph test previously checked only that nodes existed while 0/117 edges were drawn (DEF-022); it now asserts all edges/nodes are drawn and that an edge opens its exact source line (DEF-024). |
 | Evaluation metrics vs `truth-labels.json` | Demonstrated — `scripts/evaluate.py` runs the real pipeline against the golden dataset and fills `reports/*-evaluation.md`: 5/5 extraction checks, 3/3 entity-resolution decision accuracy, 4/4 graph checks (bridge, communities, both rule types) HIT, honestly scoped as exact hit/miss over planted scenarios, not a large-corpus benchmark |
 | Performance with documented conditions | Demonstrated — `scripts/perf_test.py` measures real wall-clock timings (upload→scan→extract→resolve, graph, analysis) at two scales (golden dataset and a synthetic 20,000-row CSV) on this host, with host/software conditions and known limitations of the measurement stated explicitly in `reports/performance.md` |
 

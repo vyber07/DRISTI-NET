@@ -83,7 +83,6 @@ function RevealModalContent({ modalTarget }: RevealModalContentProps) {
 
   const [justification, setJustification] = useState("");
   const [certifiedAcknowledgment, setCertifiedAcknowledgment] = useState(false);
-  const [emergencyBypass, setEmergencyBypass] = useState(false);
   const [localValidation, setLocalValidation] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -95,13 +94,13 @@ function RevealModalContent({ modalTarget }: RevealModalContentProps) {
       return;
     }
 
-    if (!certifiedAcknowledgment && !emergencyBypass) {
+    if (!certifiedAcknowledgment) {
       setLocalValidation("You must certify under official duty that this requisition is authorized.");
       return;
     }
 
     try {
-      await submitRevealRequest(justification, emergencyBypass);
+      await submitRevealRequest(justification);
     } catch {
       // Error handled in store
     }
@@ -323,7 +322,7 @@ function RevealModalContent({ modalTarget }: RevealModalContentProps) {
               />
             </div>
 
-            {/* Acknowledgment & Emergency toggle */}
+            {/* Acknowledgment (no client-side bypass: the server requires case_id + reason for every reveal) */}
             <div className="space-y-2 pt-1">
               <label className="flex items-start gap-2.5 cursor-pointer select-none">
                 <input
@@ -335,16 +334,6 @@ function RevealModalContent({ modalTarget }: RevealModalContentProps) {
                 <span className="text-micro text-text-secondary leading-normal">
                   I confirm that this identity unmasking requisition is required for authorized investigation under the current Case. I acknowledge this action is recorded in the tamper-evident audit trail.
                 </span>
-              </label>
-
-              <label className="flex items-center gap-2 cursor-pointer select-none text-micro text-text-muted">
-                <input
-                  type="checkbox"
-                  checked={emergencyBypass}
-                  onChange={(e) => setEmergencyBypass(e.target.checked)}
-                  className="h-3 w-3 rounded border-border-subtle bg-surface-2 text-amber-500 focus:ring-0"
-                />
-                <span>Exigent Circumstances / Emergency Bypass Protocol (Immediate threat to life)</span>
               </label>
             </div>
 
