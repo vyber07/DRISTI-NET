@@ -17,8 +17,9 @@ pytest>=8.0
 moto[s3]
 kafka-python==2.0.2
 web3==6.15.1
-paddlepaddle
-paddleocr
+clamd==1.0.2
+paddlepaddle==2.6.2
+paddleocr==2.10.0
 pymupdf
 transformers
 torch

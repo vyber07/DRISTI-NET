@@ -165,7 +165,7 @@ export const useGraphStore = create<GraphState>((set, get) => ({
       selectedRelationshipDetail: null,
     });
     try {
-      const res = await getEntityDetails(nodeId);
+      const res = await getEntityDetails(nodeId, get().caseId || "CASE-0001");
       set({ selectedEntityDetail: res.data });
     } catch {
       // Keep selectedNodeId

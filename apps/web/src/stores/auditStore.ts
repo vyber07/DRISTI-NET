@@ -53,10 +53,11 @@ export const useAuditStore = create<AuditState>((set, get) => ({
   selectedLog: null,
   isDrawerOpen: false,
 
-  loadLogs: async (caseId: string) => {
-    set({ isLoading: true, error: null, caseId });
+  loadLogs: async (caseId?: string) => {
+    const cId = caseId || get().caseId || "CASE-0001";
+    set({ isLoading: true, error: null, caseId: cId });
     try {
-      const res = await listAuditLogs(caseId);
+      const res = await listAuditLogs(cId);
       if (res.data) {
         set({
           logs: res.data,

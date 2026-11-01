@@ -35,7 +35,26 @@ export function HITLEvidencePane({ task }: HITLEvidencePaneProps) {
           // In a fully integrated backend, this fetches the evidence record linked to the candidate
           const evidenceRes = await getEvidenceById(task.primaryEvidenceId);
           if (evidenceRes.data) {
-             matched = { id: evidenceRes.data.id, caseId: evidenceRes.data.caseId, sourceId: evidenceRes.data.id, sourceName: evidenceRes.data.filename, extractionMethod: evidenceRes.data.sourceType, confidenceScore: 0.9, rawExtractedText: "", parsedData: {}, extractedAt: evidenceRes.data.createdAt, verifiedBy: evidenceRes.data.uploadedBy, status: "VERIFIED" };
+            const ev = evidenceRes.data;
+            matched = {
+              recordId: ev.evidence_id,
+              relationshipId: task.id,
+              documentId: ev.evidence_id,
+              documentTitle: ev.filename,
+              documentType: (ev.filename.toLowerCase().includes("fir") ? "FIR_EXCERPT" : "CDR_RECORD") as any,
+              sourceType: ev.source_label || "FILE_UPLOAD",
+              sourceAgency: ev.jurisdiction || "DEMO-A",
+              ingestedAt: ev.created_at,
+              sha256Hash: ev.sha256,
+              rawArtifactId: ev.evidence_id,
+              rawArtifactSha256: ev.sha256,
+              evidenceTier: 2 as const,
+              boundingBoxes: [],
+              extractedTextSnippet: "",
+              extractionModel: ev.detected_type || "text/plain",
+              extractionConfidence: 0.9,
+              chainOfCustody: [],
+            };
           }
         }
 

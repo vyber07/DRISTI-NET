@@ -25,6 +25,12 @@ export function CaseEvidenceView() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [uploadMsg, setUploadMsg] = useState("");
 
+  useEffect(() => {
+    if (caseId) {
+      loadEvidence(caseId, entityScope);
+    }
+  }, [caseId, entityScope, loadEvidence]);
+
   const filteredEvidence = getFilteredEvidence();
 
   const handleScopeEntity = (entId: string) => {
@@ -83,9 +89,9 @@ export function CaseEvidenceView() {
               fd.append("file", selectedFile);
               fd.append("source_label", "manual");
               const tok = localStorage.getItem("drishti.token");
-              const res = await fetch(`/api/v1/cases/\${caseId}/evidence`, {
+              const res = await fetch(`/api/v1/cases/${caseId}/evidence`, {
                 method: "POST",
-                headers: tok ? { Authorization: `Bearer \${tok}` } : {},
+                headers: tok ? { Authorization: `Bearer ${tok}` } : {},
                 body: fd
               });
               if (!res.ok) {

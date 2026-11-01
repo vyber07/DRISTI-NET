@@ -1,10 +1,11 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { ChevronsLeft, ChevronsRight, Compass } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { PRIMARY_NAV_ITEMS, SYSTEM_NAV_ITEMS, type NavItem } from "@/constants/navigation";
 import { useUIStore } from "@/stores/uiStore";
+import { useAuthStore } from "@/stores/authStore";
 import { cn } from "@/lib/utils";
 
 function NavItemLink({ item, collapsed }: { item: NavItem; collapsed: boolean }) {
@@ -42,8 +43,64 @@ function NavItemLink({ item, collapsed }: { item: NavItem; collapsed: boolean })
   );
 }
 
+function ProfileButton({ collapsed }: { collapsed: boolean }) {
+  const navigate = useNavigate();
+  const { user } = useAuthStore();
+
+  if (!user) return null;
+
+  const initials = user.display_name
+    .split(" ")
+    .slice(0, 2)
+    .map((w: string) => w[0])
+    .join("")
+    .toUpperCase();
+
+  const button = (
+    <button
+      onClick={() => navigate("/profile")}
+      className={cn(
+        "w-full flex items-center gap-2.5 rounded-md px-2 py-2 transition-colors duration-[var(--motion-fast)]",
+        "text-text-secondary hover:bg-surface-2 hover:text-text-primary",
+        "[&.active]:bg-electric-blue/10 [&.active]:text-electric-blue"
+      )}
+      aria-label="View profile"
+    >
+      {/* Avatar circle */}
+      <div className="h-7 w-7 rounded-full bg-electric-blue/20 border border-electric-blue/30 flex items-center justify-center shrink-0">
+        <span className="font-mono text-[10px] font-bold text-electric-blue">{initials}</span>
+      </div>
+      {!collapsed && (
+        <div className="flex-1 min-w-0 text-left">
+          <p className="text-xs font-semibold text-text-primary truncate leading-tight">
+            {user.display_name}
+          </p>
+          <p className="text-[10px] text-text-muted font-mono truncate leading-tight">
+            {user.role}
+          </p>
+        </div>
+      )}
+    </button>
+  );
+
+  if (collapsed) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>{button}</TooltipTrigger>
+        <TooltipContent side="right" className="text-xs">
+          <p className="font-semibold text-text-primary">{user.display_name}</p>
+          <p className="text-micro text-text-secondary">{user.role} · {user.jurisdiction}</p>
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
+
+  return button;
+}
+
 function Sidebar() {
-  const {  sidebarCollapsed, toggleSidebar } = useUIStore();
+  const { sidebarCollapsed, toggleSidebar } = useUIStore();
+  const { user } = useAuthStore();
 
   return (
     <aside
@@ -86,21 +143,34 @@ function Sidebar() {
           </ul>
         </div>
 
-        <Separator />
-
-        <div className="px-2">
-          {!sidebarCollapsed && (
-            <div className="px-2 pb-1.5 text-[10.5px] font-semibold uppercase tracking-wider text-text-muted">
-              System &amp; Verification
+        {/* Role-filtered system items */}
+        {SYSTEM_NAV_ITEMS.filter((item) => !item.roles || item.roles.includes(user?.role || "")).length > 0 && (
+          <>
+            <Separator />
+            <div className="px-2">
+              {!sidebarCollapsed && (
+                <div className="px-2 pb-1.5 text-[10.5px] font-semibold uppercase tracking-wider text-text-muted">
+                  System
+                </div>
+              )}
+              <ul className="flex flex-col gap-0.5">
+                {SYSTEM_NAV_ITEMS
+                  .filter((item) => !item.roles || item.roles.includes(user?.role || ""))
+                  .map((item) => (
+                    <NavItemLink key={item.path} item={item} collapsed={sidebarCollapsed} />
+                  ))}
+              </ul>
             </div>
-          )}
-          <ul className="flex flex-col gap-0.5">
-            {SYSTEM_NAV_ITEMS.map((item) => (
-              <NavItemLink key={item.path} item={item} collapsed={sidebarCollapsed} />
-            ))}
-          </ul>
-        </div>
+          </>
+        )}
       </nav>
+
+      <Separator />
+
+      {/* Profile button */}
+      <div className="px-2 py-2 shrink-0">
+        <ProfileButton collapsed={sidebarCollapsed} />
+      </div>
 
       <Separator />
 

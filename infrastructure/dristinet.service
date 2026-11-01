@@ -1,6 +1,6 @@
 [Unit]
 Description=DRISHTI-NET Docker Compose stack
-Documentation=file:///home/ubuntu/project/DRISTINET/README.md
+Documentation=file:///home/ubuntu/DRISTI-NET/README.md
 Requires=docker.service
 After=docker.service network-online.target
 Wants=network-online.target
@@ -8,10 +8,10 @@ Wants=network-online.target
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-WorkingDirectory=/home/ubuntu/project/DRISTINET
+WorkingDirectory=/home/ubuntu/DRISTI-NET
 
 # Load .env so secrets are available to compose without -e flags
-EnvironmentFile=/home/ubuntu/project/DRISTINET/.env
+EnvironmentFile=/home/ubuntu/DRISTI-NET/.env
 
 # Pull any updated images, then bring the stack up
 ExecStartPre=/usr/bin/docker compose pull --quiet

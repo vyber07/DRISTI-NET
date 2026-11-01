@@ -16,11 +16,14 @@ Provenance
 Each extracted line carries a locator that can populate docs/context.md §9.3 fields:
   {"page": int, "line": int, "bbox": [x1, y1, x2, y2], "engine": str, "confidence": float}
 
-Status: Architecture target.  The import-guarded paddle branch requires
-  - paddlepaddle (or paddlepaddle-gpu) >= 2.6
-  - paddleocr >= 2.7
-which are NOT in requirements.txt (large, GPU-optional dependencies).  When absent the
-adapter silently falls back to pypdf text extraction with a "pypdf-fallback" engine tag.
+Compatibility
+-------------
+Supports both PaddleOCR 2.x and 3.x:
+  - 2.x (paddlepaddle>=2.6, paddleocr>=2.7): uses ocr(img, cls=True) API with
+    [[bbox, (text, conf)], ...] return format.
+  - 3.x (paddlepaddle>=3.0, paddleocr>=3.0): uses predict(img) API with
+    OCRResult objects having rec_texts / rec_scores / rec_polys fields.
+  The adapter auto-detects the API version at runtime.
 
 Production note: pin model revisions and pre-cache weights before any release gate.  Never
 let a release download unreviewed model weights at runtime.
@@ -34,7 +37,7 @@ from typing import Optional
 
 logger = logging.getLogger("drishti.ocr")
 
-METHOD_VERSION = "0.1.0"
+METHOD_VERSION = "0.2.0"
 
 
 @dataclass
@@ -74,18 +77,65 @@ def _needs_ocr(pages: list[OcrPage], min_chars_per_page: int = 20) -> bool:
     return avg_chars < min_chars_per_page
 
 
+def _extract_lines_v2(raw: object) -> tuple[list[str], list[float], list[list]]:
+    """Parse PaddleOCR 2.x ocr() result: list[list[[bbox, (text, conf)]]] per page."""
+    lines: list[str] = []
+    scores: list[float] = []
+    polys: list[list] = []
+    if not raw or not raw[0]:
+        return lines, scores, polys
+    for item in raw[0]:
+        try:
+            bbox_raw, (text, conf) = item
+            lines.append(str(text))
+            scores.append(float(conf))
+            polys.append(bbox_raw)
+        except Exception:
+            continue
+    return lines, scores, polys
+
+
+def _extract_lines_v3(raw_results: list) -> tuple[list[str], list[float], list[list]]:
+    """Parse PaddleOCR 3.x predict() result: list of OCRResult objects."""
+    lines: list[str] = []
+    scores: list[float] = []
+    polys: list[list] = []
+    for raw in raw_results:
+        texts = raw.get("rec_texts") or []
+        rec_scores = raw.get("rec_scores") or []
+        rec_polys = raw.get("rec_polys") or []
+        for text, conf, poly in zip(texts, rec_scores, rec_polys):
+            lines.append(str(text))
+            scores.append(float(conf))
+            polys.append(poly)
+    return lines, scores, polys
+
+
+def _bbox_from_poly(poly: list) -> list:
+    """Convert a 4-point polygon to a flat [x1, y1, x2, y2] bounding box."""
+    try:
+        xs = [pt[0] for pt in poly]
+        ys = [pt[1] for pt in poly]
+        return [float(min(xs)), float(min(ys)), float(max(xs)), float(max(ys))]
+    except Exception:
+        return []
+
+
 def _paddle_pages(pdf_bytes: bytes) -> list[OcrPage]:
-    """Run PaddleOCR PP-Structure on rendered PDF images.  Import-guarded so tests pass
-    without the heavy dependency installed."""
+    """Run PaddleOCR on rendered PDF images.  Import-guarded so the API starts and
+    tests pass without the heavy dependency installed.
+
+    Supports PaddleOCR 2.x (ocr() API) and 3.x (predict() API) transparently.
+    Falls back to pypdf on any import or runtime error — never raises.
+    """
     try:
         import fitz  # PyMuPDF — renders PDF pages to images
-        from paddleocr import PaddleOCR
+        from paddleocr import PaddleOCR  # noqa: F401 — import check only
     except ImportError as exc:
         logger.info("PaddleOCR/PyMuPDF not installed, using pypdf fallback: %s", exc)
         return []
 
     try:
-        # One-time init per process (lazy singleton)
         ocr = _get_paddle_instance()
         doc = fitz.open(stream=pdf_bytes, filetype="pdf")
         result = []
@@ -94,21 +144,25 @@ def _paddle_pages(pdf_bytes: bytes) -> list[OcrPage]:
             pix = page.get_pixmap(dpi=300)
             img_bytes = pix.tobytes("png")
 
-            raw = ocr.ocr(img_bytes, cls=True)   # returns list[list[[bbox, (text, conf)]]]
+            # Auto-detect 2.x vs 3.x API at call time
+            if hasattr(ocr, "predict"):
+                # PaddleOCR 3.x
+                raw_results = list(ocr.predict(img_bytes))
+                texts, scores, polys = _extract_lines_v3(raw_results)
+            else:
+                # PaddleOCR 2.x
+                raw = ocr.ocr(img_bytes, cls=True)
+                texts, scores, polys = _extract_lines_v2(raw)
+
             lines: list[str] = []
             locators: list[dict] = []
-            if raw and raw[0]:
-                for lno, item in enumerate(raw[0], start=1):
-                    bbox_raw, (text, conf) = item
-                    # bbox_raw: [[x1,y1],[x2,y1],[x2,y2],[x1,y2]]
-                    xs = [pt[0] for pt in bbox_raw]
-                    ys = [pt[1] for pt in bbox_raw]
-                    bbox = [min(xs), min(ys), max(xs), max(ys)]
-                    lines.append(text)
-                    locators.append({
-                        "page": pno + 1, "line": lno,
-                        "bbox": bbox, "engine": "paddleocr", "confidence": float(conf),
-                    })
+            for lno, (text, conf, poly) in enumerate(zip(texts, scores, polys), start=1):
+                lines.append(text)
+                locators.append({
+                    "page": pno + 1, "line": lno,
+                    "bbox": _bbox_from_poly(poly),
+                    "engine": "paddleocr", "confidence": conf,
+                })
             result.append(OcrPage(page_number=pno + 1, lines=lines, locators=locators,
                                   engine="paddleocr", ocr_applied=True))
         doc.close()
@@ -122,12 +176,17 @@ _paddle_instance: Optional[object] = None
 
 
 def _get_paddle_instance():
+    """Lazy singleton for the PaddleOCR model.  Supports 2.x and 3.x init signatures."""
     global _paddle_instance
     if _paddle_instance is None:
         from paddleocr import PaddleOCR
-        # lang="en" covers English; "ml" or "hindi" can be added for Devanagari when
-        # language-specific model weights are pre-cached in production.
-        _paddle_instance = PaddleOCR(use_angle_cls=True, lang="en", show_log=False)
+        import inspect
+        params = inspect.signature(PaddleOCR.__init__).parameters
+        # PaddleOCR 2.x accepts use_angle_cls + show_log; 3.x removed both
+        if "use_angle_cls" in params:
+            _paddle_instance = PaddleOCR(use_angle_cls=True, lang="en", show_log=False)
+        else:
+            _paddle_instance = PaddleOCR(lang="en")
     return _paddle_instance
 
 

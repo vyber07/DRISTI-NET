@@ -491,7 +491,8 @@ export class GraphEngine {
 
 
     // Filter by date range
-    const timestamp = new Date(attr.timestamp as string).getTime();
+    const edgeTimeStr = (attr.firstSeen || attr.lastSeen || attr.timestamp) as string | undefined;
+    const timestamp = edgeTimeStr ? new Date(edgeTimeStr).getTime() : NaN;
     if (this.filters.dateRange && !isNaN(timestamp)) {
       if (timestamp < this.filters.dateRange[0] || timestamp > this.filters.dateRange[1]) {
         return false;

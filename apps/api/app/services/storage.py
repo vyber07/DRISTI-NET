@@ -89,6 +89,9 @@ def _client():
     return _s3_client
 
 
+s3 = _client
+
+
 def _ensure_bucket(client) -> None:
     from botocore.exceptions import ClientError
 

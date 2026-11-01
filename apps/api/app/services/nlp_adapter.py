@@ -48,6 +48,12 @@ _LABEL_MAP = {
     "ORGANIZATION": "ORGANIZATION",
     "LOC": "LOCATION",
     "LOCATION": "LOCATION",
+    "LABEL_1": "PERSON",
+    "LABEL_2": "PERSON",
+    "LABEL_3": "ORGANIZATION",
+    "LABEL_4": "ORGANIZATION",
+    "LABEL_5": "LOCATION",
+    "LABEL_6": "LOCATION",
 }
 
 _MODEL_NAME = "ai4bharat/IndicBERTv2-MLM-only-NER"
@@ -71,11 +77,23 @@ def _get_pipeline():
     if _pipeline_instance is None:
         from transformers import pipeline as hf_pipeline
         logger.info("Loading IndicBERT NER model: %s (first call)", _MODEL_NAME)
+        _id2label = {
+            0: "O",
+            1: "B-PER",
+            2: "I-PER",
+            3: "B-ORG",
+            4: "I-ORG",
+            5: "B-LOC",
+            6: "I-LOC",
+        }
         _pipeline_instance = hf_pipeline(
             "token-classification",
             model=_MODEL_NAME,
             aggregation_strategy="simple",
         )
+        if hasattr(_pipeline_instance, "model") and hasattr(_pipeline_instance.model, "config"):
+            _pipeline_instance.model.config.id2label = _id2label
+            _pipeline_instance.model.config.label2id = {v: k for k, v in _id2label.items()}
         logger.info("IndicBERT NER model loaded.")
     return _pipeline_instance
 
@@ -127,8 +145,10 @@ def extract_entities(
         score: float = float(item.get("score", 0.0))
         if score < confidence_threshold:
             continue
-        word: str = item.get("word", "").strip()
-        if not word or word.startswith("##"):
+        import re
+        word_raw: str = item.get("word", "").strip()
+        word = re.sub(r"\s*##\s*", "", word_raw).strip()
+        if not word:
             continue
         # Best-effort line localisation: find word in original text by char offset
         start_char: int = item.get("start", 0)

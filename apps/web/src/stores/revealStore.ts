@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { requestPiiReveal } from "@/services/api/revealApi";
+import { useGraphStore } from "@/stores/graphStore";
 import type { RevealResult } from "@/types/reveal";
 
 interface RevealModalTarget {
@@ -71,8 +72,14 @@ export const useRevealStore = create<RevealState>((set, get) => ({
     set({ isSubmitting: true, submissionError: null });
 
     try {
+      const activeCaseId = useGraphStore.getState().caseId || "CASE-0001";
       const res = await requestPiiReveal({
-        caseId: "unknown", maskedValue: "unknown", requesterBadge: "unknown", requesterName: "unknown", requesterRole: "unknown", officerClearance: 3,
+        caseId: activeCaseId,
+        maskedValue: state.modalTarget.maskedValue,
+        requesterBadge: "INV-DEMO",
+        requesterName: "Investigator",
+        requesterRole: "INVESTIGATOR",
+        officerClearance: 3,
         entityId: state.modalTarget.entityId,
         identifierType: state.modalTarget.identifierType as any,
         justification,

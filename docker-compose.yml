@@ -36,12 +36,15 @@ services:
       DRISHTI_STORAGE_ROOT: /data
       DRISHTI_KAFKA_BROKERS: kafka:9092
       DRISHTI_BESU_ENDPOINT: http://besu:8545
+      DRISHTI_REDIS_URL: redis://redis:6379/0
     volumes:
     - drishti-data:/data
     depends_on:
       postgres:
         condition: service_healthy
       neo4j:
+        condition: service_healthy
+      redis:
         condition: service_healthy
       minio:
         condition: service_healthy
@@ -153,10 +156,23 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+      migrations:
+        condition: service_completed_successfully
       kafka:
         condition: service_healthy
       besu:
         condition: service_healthy
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    healthcheck:
+      test:
+      - CMD
+      - redis-cli
+      - ping
+      interval: 5s
+      timeout: 3s
+      retries: 10
   kafka:
     image: bitnami/kafka:3.5
     restart: unless-stopped

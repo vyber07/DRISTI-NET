@@ -99,7 +99,7 @@ def test_no_secrets_in_repo():
     import re
     from apps.api.app.config import REPO_ROOT
     bad = re.compile(r"(AKIA[0-9A-Z]{16}|-----BEGIN (RSA|EC|OPENSSH) PRIVATE KEY-----|sk-[A-Za-z0-9]{20,})")
-    skip = {"node_modules", ".venv", "venv", ".git", "storage", "dist", "__pycache__", ".pytest_cache"}
+    skip = {"node_modules", ".venv", ".venv311", "venv", ".git", "storage", "dist", "__pycache__", ".pytest_cache"}
     for p in REPO_ROOT.rglob("*"):
         if p.is_file() and p.suffix in (".py", ".ts", ".tsx", ".md", ".yml", ".yaml", ".json", ".example") and not (skip & set(p.parts)):
             assert not bad.search(p.read_text(errors="ignore")), p
