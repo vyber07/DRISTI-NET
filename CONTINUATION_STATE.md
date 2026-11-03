@@ -1,6 +1,6 @@
 # DRISTI-NET — Continuation State & Handoff Record
 
-**Updated:** 2026-11-03 (session 4, third pass complete)
+**Updated:** 2026-11-04 (session 4, fourth pass complete)
 **Release status:** ENGINEERING PREVIEW (`audit/RELEASE_READINESS_REPORT.md`)
 **Branch:** `audit/session-4-security-fixes` (local, not pushed) on top of `main` @ `135edeb`.
 
@@ -33,8 +33,12 @@
    six-tier model (UI removed until decided).
 5. Replacement images for MinIO and Kafka (BLK-04); isolated host for `docker compose` (BLK-05).
 
+## Fourth pass (2026-11-04)
+DEF-098 job leases, DEF-099 candidate refresh, DEF-100 pinned/offline NER (real-model test). Verified: `make test` 181 passed /
+6 skipped; live stack 188 passed / 0 skipped; E2E 6/6 ×2 on the live stack.
+
 ## Next exact actions
 1. After approval 1: browser sweep of the live demo; confirm audit trail verifies (`scripts/backup_restore_drill.py` on a copy).
-2. Job lease/timeout so a process crash mid-job cannot leave a job RUNNING forever.
-3. Refresh match-candidate signals when new evidence arrives (currently frozen at creation).
-4. NER: pin model revision, offline mode, ≥100-entity evaluation set (DEF-018).
+   Consider setting `DRISHTI_NER_OFFLINE=1` in the demo's `.env` (the pinned model is already in this host's cache).
+2. NER: a ≥100-entity synthetic evaluation set; recall gaps observed (DEF-018).
+3. Split runtime vs optional Python dependencies (S4-07).

@@ -129,3 +129,12 @@ probed read-only (one request for `README.md`) and was not restarted or written 
 | `scripts/perf_test.py` (fixed, real pipeline per sample) | golden files 0.03–0.66 s each (PDF first sample 10.7 s: NER model load); 20 000-row CSV **17.8 s** median; graph query on that case 4.8 s |
 | Live-demo upgrade rehearsal on a **copy** of `storage/drishti.db` | new column added at startup; login, anchors, candidates, graph all 200; real file unchanged |
 | OpenAPI drift check | 1 drift (reveal `window` bound) → regenerated, 0 drift |
+
+## Session 4, fourth pass (2026-11-04)
+| Stage | Result |
+|---|---|
+| `make test` (clean env) | 181 passed, 6 skipped, 1 deselected |
+| Live PostgreSQL + Neo4j + S3 + ClamAV | 188 passed, 0 failed, 0 skipped |
+| Browser E2E on the live stack (DB built by the migrations entry point incl. `5bcde1234570`, evidence in S3) | 6/6, 6/6 |
+| Real NER model (pinned, offline) | adapter test passes; `fir_001.pdf` → 21 review-required candidates with page/line locators |
+| Evaluation / dry runs | 6/6 HIT, resolution 3/3; 5 × 29/29 |

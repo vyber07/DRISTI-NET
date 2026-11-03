@@ -184,3 +184,13 @@ keep the signals from when they were created (later evidence does not refresh th
 self-calls (CALL-0026, CALL-0034 — generator quirk, kept because many tests depend on exact counts); `paddlepaddle`
 advisories; raw-file download policy for EVIDENCE_OFFICER/AUDITOR; global `Entity.label` for shared identifiers.
 Existing deployments: person entities created before DEF-090 keep their old global key until data is re-ingested.
+
+## Session 4, fourth pass (2026-11-04): items previously "recorded, not changed"
+
+| ID | Sev | Component | Finding (evidence) | Fix | Regression test |
+|---|---|---|---|---|---|
+| DEF-098 | P1 | Pipeline | a process that died mid-job left the job RUNNING and the evidence in MALWARE_SCANNING / PROCESSING / ENTITY_CANDIDATES forever (`_job()` refused RUNNING, `/process` refused those states) | job lease `JOB_LEASE_S` (900 s): expired RUNNING jobs are reclaimed and audited (`JOB_LEASE_RECLAIMED`); fresh ones still refused | `test_job_abandoned_by_a_crashed_process_can_be_reclaimed` ×3 (faithful crash simulation per stage; all fail on old code) |
+| DEF-099 | P2 | Resolution | candidates frozen at creation: later evidence never reached the signals a reviewer sees | undecided candidates recomputed; decided ones keep decision + snapshot and expose `new_evidence_since_snapshot` | `test_undecided_candidates_refresh_and_decided_ones_show_new_evidence` |
+| DEF-100 | P1 (supply chain) | NER | model loaded by name from mutable `main`; since `main` has only a pickle `.bin`, transformers fetched `model.safetensors` from an **unmerged conversion PR branch** (`refs/pr/1`). The first real-model test also found that passing `local_files_only` twice raised `TypeError`, which the extractor would have swallowed — NER silently off | pinned to commit `924ec1c38bac2cec70ce3b4ed6c2cd60282a518d`, that commit's own weights (`use_safetensors=False`; torch 2.14 loads with `weights_only`); `DRISHTI_NER_OFFLINE=1`; label order pinned by observed behaviour (the model repo has no card) | `test_ner_real_model.py` (real model, local cache only); real offline ingest of `fir_001.pdf`: 21 candidates with page/line |
+
+Closes the pinning/offline part of DEF-018 and DEF-027. Still open from DEF-018: recall (the real model missed "Rahul Sharma" in a probe sentence) and an evaluation set of meaningful size.
