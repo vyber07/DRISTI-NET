@@ -60,80 +60,109 @@ def _merkle_hash(left: str, right: str) -> str:
     return hashlib.sha256(combined).hexdigest()
 
 
-def merkle_root(leaf_hashes: list[str]) -> str:
-    """Compute the deterministic Merkle root of an ordered list of hex SHA-256 hashes.
+# DEF-085: the original construction (kept below as scheme "dup-last-v0" so existing anchors still verify) had no
+# leaf/node domain separation and duplicated the last node on odd levels: root([a,b,c]) == root([a,b,c,c]), and an
+# internal node could be presented as a leaf. Its docstring claimed RFC 6962, which it was not. New anchors use
+# RFC 6962 Merkle Tree Hash: leaf = SHA-256(0x00 || leaf), node = SHA-256(0x01 || left || right), split at the
+# largest power of two smaller than n, no duplication.
+SCHEME_RFC6962 = "rfc6962"
+SCHEME_LEGACY = "dup-last-v0"
+CURRENT_SCHEME = SCHEME_RFC6962
 
-    Empty list returns the hash of an empty byte string (standard sentinel).
-    Odd-length levels duplicate the last leaf (RFC 6962 / Bitcoin convention).
 
-    Parameters
-    ----------
-    leaf_hashes : list of SHA-256 hex strings (64 chars each)
+def _rfc_leaf(leaf_hex: str) -> str:
+    return hashlib.sha256(b"\x00" + bytes.fromhex(leaf_hex)).hexdigest()
 
-    Returns
-    -------
-    Hex SHA-256 string of the Merkle root.
-    """
-    if not leaf_hashes:
-        return hashlib.sha256(b"").hexdigest()
+
+def _rfc_node(left_hex: str, right_hex: str) -> str:
+    return hashlib.sha256(b"\x01" + bytes.fromhex(left_hex) + bytes.fromhex(right_hex)).hexdigest()
+
+
+def _split(n: int) -> int:
+    k = 1
+    while k * 2 < n:
+        k *= 2
+    return k
+
+
+def _rfc_mth(leaves: list[str]) -> str:
+    if len(leaves) == 1:
+        return _rfc_leaf(leaves[0])
+    k = _split(len(leaves))
+    return _rfc_node(_rfc_mth(leaves[:k]), _rfc_mth(leaves[k:]))
+
+
+def _rfc_path(m: int, leaves: list[str]) -> list[dict]:
+    """RFC 6962 audit path, ordered from the leaf upwards."""
+    if len(leaves) == 1:
+        return []
+    k = _split(len(leaves))
+    if m < k:
+        return _rfc_path(m, leaves[:k]) + [{"hash": _rfc_mth(leaves[k:]), "position": "right"}]
+    return _rfc_path(m - k, leaves[k:]) + [{"hash": _rfc_mth(leaves[:k]), "position": "left"}]
+
+
+def _legacy_root(leaf_hashes: list[str]) -> str:
     level = list(leaf_hashes)
     while len(level) > 1:
         if len(level) % 2 == 1:
-            level.append(level[-1])   # duplicate last leaf on odd-length level
-        next_level = []
-        for i in range(0, len(level), 2):
-            next_level.append(_merkle_hash(level[i], level[i + 1]))
-        level = next_level
+            level.append(level[-1])
+        level = [_merkle_hash(level[i], level[i + 1]) for i in range(0, len(level), 2)]
     return level[0]
 
 
-@dataclass
-class MerkleProof:
-    """An inclusion proof for a single leaf.  Can be verified offline."""
-    leaf_hash: str
-    root: str
-    siblings: list[dict]   # [{"hash": hex, "position": "left"|"right"}, ...]
-
-    def verify(self) -> bool:
-        """Recompute the root from the leaf + siblings and check it matches."""
-        current = self.leaf_hash
-        for step in self.siblings:
-            sib = step["hash"]
-            if step["position"] == "left":
-                current = _merkle_hash(sib, current)
-            else:
-                current = _merkle_hash(current, sib)
-        return current == self.root
-
-
-def merkle_proof(leaf_hashes: list[str], leaf_index: int) -> MerkleProof:
-    """Compute the inclusion proof for leaf_hashes[leaf_index].
-
-    Raises IndexError if leaf_index is out of bounds.
-    """
-    if not leaf_hashes or leaf_index < 0 or leaf_index >= len(leaf_hashes):
-        raise IndexError(f"leaf_index {leaf_index} out of range for {len(leaf_hashes)} leaves")
-    root = merkle_root(leaf_hashes)
-    level = list(leaf_hashes)
-    idx = leaf_index
-    siblings: list[dict] = []
+def _legacy_path(leaf_hashes: list[str], leaf_index: int) -> list[dict]:
+    level, idx, siblings = list(leaf_hashes), leaf_index, []
     while len(level) > 1:
         if len(level) % 2 == 1:
             level.append(level[-1])
         if idx % 2 == 0:
-            # right sibling
-            sib_idx = idx + 1
-            siblings.append({"hash": level[sib_idx], "position": "right"})
+            siblings.append({"hash": level[idx + 1], "position": "right"})
         else:
-            # left sibling
-            sib_idx = idx - 1
-            siblings.append({"hash": level[sib_idx], "position": "left"})
-        next_level = []
-        for i in range(0, len(level), 2):
-            next_level.append(_merkle_hash(level[i], level[i + 1]))
-        level = next_level
+            siblings.append({"hash": level[idx - 1], "position": "left"})
+        level = [_merkle_hash(level[i], level[i + 1]) for i in range(0, len(level), 2)]
         idx //= 2
-    return MerkleProof(leaf_hash=leaf_hashes[leaf_index], root=root, siblings=siblings)
+    return siblings
+
+
+def merkle_root(leaf_hashes: list[str], scheme: str = CURRENT_SCHEME) -> str:
+    """Merkle root of an ordered list of hex SHA-256 leaf values. Empty list -> SHA-256 of the empty string."""
+    if not leaf_hashes:
+        return hashlib.sha256(b"").hexdigest()
+    if scheme == SCHEME_RFC6962:
+        return _rfc_mth(list(leaf_hashes))
+    if scheme == SCHEME_LEGACY:
+        return _legacy_root(leaf_hashes)
+    raise ValueError(f"unknown Merkle scheme {scheme!r}")
+
+
+@dataclass
+class MerkleProof:
+    """An inclusion proof for a single leaf. Can be verified offline."""
+    leaf_hash: str
+    root: str
+    siblings: list[dict]   # [{"hash": hex, "position": "left"|"right"}, ...], leaf upwards
+    scheme: str = CURRENT_SCHEME
+
+    def verify(self) -> bool:
+        """Recompute the root from the leaf + siblings and check it matches."""
+        if self.scheme == SCHEME_RFC6962:
+            current, combine = _rfc_leaf(self.leaf_hash), _rfc_node
+        elif self.scheme == SCHEME_LEGACY:
+            current, combine = self.leaf_hash, _merkle_hash
+        else:
+            return False
+        for step in self.siblings:
+            current = combine(step["hash"], current) if step["position"] == "left" else combine(current, step["hash"])
+        return current == self.root
+
+
+def merkle_proof(leaf_hashes: list[str], leaf_index: int, scheme: str = CURRENT_SCHEME) -> MerkleProof:
+    """Inclusion proof for leaf_hashes[leaf_index]. Raises IndexError if leaf_index is out of bounds."""
+    if not leaf_hashes or leaf_index < 0 or leaf_index >= len(leaf_hashes):
+        raise IndexError(f"leaf_index {leaf_index} out of range for {len(leaf_hashes)} leaves")
+    siblings = _rfc_path(leaf_index, list(leaf_hashes)) if scheme == SCHEME_RFC6962 else _legacy_path(leaf_hashes, leaf_index)
+    return MerkleProof(leaf_hash=leaf_hashes[leaf_index], root=merkle_root(leaf_hashes, scheme), siblings=siblings, scheme=scheme)
 
 
 # ─── Database model ──────────────────────────────────────────────────────────
@@ -157,6 +186,9 @@ class LedgerAnchor(Base):
     chain_id: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     endpoint: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     anchor_status: Mapped[str] = mapped_column(String, default="LOCAL_ONLY")
+    # DEF-085: which Merkle construction produced merkle_root. Rows that existed before the column get the legacy
+    # value through the server default (migration 5bcde1234570 / SQLite additive upgrade in db.init_db).
+    merkle_scheme: Mapped[Optional[str]] = mapped_column(String, nullable=True, server_default=SCHEME_LEGACY)
     # LOCAL_ONLY = Merkle root computed but no ledger tx submitted
     # SUBMITTED  = tx submitted, awaiting confirmation
     # CONFIRMED  = block confirmation received
@@ -242,8 +274,9 @@ def build_and_anchor(
 
     Returns the saved LedgerAnchor row.
     """
-    root = merkle_root(evidence_sha256_list)
+    root = merkle_root(evidence_sha256_list, CURRENT_SCHEME)
     anchor = LedgerAnchor(
+        merkle_scheme=CURRENT_SCHEME,
         anchor_id=new_anchor_id(),
         case_id=case_id,
         leaf_hashes=evidence_sha256_list,

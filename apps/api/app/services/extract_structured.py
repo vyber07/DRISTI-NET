@@ -2,9 +2,27 @@ import csv, io, json, re
 from .extract_common import ExtractorBase, norm_phone, norm_account, norm_name, norm_text, norm_reg
 
 class StructuredExtractor(ExtractorBase):
+    def _missing_party(self, kind, norm, row, cols, line, observed_time):
+        """DEF-093: a row with a blank identifier used to create one shared entity with an empty key (a phantom hub
+        linking every such row, across cases). Record the present party with the gap as missing data instead."""
+        present = [c for c in cols if norm(row.get(c) or "")]
+        missing = {c: "missing in source" for c in cols if not norm(row.get(c) or "")}
+        self.stats.missing_fields += len(missing)
+        if not present:
+            return
+        c = present[0]
+        ent = self.entity(kind, norm(row[c]), row[c])
+        self.claim("MENTION", ent, original=row[c], normalized=ent.canonical, observed_time=observed_time, missingness=missing,
+                   confidence=0.6, locator={"row": line, "columns": list(cols)}, snippet=",".join(v or "" for v in row.values()))
+
     def extract_calls(self, text: str):
-        for i, row in enumerate(csv.DictReader(io.StringIO(text)), start=2):  # row 1 = header
+        reader = csv.DictReader(io.StringIO(text))
+        for row in reader:
+            i = reader.line_num  # DEF-094: physical line (blank lines are skipped by DictReader)
             self.stats.rows += 1
+            if not norm_phone(row.get("caller") or "") or not norm_phone(row.get("callee") or ""):
+                self._missing_party("PHONE", norm_phone, row, ("caller", "callee"), i, row.get("start_time"))
+                continue
             caller = self.entity("PHONE", norm_phone(row["caller"]), row["caller"])
             callee = self.entity("PHONE", norm_phone(row["callee"]), row["callee"])
             missing = {}
@@ -23,8 +41,13 @@ class StructuredExtractor(ExtractorBase):
 
     # ---------------------------------------------------------------- CSV: transactions
     def extract_transactions(self, text: str):
-        for i, row in enumerate(csv.DictReader(io.StringIO(text)), start=2):
+        reader = csv.DictReader(io.StringIO(text))
+        for row in reader:
+            i = reader.line_num  # DEF-094
             self.stats.rows += 1
+            if not norm_account(row.get("from_account") or "") or not norm_account(row.get("to_account") or ""):
+                self._missing_party("ACCOUNT", norm_account, row, ("from_account", "to_account"), i, row.get("timestamp"))
+                continue
             src = self.entity("ACCOUNT", norm_account(row["from_account"]), row["from_account"])
             dst = self.entity("ACCOUNT", norm_account(row["to_account"]), row["to_account"])
             amt = (row.get("amount_inr") or "").strip()
@@ -36,19 +59,23 @@ class StructuredExtractor(ExtractorBase):
 
     # ---------------------------------------------------------------- CSV: vehicles
     def extract_vehicles(self, text: str):
-        for i, row in enumerate(csv.DictReader(io.StringIO(text)), start=2):
+        reader = csv.DictReader(io.StringIO(text))
+        for row in reader:
+            i = reader.line_num  # DEF-094
             self.stats.rows += 1
             veh = self.entity("VEHICLE", norm_reg(row["registration"]), row["registration"], {"type": row.get("type")})
             self.claim("ATTRIBUTE", veh, attribute="owner", original=row["owner_name"], normalized=norm_name(row["owner_name"]),
                        locator={"row": i, "columns": ["registration", "owner_name"]}, snippet=",".join(row.values()))
             if row.get("owner_person_id"):
-                person = self.entity("PERSON", f"pid:{row['owner_person_id']}", row["owner_name"])
+                person = self.entity("PERSON", self.pid(row["owner_person_id"]), row["owner_name"])
                 self.claim("RELATIONSHIP", person, veh, "OWNS_VEHICLE", original=row["registration"], normalized=veh.canonical,
                            locator={"row": i, "columns": ["owner_person_id", "registration"]}, snippet=",".join(row.values()))
 
     # ---------------------------------------------------------------- CSV: locations
     def extract_locations(self, text: str):
-        for i, row in enumerate(csv.DictReader(io.StringIO(text)), start=2):
+        reader = csv.DictReader(io.StringIO(text))
+        for row in reader:
+            i = reader.line_num  # DEF-094
             self.stats.rows += 1
             loc = self.entity("LOCATION", row["location_id"], row.get("name") or row["location_id"],
                               {"lat": row.get("lat"), "lon": row.get("lon"), "kind": row.get("kind")})
@@ -61,7 +88,7 @@ class StructuredExtractor(ExtractorBase):
         for i, rec in enumerate(json.loads(text)):
             self.stats.rows += 1
             jp = f"$[{i}]"
-            person = self.entity("PERSON", f"pid:{rec['person_id']}", rec["name"],
+            person = self.entity("PERSON", self.pid(rec["person_id"]), rec["name"],
                                  {"dob": rec.get("dob"), "address": rec.get("address"), "person_id": rec["person_id"]})
             self.claim("RELATIONSHIP", person, case, "APPEARS_IN", original=rec["person_id"], normalized=rec["person_id"],
                        locator={"json_path": jp}, snippet=json.dumps(rec)[:200])
@@ -89,7 +116,7 @@ class StructuredExtractor(ExtractorBase):
     def extract_aliases(self, text: str):
         for i, rec in enumerate(json.loads(text)):
             self.stats.rows += 1
-            person = self.entity("PERSON", f"pid:{rec['person_id']}", rec.get("person_id"))
+            person = self.entity("PERSON", self.pid(rec["person_id"]), rec.get("person_id"))
             self.claim("ATTRIBUTE", person, attribute="alias", original=rec["alias"], normalized=norm_name(rec["alias"]),
                        locator={"json_path": f"$[{i}].alias"}, snippet=json.dumps(rec))
 

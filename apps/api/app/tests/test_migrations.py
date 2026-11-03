@@ -84,3 +84,34 @@ def test_alembic_upgrade_on_fresh_db_matches_models_and_downgrades(fresh_db_url)
             assert set(inspect(conn).get_table_names()) - {"alembic_version"} == set()
     finally:
         eng.dispose()
+
+
+def test_timestamps_and_audit_signatures_survive_a_non_utc_server_time_zone():
+    """DEF-088: with the database/server time zone set to Asia/Kolkata, stored timestamps shifted +05:30 and every
+    audit HMAC failed verification after reload. Sessions are now pinned to UTC."""
+    from sqlalchemy import text
+    from apps.api.app.db import Base, SessionLocal, engine
+    from apps.api.app.models import AuditEvent
+    from apps.api.app.services.audit import record_audit, verify_audit_event
+
+    dbname = engine.url.database
+    with engine.connect() as c:
+        c.execution_options(isolation_level="AUTOCOMMIT").execute(text(f'ALTER DATABASE "{dbname}" SET timezone TO \'Asia/Kolkata\''))
+    engine.dispose()  # new connections pick up the database default -- the listener must override it
+    try:
+        Base.metadata.create_all(engine)
+        with engine.connect() as c:
+            assert c.execute(text("show timezone")).scalar() == "UTC"
+        db = SessionLocal()
+        ev = record_audit(db, "TR-TZ", None, "TZ_PROBE", detail={"x": 1})
+        signed_at = ev.created_at.replace(tzinfo=None)
+        db.commit(); aid = ev.audit_id; db.close()
+        db = SessionLocal()
+        row = db.get(AuditEvent, aid)
+        assert row.created_at.replace(tzinfo=None) == signed_at, (row.created_at, signed_at)
+        assert verify_audit_event(row)
+        db.close()
+    finally:
+        with engine.connect() as c:
+            c.execution_options(isolation_level="AUTOCOMMIT").execute(text(f'ALTER DATABASE "{dbname}" RESET timezone'))
+        engine.dispose()

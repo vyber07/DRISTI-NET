@@ -15,7 +15,14 @@ router = APIRouter(tags=["graph"])
 
 
 def _t(s: str | None) -> datetime | None:
-    return graph_svc._parse_time(s) if s else None
+    """Time-window query parameter. DEF-087: an unparseable value used to be ignored (graph) or compared as a raw
+    string (timeline), so a filter that failed looked like a filtered result. Reject it instead."""
+    if not s:
+        return None
+    t = graph_svc._parse_time(s.strip())
+    if t is None:
+        raise HTTPException(422, "time filter must be YYYY-MM-DD, YYYY-MM-DD HH:MM[:SS] or YYYY-MM-DDTHH:MM[:SS] (no time zone)")
+    return t
 
 
 def claim_out(c: Claim, db: Session, unmasked: bool = False) -> dict:
@@ -140,10 +147,12 @@ def timeline(case_id: str, request: Request, t_from: str | None = None, t_to: st
     q = db.query(Claim).filter(Claim.case_id == case_id, Claim.kind == "RELATIONSHIP", Claim.observed_time.isnot(None), Claim.state.in_(["ALLOWED", "APPROVE"]))
     if entity_id:
         q = q.filter((Claim.source_entity_id == entity_id) | (Claim.target_entity_id == entity_id))
-    if t_from:
-        q = q.filter(Claim.observed_time >= t_from)
-    if t_to:
-        q = q.filter(Claim.observed_time <= t_to)
+    # stored observed_time is normalised 'YYYY-MM-DD HH:MM:SS', so compare against the same canonical form
+    tf, tt = _t(t_from), _t(t_to)
+    if tf:
+        q = q.filter(Claim.observed_time >= tf.strftime("%Y-%m-%d %H:%M:%S"))
+    if tt:
+        q = q.filter(Claim.observed_time <= tt.strftime("%Y-%m-%d %H:%M:%S"))
     claims = q.order_by(Claim.observed_time).limit(min(limit, 2000)).all()
     ents = {e.entity_id: e for e in db.query(Entity).filter(Entity.entity_id.in_({c.source_entity_id for c in claims} | {c.target_entity_id for c in claims if c.target_entity_id})).all()} if claims else {}
     all_times = [c.observed_time for c in db.query(Claim.observed_time).filter(Claim.case_id == case_id, Claim.observed_time.isnot(None)).all() for c in [c]]

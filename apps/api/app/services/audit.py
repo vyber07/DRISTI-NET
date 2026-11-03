@@ -36,10 +36,29 @@ def _compute_hmac(key_bytes: bytes, ev: AuditEvent) -> str:
     payload = f"{ev.audit_id}|{ev.trace_id}|{ev.actor_id or ''}|{ev.action}|{ev.target_kind or ''}|{ev.target_id or ''}|{ev.case_id or ''}|{ev.outcome}|{dt_str}|{json.dumps(ev.detail, sort_keys=True)}"
     return hmac.new(key_bytes, payload.encode('utf-8'), hashlib.sha256).hexdigest()
 
+def _compute_hmac_json(key_bytes: bytes, ev: AuditEvent) -> str:
+    """DEF-091: unambiguous payload. The legacy payload joined fields with '|', so text could move across a field
+    boundary (trace_id 'T|USR-a' + actor 'USR-b' == trace 'T' + actor 'USR-a|USR-b') without breaking the HMAC.
+    A JSON array keeps every field's boundaries; the timestamp canonicalisation is unchanged."""
+    _compute_hmac(key_bytes, ev)  # assigns created_at / audit_id defaults exactly as before
+    dt = ev.created_at
+    if dt.tzinfo is None:
+        import datetime
+        dt = dt.replace(tzinfo=datetime.timezone.utc)
+    fields = [ev.audit_id, ev.trace_id, ev.actor_id or "", ev.action, ev.target_kind or "", ev.target_id or "",
+              ev.case_id or "", ev.outcome, dt.isoformat(), ev.detail]
+    payload = json.dumps(fields, sort_keys=True, separators=(",", ":"), ensure_ascii=False)
+    return hmac.new(key_bytes, payload.encode("utf-8"), hashlib.sha256).hexdigest()
+
+
+_ALGORITHMS = {"hmac-sha256": _compute_hmac, "hmac-sha256-json": _compute_hmac_json}
+CURRENT_ALGORITHM = "hmac-sha256-json"
+
+
 def sign_audit_event(ev: AuditEvent) -> str:
     key_bytes = config.AUDIT_KEYS[config.CURRENT_AUDIT_KEY_ID].encode('utf-8')
-    sig_hex = _compute_hmac(key_bytes, ev)
-    return f"{config.CURRENT_AUDIT_KEY_ID}:hmac-sha256:{sig_hex}"
+    sig_hex = _ALGORITHMS[CURRENT_ALGORITHM](key_bytes, ev)
+    return f"{config.CURRENT_AUDIT_KEY_ID}:{CURRENT_ALGORITHM}:{sig_hex}"
 
 # P1-1: Add HMAC verification
 def verify_audit_event(ev: AuditEvent) -> bool:
@@ -57,11 +76,12 @@ def verify_audit_event(ev: AuditEvent) -> bool:
         # Cannot verify with unknown key
         return False
         
-    if algo != "hmac-sha256":
+    compute = _ALGORITHMS.get(algo)
+    if compute is None:
         return False
-        
+
     key_bytes = config.AUDIT_KEYS[key_id].encode('utf-8')
-    expected_hex = _compute_hmac(key_bytes, ev)
+    expected_hex = compute(key_bytes, ev)
     return hmac.compare_digest(expected_hex, sig_hex)
 
 def record_audit(db: Session, trace_id: str, actor_id: str | None, action: str, target_kind: str | None = None,

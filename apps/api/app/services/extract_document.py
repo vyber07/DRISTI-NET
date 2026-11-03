@@ -37,8 +37,10 @@ class DocumentExtractor(StructuredExtractor):
                 # vehicle ownership asserted by the document → ATTRIBUTE claim (may contradict a registry).
                 # The sentence may wrap, so match against this line joined with the next one.
                 joined = line + " " + (lines[lno] if lno < len(lines) else "")
+                this_line_len = len(re.sub(r"\s+", " ", line))
                 for m in self.OWNER_RE.finditer(re.sub(r"\s+", " ", joined)):
-                    if "registration" not in line:
+                    # DEF-096: only sentences that start on this line; one starting on the next line is claimed there
+                    if "registration" not in line or m.start() >= this_line_len:
                         continue
                     veh = self.entity("VEHICLE", norm_reg(m.group(1)), m.group(1))
                     self.claim("ATTRIBUTE", veh, attribute="owner", original=m.group(2), normalized=norm_name(m.group(2)),
@@ -102,9 +104,14 @@ class DocumentExtractor(StructuredExtractor):
         # ── Model-backed NER pass (IndicBERT) ────────────────────────────────────
         try:
             from .nlp_adapter import extract_entities as _ner
-            full_text = "\n".join(l for pg in pages for l in pg)
-            if full_text.strip():
-                ner_candidates = _ner(full_text, evidence_id=self.ev.evidence_id, page=1, line_start=1)
+            # DEF-095: run per page with the real page number; joining every page and passing page=1 gave a name on
+            # page 2 a page-1 locator that opened nothing.
+            ner_candidates = []
+            for pno_ner, page_lines in enumerate(pages, start=1):
+                page_text = "\n".join(page_lines)
+                if page_text.strip():
+                    ner_candidates.extend(_ner(page_text, evidence_id=self.ev.evidence_id, page=pno_ner, line_start=1))
+            if ner_candidates:
                 for nc in ner_candidates:
                     canonical_id = f"mention:{norm_name(nc.normalized_text)}@{self.ev.evidence_id}" if nc.kind == "PERSON" else f"ner:{norm_name(nc.normalized_text)}@{self.ev.evidence_id}"
                     ent = self.entity(nc.kind, canonical_id,

@@ -38,7 +38,9 @@ HALF_LIFE_DAYS = 180
 def _parse_time(s: str | None) -> datetime | None:
     if not s:
         return None
-    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d"):
+    # DEF-087: also the ISO 'T' forms a browser datetime-local input sends. Values carrying a zone are not accepted
+    # anywhere (stored times are recorded without one), so they fall through to None.
+    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M", "%Y-%m-%d %H:%M"):
         try:
             return datetime.strptime(s, fmt)
         except ValueError:
@@ -356,7 +358,9 @@ def analyze(G: nx.MultiDiGraph) -> dict:
                                     "check against how much this grouping depends on exactly which evidence "
                                     "is present, not a confidence or accuracy percentage")
     # which community does each bridge candidate touch?
-    comm_of = {m["entity_id"]: c["community_id"] for c in communities for m in c.get("members", [])}
+    # DEF-089: built from the full community sets. It used the displayed member list (capped at 12), so a bridge
+    # whose neighbours were outside a large community's top 12 reported touching no community at all.
+    comm_of = {n: f"C{i+1}" for i, cset in enumerate(comm_sets) for n in cset}
     for b in bridges:
         touched = {comm_of.get(nb) for nb in U.neighbors(b["entity_id"]) if comm_of.get(nb)}
         b["touches_communities"] = sorted(touched)

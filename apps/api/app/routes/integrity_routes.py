@@ -46,6 +46,7 @@ def _anchor_out(anchor) -> dict:
         "anchor_id": anchor.anchor_id,
         "case_id": anchor.case_id,
         "merkle_root": anchor.merkle_root,
+        "merkle_scheme": anchor.merkle_scheme or integrity_svc.SCHEME_LEGACY,
         "leaf_count": len(anchor.leaf_hashes),
         "anchor_status": anchor.anchor_status,
         "tx_hash": anchor.tx_hash,
@@ -149,7 +150,7 @@ def merkle_proof(
     except ValueError:
         raise HTTPException(404, f"SHA-256 {leaf_sha256[:16]}… not found in anchor leaf set")
     try:
-        proof = integrity_svc.merkle_proof(anchor.leaf_hashes, idx)
+        proof = integrity_svc.merkle_proof(anchor.leaf_hashes, idx, anchor.merkle_scheme or integrity_svc.SCHEME_LEGACY)
     except Exception as exc:
         raise HTTPException(500, f"Proof computation failed: {exc}")
     return {
@@ -157,6 +158,8 @@ def merkle_proof(
         "merkle_root": anchor.merkle_root,
         "leaf_sha256": leaf_sha256,
         "leaf_index": idx,
+        "merkle_scheme": proof.scheme,
+        "proof_root_matches_anchor": proof.root == anchor.merkle_root,
         "siblings": proof.siblings,
         "valid": proof.verify(),
         "note": "Verify offline: recompute the root from leaf + siblings and compare with merkle_root.",
