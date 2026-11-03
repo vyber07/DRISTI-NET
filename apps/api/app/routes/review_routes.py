@@ -37,6 +37,10 @@ def candidate_out(db: Session, m: MatchCandidate, detailed: bool = True) -> dict
     if detailed:
         d["left"] = entity_summary(db, left, m.case_id)
         d["right"] = entity_summary(db, right, m.case_id)
+        # DEF-099: evidence about either record that arrived after this candidate's signals were computed. For a
+        # decided candidate the signals are the snapshot the reviewer decided on; this tells them what is newer.
+        current = set(d["left"]["evidence_ids"]) | set(d["right"]["evidence_ids"])
+        d["new_evidence_since_snapshot"] = sorted(current - set(m.evidence_ids or []))
     return d
 
 

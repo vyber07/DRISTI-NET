@@ -36,9 +36,18 @@ def _job(db: Session, ev: Evidence, kind: str, trace_id: str) -> Job:
     elif job.status == "SUCCEEDED":
         raise ValueError(f"Job {key} already succeeded")
     elif job.status == "RUNNING":
-        # In a real deployment we'd check lock timeouts, but for now we reject
-        raise ValueError(f"Job {key} is already running in another worker")
-        
+        # DEF-098: refuse while a worker may still hold the job; reclaim it once its lease has expired (the process
+        # that held it died -- otherwise the job and its evidence stayed stuck forever).
+        import datetime
+        from .. import config
+        last = job.updated_at.replace(tzinfo=None) if job.updated_at else None
+        now = datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
+        if last is not None and (now - last).total_seconds() < config.JOB_LEASE_S:
+            raise ValueError(f"Job {key} is already running in another worker")
+        logger.warning("reclaiming abandoned job %s (last update %s)", key, last)
+        record_audit(db, trace_id, None, "JOB_LEASE_RECLAIMED", "JOB", job.job_id, ev.case_id, outcome="ERROR",
+                     detail={"kind": kind, "last_update": last.isoformat() if last else None, "lease_s": config.JOB_LEASE_S})
+
     job.attempts += 1
     job.status = "RUNNING"
     job.error = None
@@ -87,7 +96,7 @@ def run_scan(db: Session, ev: Evidence, trace_id: str, actor_id: str | None) -> 
 
 
 def run_extract(db: Session, ev: Evidence, trace_id: str, actor_id: str | None) -> bool:
-    if ev.status not in ("ACCEPTED", "EXTRACTION_FAILED"):
+    if ev.status not in ("ACCEPTED", "EXTRACTION_FAILED", "PROCESSING"):
         raise ValueError(f"evidence {ev.evidence_id} is {ev.status}; extraction requires ACCEPTED")
     job = _job(db, ev, "EXTRACT", trace_id)
     ev.status = "PROCESSING"
@@ -170,13 +179,15 @@ def process_evidence(db: Session, evidence_id: str, trace_id: str, actor_id: str
             db.commit()
             return ev  # worker will process asynchronously
 
-    if ev.status in ("QUARANTINED", "SCAN_FAILED", "SCAN_TIMEOUT", "SCANNER_UNAVAILABLE"):
+    # MALWARE_SCANNING / PROCESSING / ENTITY_CANDIDATES are only re-entered after a job lease expired (DEF-098);
+    # _job() refuses them while the job is still held.
+    if ev.status in ("QUARANTINED", "SCAN_FAILED", "SCAN_TIMEOUT", "SCANNER_UNAVAILABLE", "MALWARE_SCANNING"):
         if not run_scan(db, ev, trace_id, actor_id):
             return ev
-    if ev.status in ("ACCEPTED", "EXTRACTION_FAILED"):
+    if ev.status in ("ACCEPTED", "EXTRACTION_FAILED", "PROCESSING"):
         if not run_extract(db, ev, trace_id, actor_id):
             return ev
-    if ev.status == "EXTRACTED":
+    if ev.status in ("EXTRACTED", "ENTITY_CANDIDATES"):
         run_resolve(db, ev, trace_id, actor_id)
     return ev
 

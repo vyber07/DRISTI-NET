@@ -97,3 +97,74 @@ def test_consecutive_ownership_sentences_give_one_claim_each_on_their_own_line(c
                                                   b"The vehicle with registration KA03 BB 0002 owned by Sameer Qureshi was seen.\n")
     owners = sorted((c["original_value"], c["provenance"][0]["locator"]["line"]) for c in _claims(client, investigator, ev["evidence_id"]) if c.get("attribute") == "owner")
     assert owners == [("Kavya Iyer", 2), ("Sameer Qureshi", 3)], owners
+
+
+@pytest.mark.parametrize("stuck_status, kind", [("MALWARE_SCANNING", "SCAN"), ("PROCESSING", "EXTRACT"), ("ENTITY_CANDIDATES", "RESOLVE")])
+def test_job_abandoned_by_a_crashed_process_can_be_reclaimed(client, case, officer, auditor, stuck_status, kind):
+    """DEF-098: a process that died mid-job left the job RUNNING and the evidence in an in-between state forever:
+    _job() refused RUNNING jobs and /process refused those states. A RUNNING job past its lease is reclaimable; a fresh
+    RUNNING job is still refused (two workers must not run the same job). The crash is simulated faithfully: earlier
+    stages really ran, the crashed stage left only its RUNNING job (its transaction rolled back), later stages never ran."""
+    import datetime
+    from ..db import SessionLocal
+    from ..models import Evidence, Job
+    from ..services import pipeline
+    n = {"SCAN": 1, "EXTRACT": 2, "RESOLVE": 3}[kind]
+    r = client.post(f"/api/v1/cases/{case}/evidence", headers=officer, data={"process": "false"},
+                    files={"file": (f"calls_crash_{kind.lower()}.csv",
+                                    f"call_id,caller,callee,start_time,duration_sec,cell_id\nC1,+91 90000 8{n}001,+91 90000 8{n}002,2025-01-01 10:00:00,10,\n".encode())})
+    assert r.status_code == 201, r.text
+    ev_id = r.json()["evidence_id"]
+    db = SessionLocal()
+    e = db.get(Evidence, ev_id)
+    if kind in ("EXTRACT", "RESOLVE"):
+        assert pipeline.run_scan(db, e, "TRC-test", None)
+    if kind == "RESOLVE":
+        assert pipeline.run_extract(db, e, "TRC-test", None)
+    now = datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
+    job = Job(evidence_id=ev_id, case_id=e.case_id, kind=kind, trace_id="TRC-crashed", idempotency_key=f"{ev_id}:{kind}",
+              attempts=1, metrics={}, status="RUNNING", updated_at=now)
+    db.add(job)
+    e.status = stuck_status
+    db.commit()
+    # a worker may still hold a fresh job: refuse
+    assert client.post(f"/api/v1/evidence/{ev_id}/process", headers=officer).status_code == 409
+    job.updated_at = now - datetime.timedelta(hours=2)  # the lease has long expired: the holder died
+    db.commit(); db.close()
+    r = client.post(f"/api/v1/evidence/{ev_id}/process", headers=officer)
+    assert r.status_code == 200, r.text
+    assert r.json()["status"] in ("HITL", "GRAPH_PROJECTED"), r.json()["status"]
+    rows = client.get("/api/v1/audit?action=JOB_LEASE_RECLAIMED&limit=500", headers=auditor).json()
+    assert any(a["case_id"] == case for a in rows)
+
+
+def test_undecided_candidates_refresh_and_decided_ones_show_new_evidence(client, admin, officer, reviewer):
+    """DEF-099: candidates were frozen at creation -- later evidence about the same two records never reached the
+    signals a reviewer sees. Undecided candidates are now recomputed; decided ones keep the signals and decision the
+    reviewer saw, and list the evidence that arrived after that snapshot."""
+    import json
+    cid = "CASE-PROV2"
+    assert client.post("/api/v1/cases", headers=admin, json={"case_id": cid, "title": "candidate refresh", "jurisdiction": "Demo District A",
+                       "purpose": "RETROSPECTIVE_REVIEW", "authority_reference": "TEST-PROV2"}).status_code == 201
+    for u in ("officer", "reviewer"):
+        client.post(f"/api/v1/cases/{cid}/assign", headers=admin, json={"username": u})
+    people = [{"person_id": "P-1", "name": "Meera Joshi"},
+              {"person_id": "P-2", "name": "Meera Joshi"},
+              {"person_id": "P-3", "name": "Ravi Menon"},
+              {"person_id": "P-4", "name": "Ravi Menon"}]
+    assert _up(client, officer, cid, "people.json", json.dumps(people).encode())["status"] in ("HITL", "GRAPH_PROJECTED")
+    cands = {tuple(sorted((c["left"]["label"], c["right"]["label"]))): c for c in client.get(f"/api/v1/cases/{cid}/candidates", headers=reviewer).json()}
+    meera, ravi = cands[("Meera Joshi", "Meera Joshi")], cands[("Ravi Menon", "Ravi Menon")]
+    assert all("dob_match" not in [s["signal"] for s in c["positive_signals"]] for c in (meera, ravi))
+    # the reviewer decides Ravi; Meera stays undecided
+    assert client.post(f"/api/v1/candidates/{ravi['candidate_id']}/decision", headers=reviewer, json={"decision": "DEFER", "reason": "need more data"}).status_code == 200
+    # new evidence: matching DOBs for both pairs
+    more = [{"person_id": "P-1", "name": "Meera Joshi", "dob": "1991-02-03"}, {"person_id": "P-2", "name": "Meera Joshi", "dob": "1991-02-03"},
+            {"person_id": "P-3", "name": "Ravi Menon", "dob": "1980-01-01"}, {"person_id": "P-4", "name": "Ravi Menon", "dob": "1980-01-01"}]
+    new_ev = _up(client, officer, cid, "people_update.json", json.dumps(more).encode())
+    m2 = client.get(f"/api/v1/candidates/{meera['candidate_id']}", headers=reviewer).json()
+    r2 = client.get(f"/api/v1/candidates/{ravi['candidate_id']}", headers=reviewer).json()
+    assert "dob_match" in [s["signal"] for s in m2["positive_signals"]] and m2["confidence"] > meera["confidence"]
+    assert new_ev["evidence_id"] in m2["evidence_ids"] and m2["state"] == "REVIEW_REQUIRED"
+    assert r2["state"] == "DEFER" and r2["positive_signals"] == ravi["positive_signals"]  # decision + snapshot kept
+    assert new_ev["evidence_id"] in r2["new_evidence_since_snapshot"], r2.get("new_evidence_since_snapshot")
