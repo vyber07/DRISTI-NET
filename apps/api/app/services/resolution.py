@@ -70,12 +70,16 @@ def generate_candidates(db: Session, case_id: str) -> list[MatchCandidate]:
     persons = _persons_in_case(db, case_id)
     profiles = {eid: _profile(db, case_id, e) for eid, e in persons.items()}
     blocks = {eid: _block_keys(p) for eid, p in profiles.items()}
-    existing = {tuple(sorted((m.left_entity_id, m.right_entity_id))) for m in db.query(MatchCandidate).filter_by(case_id=case_id).all()}
+    # DEF-099: existing candidates used to be skipped, so later evidence never reached them. Undecided ones
+    # (REVIEW_REQUIRED) are recomputed below; decided ones keep exactly what the reviewer saw (their decision is never
+    # overwritten -- cf. DEF-092) and report newer evidence at read time instead.
+    existing = {tuple(sorted((m.left_entity_id, m.right_entity_id))): m for m in db.query(MatchCandidate).filter_by(case_id=case_id).all()}
     created: list[MatchCandidate] = []
 
     for a, b in combinations(sorted(persons), 2):
         pair = tuple(sorted((a, b)))
-        if pair in existing:
+        prior = existing.get(pair)
+        if prior is not None and prior.state != "REVIEW_REQUIRED":
             continue
         shared_blocks = blocks[a] & blocks[b]
         if not shared_blocks:
@@ -121,6 +125,12 @@ def generate_candidates(db: Session, case_id: str) -> list[MatchCandidate]:
             counter.append({"signal": "identifier_only", "detail": "only a shared phone links these records; no person-level corroboration", "weight": 0.0})
 
         confidence = max(0.02, min(0.98, round(0.5 + score, 2)))  # never 0 or 1: the matcher is a heuristic
+        if prior is not None:
+            prior.block_key = "|".join(sorted(shared_blocks))
+            prior.positive_signals, prior.counter_evidence, prior.conflicts, prior.missing = positive, counter, conflicts, missing
+            prior.confidence, prior.matcher_version = confidence, MATCHER_VERSION
+            prior.evidence_ids = sorted(pa["evidence"] | pb["evidence"])
+            continue
         cand = MatchCandidate(case_id=case_id, left_entity_id=a, right_entity_id=b, block_key="|".join(sorted(shared_blocks)),
                               positive_signals=positive, counter_evidence=counter, conflicts=conflicts, missing=missing,
                               confidence=confidence, matcher_version=MATCHER_VERSION, state="REVIEW_REQUIRED",

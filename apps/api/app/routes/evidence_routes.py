@@ -109,7 +109,8 @@ def get_evidence(evidence_id: str, request: Request, user: User = Depends(curren
 @router.post("/evidence/{evidence_id}/process")
 def process(evidence_id: str, request: Request, user: User = Depends(require_roles("EVIDENCE_OFFICER", "INVESTIGATOR", "ADMIN")), db: Session = Depends(get_db)):
     ev = _get_ev(db, user, evidence_id, request, action="EVIDENCE_PROCESS")
-    if ev.status not in ("QUARANTINED", "SCAN_FAILED", "SCAN_TIMEOUT", "SCANNER_UNAVAILABLE", "ACCEPTED", "EXTRACTION_FAILED", "EXTRACTED"):
+    if ev.status not in ("QUARANTINED", "SCAN_FAILED", "SCAN_TIMEOUT", "SCANNER_UNAVAILABLE", "ACCEPTED", "EXTRACTION_FAILED", "EXTRACTED",
+                         "MALWARE_SCANNING", "PROCESSING", "ENTITY_CANDIDATES"):  # in-between states: DEF-098 lease reclaim
         raise HTTPException(409, f"evidence in status {ev.status} cannot be (re)processed")
     pipeline.process_evidence(db, evidence_id, request.state.trace_id, user.user_id)
     db.refresh(ev)

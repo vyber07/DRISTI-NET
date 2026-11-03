@@ -32,6 +32,7 @@ runtime.  See docs/adr/012-nlp-adapter.md.
 from __future__ import annotations
 
 import logging
+import os
 from dataclasses import dataclass, field
 from typing import Optional
 
@@ -57,6 +58,21 @@ _LABEL_MAP = {
 }
 
 _MODEL_NAME = "ai4bharat/IndicBERTv2-MLM-only-NER"
+# DEF-018 / DEF-100: the model was loaded by name only (mutable `main`), and because `main` ships only a pickle
+# `pytorch_model.bin`, transformers silently fetched `model.safetensors` from an unmerged conversion PR branch
+# (refs/pr/1). Pin the exact commit and load that commit's own weights. Override only with a reviewed commit hash.
+_MODEL_REVISION = os.environ.get("DRISHTI_NER_MODEL_REVISION", "924ec1c38bac2cec70ce3b4ed6c2cd60282a518d")
+# DRISHTI_NER_OFFLINE=1: never contact huggingface.co; the pinned revision must already be in the local cache.
+_OFFLINE = os.environ.get("DRISHTI_NER_OFFLINE", "") == "1"
+
+
+def _pipeline_kwargs() -> dict:
+    return {
+        "model": _MODEL_NAME,
+        "revision": _MODEL_REVISION,
+        "aggregation_strategy": "simple",
+        "model_kwargs": {"use_safetensors": False},
+    }
 _pipeline_instance: Optional[object] = None
 
 
@@ -75,6 +91,8 @@ def _get_pipeline():
     """Lazy-load the transformers NER pipeline (import-guarded)."""
     global _pipeline_instance
     if _pipeline_instance is None:
+        if _OFFLINE:  # must be set before transformers/huggingface_hub read it
+            os.environ["HF_HUB_OFFLINE"] = "1"
         from transformers import pipeline as hf_pipeline
         logger.info("Loading IndicBERT NER model: %s (first call)", _MODEL_NAME)
         _id2label = {
@@ -86,11 +104,7 @@ def _get_pipeline():
             5: "B-LOC",
             6: "I-LOC",
         }
-        _pipeline_instance = hf_pipeline(
-            "token-classification",
-            model=_MODEL_NAME,
-            aggregation_strategy="simple",
-        )
+        _pipeline_instance = hf_pipeline("token-classification", **_pipeline_kwargs())
         if hasattr(_pipeline_instance, "model") and hasattr(_pipeline_instance.model, "config"):
             _pipeline_instance.model.config.id2label = _id2label
             _pipeline_instance.model.config.label2id = {v: k for k, v in _id2label.items()}

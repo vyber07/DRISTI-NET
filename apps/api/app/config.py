@@ -41,6 +41,9 @@ CLAMAV_HOST = _env("CLAMAV_HOST", "clamav")
 CLAMAV_PORT = int(_env("CLAMAV_PORT", "3310"))
 CLAMAV_DB = _env("CLAMAV_DB", "")  # optional --database path for clamscan (user-space installs)
 SCAN_TIMEOUT_S = int(_env("SCAN_TIMEOUT_S", "120"))
+# DEF-098: a RUNNING job untouched for longer than this is treated as abandoned (its process died) and may be
+# reclaimed. Must exceed the slowest legitimate stage (scan timeout, large extraction).
+JOB_LEASE_S = int(_env("JOB_LEASE_S", "900"))
 MAX_UPLOAD_MB = int(_env("MAX_UPLOAD_MB", "25"))
 GRAPH_MAX_HOPS = int(_env("GRAPH_MAX_HOPS", "2"))
 GRAPH_MAX_NODES = int(_env("GRAPH_MAX_NODES", "150"))
