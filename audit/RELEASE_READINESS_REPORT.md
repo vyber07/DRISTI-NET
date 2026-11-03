@@ -50,3 +50,10 @@ re-tested from there: no `.env`, `*.db`, `storage/`, `node_modules/`, `.git/` in
 4. Run SAST, dependency, secret and container scans; triage findings.
 5. Bind uvicorn to 127.0.0.1 behind nginx and verify TLS.
 6. Have a second reviewer re-check the P0/P1 fixes in `audit/BUG_AND_DEFECT_REGISTER.md`.
+
+**2026-11-03:** `releases/drishti-net-706934f-clean-20261103T145003Z.tar.gz`, SHA-256
+`043c32b495aa157ad8c87db17301586964b55beb1e7f27fe2c68a2c628eba0c7` (clean tree at `706934f`). Unpacked into an empty
+directory: 0 forbidden paths (`.env`, `*.db`, `storage/`, `node_modules/`, `.git/`); backend 124 passed / 6 skipped (the
+extra skip is the SPA-route test, which needs `dist/`); `npm ci` + typecheck 0 + build OK + `npm audit` 0. Local file only.
+Restore drill re-run on this code (fresh real-ClamAV ingest): PASS — 8/8 evidence, 33/33 audit HMACs, identical graphs,
+33/33 HMAC failures under a different key.
