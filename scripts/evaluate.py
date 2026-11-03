@@ -71,7 +71,8 @@ def find_entity_by_label(db, label: str) -> Entity | None:
 
 
 def find_entity_by_canonical_suffix(db, person_id: str) -> Entity | None:
-    return db.query(Entity).filter(Entity.canonical == f"pid:{person_id}").first()
+    # DEF-090: person keys are case-scoped ("pid:<case_id>:<person_id>"); the golden people live in CASE-0001
+    return db.query(Entity).filter(Entity.canonical == f"pid:CASE-0001:{person_id}").first()
 
 
 def resolve_identity_pair_side(db, text: str) -> Entity | None:
@@ -181,7 +182,7 @@ def evaluate_graph(db) -> list[tuple[str, str, str]]:
 
     def person_id_of(entity_id: str) -> str | None:
         e = ent_by_id.get(entity_id)
-        return e.canonical[len("pid:"):] if e and e.canonical.startswith("pid:") else None
+        return e.canonical.rsplit(":", 1)[-1] if e and e.canonical.startswith("pid:") else None
 
     truth_communities = {name: set(members) for name, members in TRUTH["communities"].items()}
     for comm in analysis["communities"]:

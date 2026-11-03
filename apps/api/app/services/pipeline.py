@@ -51,8 +51,14 @@ def run_scan(db: Session, ev: Evidence, trace_id: str, actor_id: str | None) -> 
     job = _job(db, ev, "SCAN", trace_id)
     ev.status = "MALWARE_SCANNING"
     db.commit()
-    with storage.local_copy(ev.storage_path) as local_path:
-        outcome = scanner.scan_file(local_path)
+    try:
+        with storage.local_copy(ev.storage_path) as local_path:
+            outcome = scanner.scan_file(local_path)
+    except Exception as exc:
+        # DEF-083: a storage error here escaped and left the item in MALWARE_SCANNING with a RUNNING job, which
+        # /process rejects -- stuck for good. Record it as a failed scan: still quarantined, never clean, retryable.
+        logger.warning("scan of %s could not read the stored object", ev.evidence_id, exc_info=True)
+        outcome = scanner.ScanOutcome("SCAN_FAILED", "storage", f"stored object could not be read for scanning: {type(exc).__name__}")
     ev.scan_engine, ev.scan_result = outcome.engine, outcome.result
     ev.status = outcome.result
     job.metrics = {"engine": outcome.engine, "detail": outcome.detail}
@@ -64,8 +70,16 @@ def run_scan(db: Session, ev: Evidence, trace_id: str, actor_id: str | None) -> 
         ev.error = f"file remains in quarantine: {outcome.result}"
         db.commit()
         return False
+    try:
+        ev.storage_path = storage.promote_to_accepted(ev.storage_path)
+    except Exception as exc:  # DEF-083: same stuck state if promotion failed after a clean scan
+        logger.warning("promotion of %s failed after a clean scan", ev.evidence_id, exc_info=True)
+        ev.status, ev.scan_result = "SCAN_FAILED", "SCAN_FAILED"
+        job.status, job.error = "FAILED", f"promotion to accepted storage failed: {type(exc).__name__}"
+        ev.error = "file remains in quarantine: promotion failed; retry processing"
+        db.commit()
+        return False
     job.status = "SUCCEEDED"
-    ev.storage_path = storage.promote_to_accepted(ev.storage_path)
     ev.status = "ACCEPTED"
     ev.error = None
     db.commit()
@@ -112,7 +126,22 @@ def run_resolve(db: Session, ev: Evidence, trace_id: str, actor_id: str | None) 
     job = _job(db, ev, "RESOLVE", trace_id)
     ev.status = "ENTITY_CANDIDATES"
     db.commit()
-    created = resolution.generate_candidates(db, ev.case_id)
+    try:
+        created = resolution.generate_candidates(db, ev.case_id)
+    except Exception as exc:
+        # DEF-084: no handler here left ENTITY_CANDIDATES + a RUNNING job (not retryable) and a 500. Keep the
+        # extracted claims, mark the job failed, return to EXTRACTED so /process can retry resolution.
+        db.rollback()
+        logger.warning("resolution failed for %s", ev.evidence_id, exc_info=True)
+        job = db.query(Job).filter_by(idempotency_key=f"{ev.evidence_id}:RESOLVE").first()
+        if job:
+            job.status, job.error = "FAILED", f"{type(exc).__name__}: {exc}"[:500]
+        ev = db.get(Evidence, ev.evidence_id)
+        ev.status, ev.error = "EXTRACTED", f"candidate generation failed: {type(exc).__name__}; retry processing"
+        record_audit(db, trace_id, actor_id, "RESOLUTION_FAILED", "EVIDENCE", ev.evidence_id, ev.case_id, outcome="ERROR",
+                     detail={"error": type(exc).__name__})
+        db.commit()
+        return 0
     job.metrics = {"candidates_created": len(created)}
     job.status = "SUCCEEDED"
     pending = db.query(MatchCandidate).filter_by(case_id=ev.case_id, state="REVIEW_REQUIRED").count()

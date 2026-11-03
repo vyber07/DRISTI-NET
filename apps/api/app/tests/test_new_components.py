@@ -161,12 +161,12 @@ class TestMerkleTree:
     def test_single_leaf_is_its_own_root(self):
         from apps.api.app.services.integrity import merkle_root
         h = self._h("abc")
-        assert merkle_root([h]) == h
+        assert merkle_root([h], "dup-last-v0") == h  # legacy scheme (DEF-085)
 
     def test_two_leaves(self):
         from apps.api.app.services.integrity import merkle_root, _merkle_hash
         h1, h2 = self._h("a"), self._h("b")
-        assert merkle_root([h1, h2]) == _merkle_hash(h1, h2)
+        assert merkle_root([h1, h2], "dup-last-v0") == _merkle_hash(h1, h2)  # legacy scheme
 
     def test_odd_length_duplicates_last_leaf(self):
         from apps.api.app.services.integrity import merkle_root, _merkle_hash
@@ -174,7 +174,7 @@ class TestMerkleTree:
         level2_a = _merkle_hash(h1, h2)
         level2_b = _merkle_hash(h3, h3)  # duplicated
         expected = _merkle_hash(level2_a, level2_b)
-        assert merkle_root([h1, h2, h3]) == expected
+        assert merkle_root([h1, h2, h3], "dup-last-v0") == expected  # legacy scheme
 
     def test_deterministic_for_same_input(self):
         from apps.api.app.services.integrity import merkle_root

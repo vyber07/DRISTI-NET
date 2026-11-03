@@ -215,6 +215,12 @@ class ExtractorBase:
         self._archive_member: str | None = None
 
     # ---------------------------------------------------------------- entities
+    def pid(self, person_id: str) -> str:
+        """Canonical key for a source-file person id. DEF-090: scoped to the case -- a person_id is local to the
+        source that issued it, so the same id in two cases must not silently become one person (§2.2, §11.2).
+        Cross-case links between people go through shared identifiers and human review instead."""
+        return f"pid:{self.ev.case_id}:{person_id}"
+
     def entity(self, kind: str, canonical: str, label: str, attributes: dict | None = None) -> Entity:
         key = (kind, canonical)
         if key in self._entity_cache:
@@ -271,6 +277,10 @@ class ExtractorBase:
 def flag_contradictions(db: Session, case_id: str) -> int:
     """Two ATTRIBUTE claims on the same entity+attribute with different normalized values from different evidence."""
     claims = db.query(Claim).filter(Claim.case_id == case_id, Claim.kind == "ATTRIBUTE", Claim.attribute.in_(["owner", "dob", "address"])).all()
+    # DEF-092: this runs after every upload. A claim a reviewer has decided on must keep that decision; it used to be
+    # flipped back to CONTRADICTORY by the next, unrelated upload.
+    from ..models import Review
+    reviewed = {r.target_id for r in db.query(Review.target_id).filter(Review.case_id == case_id, Review.target_kind == "CLAIM").all()}
     by_key: dict[tuple[str, str], list[Claim]] = {}
     for c in claims:
         by_key.setdefault((c.source_entity_id, c.attribute), []).append(c)
@@ -280,7 +290,7 @@ def flag_contradictions(db: Session, case_id: str) -> int:
         if len(values) > 1:
             for c in group:
                 others = [o.claim_id for o in group if o.claim_id != c.claim_id and o.normalized_value != c.normalized_value]
-                if others and c.state in ("ALLOWED", "CONTRADICTORY"):
+                if others and c.state in ("ALLOWED", "CONTRADICTORY") and c.claim_id not in reviewed:
                     c.state = "CONTRADICTORY"
                     c.flags = {**(c.flags or {}), "contradicts": others}
                     flagged += 1

@@ -252,3 +252,158 @@ def test_operational_endpoints_and_job_errors_do_not_leak_server_internals(clien
     assert failed, jobs
     for j in failed:
         assert "Traceback" not in (j["error"] or "") and 'File "/' not in (j["error"] or ""), j["error"]
+
+
+def test_storage_failure_during_scan_is_retryable_not_stuck(client, admin, officer, monkeypatch):
+    """DEF-083: run_scan committed MALWARE_SCANNING + a RUNNING job before reading the object. A storage error there
+    escaped, leaving the evidence permanently in MALWARE_SCANNING with a RUNNING job (both rejected by /process)."""
+    from contextlib import contextmanager
+    from ..services import storage
+    case_id = "CASE-SEC5"
+    assert client.post("/api/v1/cases", headers=admin, json={"case_id": case_id, "title": "Scan storage failure", "jurisdiction": "Demo District A",
+                       "purpose": "RETROSPECTIVE_REVIEW", "authority_reference": "TEST-SEC-5"}).status_code == 201
+    client.post(f"/api/v1/cases/{case_id}/assign", headers=admin, json={"username": "officer"})
+
+    real = storage.local_copy
+
+    @contextmanager
+    def broken(*a, **k):
+        raise ConnectionError("simulated object-store read failure")
+        yield  # pragma: no cover
+
+    monkeypatch.setattr(storage, "local_copy", broken)
+    r = upload(client, officer, case_id, "vehicles.csv")
+    assert r.status_code == 201, r.text
+    ev = r.json()
+    assert ev["status"] == "SCAN_FAILED", ev["status"]  # never CLEAN, never stuck
+    # recovery: once storage works again the same item can be re-processed to a clean, extracted state
+    monkeypatch.setattr(storage, "local_copy", real)
+    rp = client.post(f"/api/v1/evidence/{ev['evidence_id']}/process", headers=officer)
+    assert rp.status_code == 200, rp.text
+    assert rp.json()["status"] in ("HITL", "GRAPH_PROJECTED", "EXTRACTED"), rp.json()["status"]
+
+
+def test_resolution_failure_is_visible_and_retryable(client, admin, officer, auditor, monkeypatch):
+    """DEF-084: run_resolve had no error handling. An exception in candidate generation left the evidence in
+    ENTITY_CANDIDATES with a RUNNING job -- a state /process does not accept -- and surfaced as a 500."""
+    from ..services import resolution
+    case_id = "CASE-SEC6"
+    assert client.post("/api/v1/cases", headers=admin, json={"case_id": case_id, "title": "Resolution failure", "jurisdiction": "Demo District A",
+                       "purpose": "RETROSPECTIVE_REVIEW", "authority_reference": "TEST-SEC-6"}).status_code == 201
+    client.post(f"/api/v1/cases/{case_id}/assign", headers=admin, json={"username": "officer"})
+    real = resolution.generate_candidates
+
+    def boom(*a, **k):
+        raise RuntimeError("simulated resolver failure")
+    monkeypatch.setattr(resolution, "generate_candidates", boom)
+    r = upload(client, officer, case_id, "people.json")
+    assert r.status_code == 201, r.text
+    ev = r.json()
+    assert ev["status"] == "EXTRACTED", ev["status"]  # claims kept; resolution not marked done
+    assert any(j["kind"] == "RESOLVE" and j["status"] == "FAILED" for j in ev["jobs"]), ev["jobs"]
+    rows = client.get("/api/v1/audit?action=RESOLUTION_FAILED", headers=auditor).json()
+    assert any(a["target_id"] == ev["evidence_id"] for a in rows)
+    monkeypatch.setattr(resolution, "generate_candidates", real)
+    rp = client.post(f"/api/v1/evidence/{ev['evidence_id']}/process", headers=officer)
+    assert rp.status_code == 200, rp.text
+    assert rp.json()["status"] in ("HITL", "GRAPH_PROJECTED"), rp.json()["status"]
+
+
+def test_time_window_filters_are_parsed_or_rejected_never_ignored(client, ingested, investigator):
+    """DEF-087: t_from/t_to only parsed 'YYYY-MM-DD[ HH:MM:SS]'. An ISO value with 'T' (what a datetime-local input
+    sends) was silently ignored, so a "filtered" timeline returned every event."""
+    base = "/api/v1/cases/CASE-0001/timeline"
+    full = client.get(base, headers=investigator).json()["count"]
+    spaced = client.get(f"{base}?t_from=2025-07-01 00:00:00", headers=investigator).json()["count"]
+    iso_t = client.get(f"{base}?t_from=2025-07-01T00:00", headers=investigator)
+    assert iso_t.status_code == 200
+    assert iso_t.json()["count"] == spaced < full, (full, spaced, iso_t.json()["count"])
+    for bad in ("garbage", "2025-13-01", "2025-07-01T00:00:00+05:30"):
+        r = client.get(f"{base}?t_from={bad.replace('+', '%2B')}", headers=investigator)
+        assert r.status_code == 422, (bad, r.status_code)
+    assert client.get("/api/v1/cases/CASE-0001/graph?t_to=nope", headers=investigator).status_code == 422
+
+
+def test_bridge_communities_use_full_membership_not_the_displayed_top_12():
+    """DEF-089: touches_communities was looked up in each community's displayed member list (top 12 by degree), so a
+    bridge whose neighbours were real members outside the top 12 reported touching no community. Two 20-cliques; the
+    first 13 members of each get extra leaves so they fill the top 12; the bridge attaches to member 19 of each."""
+    import networkx as nx
+    from ..services import graph as g
+    G = nx.MultiDiGraph()
+    k = 0
+
+    def edge(a, b):
+        nonlocal k
+        k += 1
+        for n in (a, b):
+            if n not in G:
+                G.add_node(n, label=n, kind="PHONE", flags={})
+        G.add_edge(a, b, key=str(k), rel_type="CALLED", observed_time=None)
+    for grp in ("A", "B"):
+        for i in range(20):
+            for j in range(i + 1, 20):
+                edge(f"{grp}{i}", f"{grp}{j}")
+        for i in range(13):
+            for x in range(3):
+                edge(f"{grp}{i}", f"{grp}{i}-leaf{x}")
+    edge("A19", "BR"); edge("BR", "B19")
+    res = g.analyze(G)
+    displayed = {m["entity_id"] for c in res["communities"] for m in c["members"]}
+    assert "A19" not in displayed and "B19" not in displayed, "precondition: neighbours outside the displayed top 12"
+    core = nx.Graph(G.to_undirected())
+    part = {n: i for i, c in enumerate(nx.community.greedy_modularity_communities(core)) for n in c}
+    assert part["A19"] != part["B19"], "precondition: the neighbours sit in different communities"
+    br = next(b for b in res["bridge_candidates"] if b["entity_id"] == "BR")
+    assert len(br["touches_communities"]) == 2, br
+
+
+def test_source_person_ids_never_merge_people_across_cases(client, admin, officer, unassigned):
+    """DEF-090: person entities were keyed globally by the source file's person_id ('pid:P-001'). Two different people
+    who happened to share that local id in two cases became ONE entity, labelled with the first case's name -- an
+    automatic person-level merge by shared identifier (constitution §2.2) that also showed a CASE-A name to CASE-B
+    users. Person ids are now scoped to the case; within one case they still join records across files."""
+    import json
+    for cid in ("CASE-PID1", "CASE-PID2"):
+        assert client.post("/api/v1/cases", headers=admin, json={"case_id": cid, "title": "pid scope", "jurisdiction": "Demo District A",
+                           "purpose": "RETROSPECTIVE_REVIEW", "authority_reference": "TEST-PID"}).status_code == 201
+        client.post(f"/api/v1/cases/{cid}/assign", headers=admin, json={"username": "officer"})
+    client.post("/api/v1/cases/CASE-PID2/assign", headers=admin, json={"username": "unassigned"})
+    a = json.dumps([{"person_id": "P-001", "name": "Asha Verma", "dob": "1990-01-01", "phone": "+91 90000 12345"}]).encode()
+    b = json.dumps([{"person_id": "P-001", "name": "Nikhil Rao", "dob": "1975-05-05", "phone": "+91 90000 67890"}]).encode()
+    for cid, data in (("CASE-PID1", a), ("CASE-PID2", b)):
+        r = client.post(f"/api/v1/cases/{cid}/evidence", headers=officer, files={"file": ("people.json", data)})
+        assert r.status_code == 201, r.text
+    labels = [n["label"] for n in client.get("/api/v1/cases/CASE-PID2/graph", headers=unassigned).json()["nodes"] if n["kind"] == "PERSON"]
+    assert labels == ["Nikhil Rao"], labels  # failure mode was ["Asha Verma"]
+    # success path: within one case the same person_id still links records from different files
+    veh = b"vehicle_id,registration,owner_person_id,owner_name,type\nVH-9,KA01 AB 0001,P-001,Nikhil Rao,van\n"
+    r = client.post("/api/v1/cases/CASE-PID2/evidence", headers=officer, files={"file": ("vehicles.csv", veh)})
+    assert r.status_code == 201, r.text
+    persons = [n for n in client.get("/api/v1/cases/CASE-PID2/graph", headers=unassigned).json()["nodes"] if n["kind"] == "PERSON"]
+    assert len(persons) == 1, persons
+
+
+def test_audit_signature_is_unambiguous_and_legacy_signatures_still_verify():
+    """DEF-091: the HMAC payload joined fields with '|', so moving text across a field boundary
+    (trace 'T|USR-a' + actor 'USR-b'  vs  trace 'T' + actor 'USR-a|USR-b') kept a valid signature. New events are
+    signed over a JSON array ('hmac-sha256-json'); existing 'hmac-sha256' signatures keep verifying."""
+    from ..models import AuditEvent, utcnow
+    from ..services import audit
+    t = utcnow()
+    e1 = AuditEvent(audit_id="AUD-1", trace_id="T|USR-a", actor_id="USR-b", action="EXPORT", target_kind="CASE", target_id="X",
+                    case_id="C", outcome="OK", detail={}, created_at=t)
+    e1.signature = audit.sign_audit_event(e1)
+    assert e1.signature.split(":")[1] == "hmac-sha256-json"
+    assert audit.verify_audit_event(e1)  # success path
+    e2 = AuditEvent(audit_id="AUD-1", trace_id="T", actor_id="USR-a|USR-b", action="EXPORT", target_kind="CASE", target_id="X",
+                    case_id="C", outcome="OK", detail={}, created_at=t, signature=e1.signature)
+    assert not audit.verify_audit_event(e2)  # the boundary-shift forgery no longer verifies
+    # an event signed before this change (legacy '|' payload) still verifies, and is still tamper-evident
+    legacy = AuditEvent(audit_id="AUD-2", trace_id="T", actor_id="USR-a", action="EXPORT", target_kind="CASE", target_id="X",
+                        case_id="C", outcome="OK", detail={"k": 1}, created_at=t)
+    key_id = audit.config.CURRENT_AUDIT_KEY_ID
+    legacy.signature = f"{key_id}:hmac-sha256:{audit._compute_hmac(audit.config.AUDIT_KEYS[key_id].encode(), legacy)}"
+    assert audit.verify_audit_event(legacy)
+    legacy.outcome = "DENIED"
+    assert not audit.verify_audit_event(legacy)
