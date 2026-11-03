@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
-  Compass, FolderOpen, ArrowRight, FileStack, AlertTriangle,
+  Compass, FolderOpen, ArrowRight, FileStack,
   CheckCircle2, Clock, GitMerge, ShieldCheck, Activity,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -46,7 +46,7 @@ export function CommandCenterPage() {
     { label: "Total Cases", value: stats.totalCases, icon: FolderOpen, color: "text-electric-blue", bg: "bg-electric-blue/10" },
     { label: "Evidence Items", value: stats.totalEvidence, icon: FileStack, color: "text-emerald-400", bg: "bg-emerald-400/10" },
     { label: "Pending Reviews", value: stats.pendingReviews, icon: Clock, color: "text-amber-400", bg: "bg-amber-400/10" },
-    { label: "Contradictions", value: stats.contradictions, icon: AlertTriangle, color: "text-red-400", bg: "bg-red-400/10" },
+    // DEF-077: a "Contradictions: 0" card was hard-coded (the case list carries no contradiction count); removed.
   ];
 
   return (

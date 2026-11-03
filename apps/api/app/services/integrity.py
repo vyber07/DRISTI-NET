@@ -40,9 +40,8 @@ from __future__ import annotations
 
 import hashlib
 import logging
-import os
-from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from dataclasses import dataclass
+from datetime import datetime
 from typing import Optional
 
 from sqlalchemy import JSON, DateTime, String, Text

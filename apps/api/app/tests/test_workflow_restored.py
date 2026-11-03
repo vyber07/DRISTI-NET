@@ -2,7 +2,6 @@
 kept citing them as evidence. Restored verbatim from 61e3437^ on 2026-11-01 (session 4 re-verification, DEF-051)."""
 import csv
 import io
-from .conftest import upload
 
 
 def _cands(client, h):

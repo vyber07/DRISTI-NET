@@ -40,7 +40,7 @@ def test_postgresql():
         cur.execute(f"INSERT INTO evidence (evidence_id, case_id, filename, extension, detected_type, record_type, size_bytes, sha256, status, storage_path, source_label, created_at, updated_at, version, uploaded_by, retention_policy, legal_hold, tombstoned, classification, jurisdiction, purpose, access_class) VALUES ('EVD-INFRA-1', 'INFRA-CASE', 'f', 'e', 't', 'r', 1, 'sha-infra-dup', 'UPLOADED', 's', 's', '2023-01-01', '2023-01-01', 1, '{user_id}', 'Standard', false, false, 'C', 'J', 'P', 'A');")
         try:
             cur.execute(f"INSERT INTO evidence (evidence_id, case_id, filename, extension, detected_type, record_type, size_bytes, sha256, status, storage_path, source_label, created_at, updated_at, version, uploaded_by, retention_policy, legal_hold, tombstoned, classification, jurisdiction, purpose, access_class) VALUES ('EVD-INFRA-2', 'INFRA-CASE', 'f', 'e', 't', 'r', 1, 'sha-infra-dup', 'UPLOADED', 's', 's', '2023-01-01', '2023-01-01', 1, '{user_id}', 'Standard', false, false, 'C', 'J', 'P', 'A');")
-            assert False, "Duplicate evidence insert succeeded!"
+            raise AssertionError("Duplicate evidence insert succeeded!")  # not `assert False`: stripped under python -O
         except psycopg2.errors.UniqueViolation:
             conn.rollback()
         finally:

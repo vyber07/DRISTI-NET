@@ -180,7 +180,6 @@ def test_audit_hmac_verification(client, officer):
     assert verify_audit_event(ev) is True
     
     def tamper_and_check(field, value):
-        from ..models import AuditEvent
         tampered_ev = copy.copy(ev)
         setattr(tampered_ev, field, value)
         assert verify_audit_event(tampered_ev) is False, f"Tampering {field} did not fail verification"

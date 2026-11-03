@@ -5,10 +5,24 @@ import { useProvenanceStore } from "@/stores/provenanceStore";
 import { cn } from "@/lib/utils";
 
 export function ProvenanceViewer() {
-  const { isModalOpen, record, closeModal, revealContext, isRevealing, revealError } = useProvenanceStore();
+  const { isModalOpen, record, closeModal, revealContext, isRevealing, revealError, isLoading, error } = useProvenanceStore();
   const [reason, setReason] = useState("");
 
-  if (!isModalOpen || !record) return null;
+  if (!isModalOpen) return null;
+  // DEF-078: the viewer returned null while loading and on error (e.g. 409 for a quarantined or integrity-mismatched
+  // item), so "Inspect" appeared to do nothing.
+  if (!record) {
+    return (
+      <div data-testid="provenance-viewer" role="dialog" aria-modal="true" className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-md">
+        <div className="rounded-lg border border-border-subtle bg-surface-1 p-6 max-w-md text-center space-y-3">
+          {isLoading ? <p className="text-sm text-text-muted">Loading source…</p> : (
+            <p role="alert" className="text-sm text-critical-red">Source not available: {error || "unknown error"}</p>
+          )}
+          <Button variant="secondary" size="sm" onClick={closeModal}>Close</Button>
+        </div>
+      </div>
+    );
+  }
 
   const handleReveal = async () => {
     if (!reason.trim()) return;

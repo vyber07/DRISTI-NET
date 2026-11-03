@@ -1,3 +1,5 @@
+import { getClaimById } from "@/services/api/claimsApi";
+import { recordedDateKey, recordedTime } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { Clock, FileText, Waypoints, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -26,9 +28,14 @@ export function TimelineEventRow({
   const { selectNode } = useGraphStore();
 
   const handleViewSource = async () => {
-    if (event.evidence_id) {
-      await openProvenanceForRecord(event.evidence_id);
-    }
+    if (!event.evidence_id) return;
+    // DEF-079: open at the claim's exact source location (it used to open line 1 of the file).
+    let locator: any = undefined;
+    try {
+      const claim = event.claim_id ? (await getClaimById(event.claim_id)).data : null;
+      locator = claim?.provenance?.[0]?.locator || undefined;
+    } catch { /* fall back to opening the file without a locator */ }
+    await openProvenanceForRecord(event.evidence_id, locator);
   };
 
   const handleViewInGraph = () => {
@@ -66,10 +73,10 @@ export function TimelineEventRow({
             <div className="flex items-center gap-2 flex-wrap">
               <span
                 className="flex items-center gap-1 font-mono text-micro font-semibold text-text-muted bg-surface-2/80 px-2 py-0.5 rounded border border-border-subtle"
-                title={event.time ? new Date(event.time).toLocaleDateString("en-IN") : "Unknown Date"}
+                title={event.time ? `${event.time} (as recorded in the source; no time zone)` : "Unknown Date"}
               >
                 <Clock className="h-3 w-3 text-text-disabled" />
-                {event.time ? new Date(event.time).toLocaleTimeString("en-IN", {hour: "2-digit", minute: "2-digit"}) : "Undated"}
+                {recordedTime(event.time) ?? (event.time ? recordedDateKey(event.time) : "Undated")}
               </span>
               <span className="text-micro font-medium border px-1.5 rounded bg-surface-3">
                 {event.rel_type}
@@ -91,7 +98,7 @@ export function TimelineEventRow({
                 size="sm"
                 className="h-7 px-2.5 text-xs font-semibold gap-1 text-teal-primary border-teal-primary/30 hover:bg-teal-primary/10 shadow-2xs"
                 onClick={handleViewSource}
-                title="View original evidence document with highlighted proof"
+                title="Open the source document at the line this event was extracted from"
               >
                 <FileText className="h-3.5 w-3.5 text-teal-primary" />
                 <span>View Evidence</span>

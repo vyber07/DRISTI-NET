@@ -50,7 +50,7 @@ function CasePlaceholderView({ tabId, caseId, onBackToOverview }: { tabId: strin
 }
 
 export function CaseWorkspacePage() {
-  const {  caseId = "CASE-0001" } = useParams();
+  const {  caseId = "" } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
   const navigate = useNavigate();
@@ -67,20 +67,25 @@ export function CaseWorkspacePage() {
 
   const [caseData, setCaseData] = useState<CaseDetail | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const {  caseInfoPanelExpanded, toggleCaseInfoPanel } = useUIStore();
 
   useEffect(() => {
     let isMounted = true;
     async function load() {
       if (!caseId) return;
+      // DEF-078: drop the previous case before loading, and keep the failure reason (a 403 used to leave the old
+      // case's header and data on screen, or show a bare "Failed to load case data").
+      setCaseData(null);
+      setLoadError(null);
       setIsLoading(true);
       try {
         const res = await getCaseDetails(caseId);
         if (isMounted && res.data) {
           setCaseData(res.data);
         }
-      } catch {
-        // Error loading case
+      } catch (e: any) {
+        if (isMounted) setLoadError(e?.message || "error");
       } finally {
         if (isMounted) setIsLoading(false);
       }
@@ -108,7 +113,7 @@ export function CaseWorkspacePage() {
   };
 
   if (isLoading) { return <div className="flex h-screen items-center justify-center">Loading Workspace...</div>; }
-  if (!caseData) { return <div className="p-8 text-center text-text-muted">Failed to load case data.</div>; }
+  if (!caseData) { return <div role="alert" className="p-8 text-center text-text-muted">Could not load case {caseId}{loadError ? `: ${loadError}` : "."}</div>; }
 
   return (
     <>
