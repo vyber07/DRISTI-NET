@@ -14,8 +14,8 @@
 
 | Gate | Result | Evidence / reason |
 |---|---|---|
-| Backend suite (SQLite) | PASS | 2026-11-03: 125 passed, 5 skipped (live-store tests), 1 deselected; clean environment |
-| Backend suite (live PostgreSQL + Neo4j + S3 + ClamAV) | PASS | 2026-11-03: 131 passed, 0 failed, 0 skipped, `REQUIRE_LIVE_TESTS=1`, two consecutive runs |
+| Backend suite (SQLite) | PASS | 2026-11-03 (third pass): 175 passed, 6 skipped, 1 deselected |
+| Backend suite (live PostgreSQL + Neo4j + S3 + ClamAV) | PASS | 2026-11-03 (third pass): 182 passed, 0 failed, 0 skipped |
 | Migrations (fresh PostgreSQL, upgrade → model diff → downgrade) | PASS after fix | Two migrations were missing (DEF-021); `5bcde1234569` added |
 | Web typecheck + build | PASS | `tsc -b --noEmit` 0 errors |
 | Browser E2E | PASS | 2026-11-03: 6/6 ×2 on the full live stack (evidence in S3), incl. HITL anti-fabrication and download-integrity assertions; 14-route sweep 0 console / 0 HTTP errors |
@@ -25,7 +25,7 @@
 | Safety language (§16) | PASS after fix | "Court Ready", "Admissibility Verification", "Emergency Bypass", fabricated 100 % / 90 % confidence removed (DEF-011R, DEF-019, DEF-023) |
 | Compose / deployment start | **FAIL** | MinIO image digest unresolvable (BLK-04); `postgres`, `neo4j`, `redis`, `kafka`, `besu`, `nginx` use mutable tags |
 | Backup / restore | **PARTIAL (2026-11-01 s4)** | SQLite + local storage: PASS (`operations/RESTORE_TEST_REPORT.md`). PostgreSQL/MinIO: not run (BLK-04/05) |
-| Security scanning (SAST / deps / containers / secrets) | **PARTIAL (s4)** | npm audit 0; pip-audit: paddlepaddle only; regex secret scan of tree + history (one public Besu dev key, removed). No SAST tool, no container scan. Manual review found P0 DEF-028 and P1 DEF-031/033 (fixed on branch) |
+| Security scanning (SAST / deps / containers / secrets) | **PARTIAL** | ruff + bandit (first runs, 2026-11-03), npm audit 0, pip-audit (paddlepaddle only), regex secret scan; no container scan, no DAST |
 | TLS / network exposure | **FAIL (live)** | Host serves HTTP on :80; live uvicorn still binds 0.0.0.0:8000 and runs code vulnerable to DEF-028 (BLK-06). Repo unit now binds 127.0.0.1 |
 | NER evaluation | **INSUFFICIENT** | 1 document / 3 entities; real-model probe shows recall gaps (DEF-018) |
 | Independent review | **NOT DONE** | This assessment is a single-agent review |

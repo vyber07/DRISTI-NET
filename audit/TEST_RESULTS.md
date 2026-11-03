@@ -114,3 +114,18 @@ probed read-only (one request for `README.md`) and was not restarted or written 
 | Failure injection, live stack | EICAR → INFECTED (409 on read); 5 bad-token kinds → 401; 28 MB → 422; magic mismatch → 422; cross-case download/reveal → 403; 8 concurrent identical uploads → 1 PostgreSQL row; S3 object tampered → INTEGRITY_MISMATCH; S3 object deleted → was 500, now 409 (DEF-042); Neo4j refused → was 500, now 200 + `projection_stale` (DEF-043); S3 refused → was 500, now 503 (DEF-044); paused (frozen) PostgreSQL → request hangs (no client-side timeout possible in psycopg2; bounded by nginx `proxy_read_timeout`) — documented limitation |
 | Shared-Neo4j interference (second instance writing the same case ids) | before DEF-072: 3 test failures (empty graph); after: 0 application failures. Test-harness `wipe_all()` itself deadlocks under a concurrent writer — live tests require an exclusive Neo4j |
 | `npm audit`; typecheck; build | 0; 0; OK |
+
+## Session 4, third pass (2026-11-03)
+| Stage | Result |
+|---|---|
+| `ruff` (F, E9, B) first run | 0 undefined names / syntax errors; 23 unused imports removed; 1 non-asserting test fixed (DEF-073); remaining: style only |
+| `bandit` first run | 6 low-severity items, all explained (demo-default strings rejected by the production guard, `escape` used for escaping, `random` in a statistical bootstrap) |
+| `make test` (clean env) | 175 passed, 6 skipped (PostgreSQL/Neo4j/S3-only tests), 1 deselected |
+| Live PostgreSQL 16 + Neo4j 5 + S3 + ClamAV | 182 passed, 0 failed, 0 skipped (incl. migration `5bcde1234570` up/compare/down and the Asia/Kolkata time-zone test) |
+| Browser E2E (Chromium), isolated instance, real ClamAV | 6/6 |
+| Browser checks | timeline source opens the claim's line (4, not 1); HITL search 8 → 3, reset → 8; 0 console errors |
+| `scripts/dry_run.py` | 5/5 runs × 29/29 steps |
+| `scripts/evaluate.py` (was crashing) | all planted scenarios HIT, resolution 3/3 |
+| `scripts/perf_test.py` (fixed, real pipeline per sample) | golden files 0.03–0.66 s each (PDF first sample 10.7 s: NER model load); 20 000-row CSV **17.8 s** median; graph query on that case 4.8 s |
+| Live-demo upgrade rehearsal on a **copy** of `storage/drishti.db` | new column added at startup; login, anchors, candidates, graph all 200; real file unchanged |
+| OpenAPI drift check | 1 drift (reveal `window` bound) → regenerated, 0 drift |

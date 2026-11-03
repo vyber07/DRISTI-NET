@@ -9,6 +9,13 @@
 > in this repository; treat those references as historical. Graph projection failure is now Demonstrated: Neo4j errors fall back
 > to the authoritative in-process projection with `projection_stale: true` (DEF-043, `test_graph_degrades_to_authoritative_projection_when_neo4j_fails`).
 
+> **Third pass (2026-11-03).** Merkle anchoring now uses RFC 6962 for new anchors (legacy anchors verify under their
+> recorded scheme, DEF-085); audit signatures use an unambiguous JSON payload (DEF-091); PostgreSQL sessions are pinned to
+> UTC — before this, a non-UTC server time zone broke every audit signature (DEF-088); source person ids are case-scoped
+> (DEF-090). `reports/performance.md` was regenerated after its measurement bug (DEF-080): earlier "Demonstrated"
+> performance numbers timed the duplicate-upload short-cut, not processing.
+
+
 
 Last audited: 2026-09-25 against `main`; rows marked **(2026-11-01)** were re-verified against the working tree on that date
 (details: `audit/BUG_AND_DEFECT_REGISTER.md`, `audit/TEST_RESULTS.md`) (see also `PROJECT_STATUS.md` for day-by-day and in-progress view,
