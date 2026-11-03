@@ -248,7 +248,7 @@ def _pdf_pages(data: bytes) -> list[list[str]]:
 
 def _mark_object_missing(db: Session, ev: Evidence, user: User, request: Request) -> None:
     """A stored object that has disappeared is an integrity failure (docs/context.md §6.1): block normal use,
-    keep the record, audit it. Recorded as INTEGRITY_MISMATCH with an explicit reason (decision DEC-009)."""
+    keep the record, audit it. Recorded as INTEGRITY_MISMATCH with an explicit reason (decision DEC-011)."""
     if ev.status != "INTEGRITY_MISMATCH":
         ev.status = "INTEGRITY_MISMATCH"
         ev.error = "stored object missing"

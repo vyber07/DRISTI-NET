@@ -100,3 +100,17 @@ probed read-only (one request for `README.md`) and was not restarted or written 
 | Upload filename `../../../accepted/...` | rejected | 422 "unsafe file name" (already handled) |
 | Scanner unavailable / DB / storage outage | not clean / controlled | covered by unit tests only (`test_scan_gate_fail_closed`, failure-injection tests); host clamd is shared, so not stopped |
 | Release archive | unpack `drishti-net-ebd5faa-clean-*.tar.gz` → `npm ci`, typecheck, build, `make test`-equivalent | 0 / OK / 91 passed, 5 skipped; no secrets or runtime data in archive |
+
+## Session 4, second pass (2026-11-01 → 2026-11-03) — after independent review fixes
+| Stage | Result |
+|---|---|
+| `make test` (clean env, SQLite) | 125 passed, 5 skipped, 1 deselected |
+| Full suite on live PostgreSQL 16 + Neo4j 5 + S3 + ClamAV (`REQUIRE_LIVE_TESTS=1`) | 131 passed, 0 failed, 0 skipped — two consecutive runs |
+| `alembic upgrade head` on empty PostgreSQL; `python -m apps.api.app.migrations` with compose-equivalent env | OK (head `5bcde1234569`, 14 tables); without `DRISHTI_SECRET_KEY` it fails — DEF-052 |
+| `seed --ingest` on live stack | 8/8 files: real ClamAV clean → extraction → real NER → HITL / GRAPH_PROJECTED; 0 local files, 8 S3 objects, Neo4j projection present |
+| Browser E2E (Chromium) on live stack | 6/6, 6/6 |
+| Browser sweep, 14 routes, investigator | 0 console errors, 0 HTTP ≥ 400; graph shows 56 entities · 117 relationships (API counts) |
+| User switch after 403 | `unassigned` on CASE-0001 graph: 0 items + visible denial (no data from the previous user) |
+| Failure injection, live stack | EICAR → INFECTED (409 on read); 5 bad-token kinds → 401; 28 MB → 422; magic mismatch → 422; cross-case download/reveal → 403; 8 concurrent identical uploads → 1 PostgreSQL row; S3 object tampered → INTEGRITY_MISMATCH; S3 object deleted → was 500, now 409 (DEF-042); Neo4j refused → was 500, now 200 + `projection_stale` (DEF-043); S3 refused → was 500, now 503 (DEF-044); paused (frozen) PostgreSQL → request hangs (no client-side timeout possible in psycopg2; bounded by nginx `proxy_read_timeout`) — documented limitation |
+| Shared-Neo4j interference (second instance writing the same case ids) | before DEF-072: 3 test failures (empty graph); after: 0 application failures. Test-harness `wipe_all()` itself deadlocks under a concurrent writer — live tests require an exclusive Neo4j |
+| `npm audit`; typecheck; build | 0; 0; OK |

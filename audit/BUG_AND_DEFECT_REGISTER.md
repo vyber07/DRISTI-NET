@@ -92,3 +92,54 @@ DEF-034/035, which are config/script changes with no runtime test). Branch: `aud
 | 24–27 | Overstated legal copy / reveal presets | FIXED earlier (DEF-011R/017) |
 | 28 | `make_packages.py` missing files | FIXED earlier (session 3) |
 | 29–31 | Doc conflicts / checksum / scaffolding docs | PARTIAL: `CHANGELOG.md`'s Phase 5 entry still overclaims ("production application", "100% test reliability"); `operations/BACKUP_POLICY.md` describes untested controls (annotated) |
+
+## Session 4, second pass (2026-11-01 → 2026-11-03): independent review + live-stack verification
+
+Method: three separate reviewer agents (backend security, frontend↔backend contract, infrastructure + documentation
+claims) worked read-only and without access to earlier conclusions; every finding below was re-verified by the
+primary agent before fixing. Each code fix has a regression test that was run **failing on the old code** and passing
+after the fix. Live stack = disposable PostgreSQL 16, Neo4j 5, S3-compatible store (bitnamilegacy/minio), host ClamAV.
+
+| ID | Sev | Component | Finding (evidence) | Fix | Regression test |
+|---|---|---|---|---|---|
+| DEF-033b | **P1** | Graph | DEF-033 fix incomplete: `graph.build_projection` and `/locations` still fell back to the whole per-case attribute map; a CASE-0002-only user saw a CASE-0001 person's DOB/address on the CASE-0002 graph | `masking.case_attributes()` used everywhere | `test_graph_and_locations_never_carry_other_cases_attributes` |
+| DEF-036 | **P1** | Scan gate (STRICT) | `if "OK" in decoded` ran before `FOUND`: clamd reply `stream: Win.Trojan.OKbot-1 FOUND` → **CLEAN**, file extracted | strict parse: `stream: … FOUND` → INFECTED, exactly `stream: OK` → CLEAN, else SCAN_FAILED | `test_scanner_parsing.py` (fake clamd) |
+| DEF-037 | P2 | Scan gate | undecodable reply raised UnicodeDecodeError → evidence stuck in MALWARE_SCANNING, not retryable | `errors="replace"`; any exception → SCAN_FAILED | same |
+| DEF-038 | P2 | Masking | candidate `block_key` exposed raw phone numbers (`phone:919000000101`) to analysts | `mask_block_key()` | `test_candidate_block_keys_do_not_expose_phone_numbers` |
+| DEF-039 | P2 | Masking | court PDF printed rule subjects (phones, accounts) unmasked | shared `mask_analysis()` for report + PDF | `test_court_pdf_masks_rule_subjects_and_escapes_markup` |
+| DEF-040 | P2 | Integrity | Merkle anchor/PDF root used a denylist; SCANNER_UNAVAILABLE / SCAN_FAILED items were anchored | allowlist of post-gate states | `test_merkle_anchor_excludes_evidence_that_never_cleared_the_scan_gate` |
+| DEF-041 | P2 | Court PDF | analyst comments / case title went into reportlab markup unescaped (409/500, local image embedding) | `xml.sax.saxutils.escape` | PDF test above |
+| DEF-042 | P2 | Evidence | missing stored object → `/download` and `/context` HTTP 500; `/verify` reported mismatch without changing state | INTEGRITY_MISMATCH + audit + 409; S3 "exists" only treats 404 as missing | `test_missing_stored_object_is_a_controlled_integrity_failure` |
+| DEF-043 | P1 | Graph | Neo4j unreachable → graph 500 (live: refused port) although docs said it degrades | fallback to authoritative in-process projection, `projection_stale: true` (§6.1) | `test_graph_degrades_to_authoritative_projection_when_neo4j_fails` |
+| DEF-044 | P2 | Storage | object store unreachable → upload 500; no S3 client timeouts (live: request hung >90 s on stalled store) | 503, no row; boto timeouts 5 s/30 s | `test_storage_outage_on_upload_is_controlled_and_leaves_no_row` |
+| DEF-045 | P3 | Audit | duplicate-upload audit row never committed | commit | `test_duplicate_upload_is_audited` |
+| DEF-046 | P3 | Reveal | unbounded `window` unmasked a whole file in one call | `0 ≤ window ≤ 10` | `test_context_reveal_window_is_bounded` |
+| DEF-047 | P3 | Evidence | `/context` on a corrupt PDF → 500 | 422, original preserved | `test_corrupt_pdf_context_is_a_controlled_error` |
+| DEF-048 | P3 | Authz | `/cases` ignored jurisdiction (listed a case `/cases/{id}` denies) | jurisdiction filter | `test_case_listing_applies_jurisdiction` |
+| DEF-049 | P2 | Audit (STRICT `auth.py`) | role-based 403s were never audited (§6.1) | `require_roles` audits ACCESS_DENIED | `test_role_denials_are_audited` |
+| DEF-050 | P3 | Masking | review reasons returned unmasked | `mask_text` | `test_review_reasons_are_masked_in_candidate_output` |
+| DEF-051 | P1 (evidence) | Tests | 10 workflow tests deleted in `61e3437` while docs cited them as "Demonstrated" | restored verbatim; all pass | `test_workflow_restored.py` |
+| DEF-052 | **P1** | Compose | `migrations` service had no `DRISHTI_SECRET_KEY` → production guard raised on import → api/worker never started | env added | reproduced with exact compose env vs live PostgreSQL: fails without, migrates to head with |
+| DEF-053 | P1 | Compose | `DRISHTI_KAFKA_BROKERS` set; code reads `DRISHTI_KAFKA_BOOTSTRAP_SERVERS` | renamed | `docker compose config` |
+| DEF-054 | **P1** | Docker | no `.dockerignore`: `COPY . .` baked `.env`, `storage/` (DB + evidence), venvs, `.git` into image | `.dockerignore` | file review (image not built: BLK-04) |
+| DEF-055 | **P1** | Tests | test fixtures drop all tables / wipe Neo4j of whatever DB they are pointed at; `make test-stack` points them at the deployment | refuse unless DB name contains `test`; Neo4j wipe needs `DRISHTI_ALLOW_NEO4J_WIPE=1` | verified refusal on DB `drishti` |
+| DEF-056 | P1 | E2E | E2E fixture writes directly to `storage/drishti.db` (live demo DB) when no DB URL set | aborts unless an explicit non-demo DB is given | verified abort |
+| DEF-057 | P2 | Config | any non-default secret accepted (`x`); check skipped on SQLite | ≥ 32 chars everywhere | `test_short_secret_key_rejected_even_on_sqlite` |
+| DEF-058 | **P0** | HITL UI | review pane rendered a static fabricated "Call Detail Record" — "Government of Rajasthan • Special Operations Group" letterhead, invented call rows, a fake Hindi threat transcript — under the real file name and SHA-256, for every candidate; fixed tier 2 / 90 % confidence / "CDR_RECORD" for any file | viewer deleted; pane shows the API's evidence records and masked source lines | E2E `test_review_queue` asserts none of that text appears and real files/lines do |
+| DEF-059 | P1 | HITL UI | matcher signals, counter-evidence, conflicts, missingness never shown; merges approved on a % alone | rendered in decision pane | E2E (waits for "Supporting signals") |
+| DEF-060 | P2 | HITL UI | resolved task showed blank decision; `assigned_to` not mapped | mapped from `reviews[]` | typecheck + browser |
+| DEF-061 | P1 | Stores | on 403 / case switch / logout the previous case's (or user's) graph stayed on screen | clear on load; full reload on logout | browser: `unassigned` sees 0 items + denial message after another user |
+| DEF-062 | P2 | Graph UI | "core connections (7)" toggle matched hard-coded mock ids `R-01…R-17`, quoted fixed counts | removed; real counts shown | browser sweep (56 / 117) |
+| DEF-063 | P2 | Graph UI | confidence slider not applied; "Alerts" filter hid every edge; tier toggles filtered nothing | confidence applied; dead controls removed | typecheck + browser |
+| DEF-064 | P2 | Reveal UI | hard-coded `authorizedBy: "INVESTIGATOR"`, fake 1 h / "15 mins" expiry, "Target Suspect" label, false clearance warning | real role; text corrected | typecheck |
+| DEF-065 | P2 | Reviews UI | claim override sent `"ALLOWED"` (always 422) with canned reason "Reviewed via UI"; errors shown green | `APPROVE`, reviewer-typed reason, red errors | typecheck |
+| DEF-066 | P3 | Map UI | lines drawn between every pair of locations | removed | browser |
+| DEF-067 | P2 | HITL UI | `Promise.all` with role-restricted `/stats` → analyst/auditor saw "queue clear" | independent loads | browser |
+| DEF-068–070 | P2 | Copy | "Statutory Tamper-Evident System Log (BSA §63 / IT Act §79A)", "immutable cryptographic audit log … IP addresses committed", "BNSS Compliant", `COURT_READY`, "Statutory Authority: CrPC / IEA", canned legal quick-fills ("Corroborated under Sec 91 CrPC notice response from TSP"), hard-coded "Zero-Trust Active" | replaced with accurate wording / removed | E2E asserts old audit heading absent |
+| DEF-071 | P2 | Graph (Neo4j) | centered Neo4j traversal ignored the supernode fan-out cap (20 of 20 spokes, cap 12) — found by a restored test run on live Neo4j | centered traversals bounded in-process on every backend (DEC-012) | `test_supernode_capping_on_a_planted_high_degree_node` on live Neo4j |
+| DEF-072 | P2 | Graph (Neo4j) | uncentered listing trusted Neo4j ids; with another instance writing the same case id into a shared Neo4j the API returned `[]` (reproduced live); mixed orderings across pages on fallback | ids must ⊆ authoritative projection else stale fallback; same ordering on fallback | `test_graph_ignores_a_neo4j_projection_that_disagrees_with_authoritative_rows`; live repro with a second instance: 3 failures → 0 |
+
+**Open (not fixed, need a decision or environment):** raw-file download is allowed for EVIDENCE_OFFICER/AUDITOR roles
+that may not reveal masked values (policy decision); `Entity.label` is global, so a name from one case's evidence shows
+on another case that references the same entity (design change); pinned MinIO and Kafka images unresolvable (BLK-04);
+`paddlepaddle` advisories (optional OCR); live demo still runs pre-fix code (BLK-06).
