@@ -143,3 +143,44 @@ after the fix. Live stack = disposable PostgreSQL 16, Neo4j 5, S3-compatible sto
 that may not reveal masked values (policy decision); `Entity.label` is global, so a name from one case's evidence shows
 on another case that references the same entity (design change); pinned MinIO and Kafka images unresolvable (BLK-04);
 `paddlepaddle` advisories (optional OCR); live demo still runs pre-fix code (BLK-06).
+
+## Session 4, third pass (2026-11-03): static analysis, scripts, pipeline reread
+
+Three new reviewer agents were started; all three stopped at the account's agent limit before reporting. Their probe
+scripts were read, run in isolated stores, and every lead below was reproduced by the primary agent before fixing.
+Python static analysis (ruff, bandit) was run for the first time. Each code fix has a regression test that fails on the
+previous code (verified by reverting the fix) unless noted.
+
+| ID | Sev | Component | Finding (evidence) | Fix | Verification |
+|---|---|---|---|---|---|
+| DEF-073 | P2 | Tests | `test_document_extraction_generalizes_beyond_fixture_wording` computed values and asserted nothing (`pass`) | real assertions | test passes; ruff F841 cleared |
+| DEF-074 | P2 | API | unauthenticated `/health` returned the absolute storage path; `/ready` echoed driver errors; job errors stored 800 chars of server traceback, returned to case members | backend kind only; generic 503; tracebacks to server log | `test_operational_endpoints_and_job_errors_do_not_leak_server_internals` |
+| DEF-075 | P2 | Compose/Make | ClamAV healthcheck passed without PONG; api had no healthcheck; worker did not wait for ClamAV; Besu exposed DEBUG/MINER RPC with `host-allowlist=*`; `make clean` deleted the demo DB without confirmation; `make test-stack` ran destructive fixtures in the deployed container | fixed / guarded (`CONFIRM=1`, `STACK_IS_DISPOSABLE=1`) | `docker compose config`; guard checked with `make -n` (never executed) |
+| DEF-076 | P2 | Web | upload success shown red, INFECTED reported "Uploaded"; login read an axios shape so 401/429 showed a generic message | real outcome / status messages | typecheck, browser |
+| DEF-077 | P2 | Web | hard-coded "Contradictions: 0" dashboard card; five `"CASE-0001"` fallbacks; analysis page read `degree`/member count the API does not send | removed / API fields | typecheck, browser sweep |
+| DEF-078 | P2 | Web | revealed value never shown (masked label kept); case and provenance load errors invisible | fixed | typecheck, browser |
+| DEF-079 | P2 | Web | timeline re-formatted zone-less times as Asia/Kolkata (shift for non-IST browsers); "View source" opened line 1 | times shown as recorded; opens the claim's locator | browser: opens line 4 (the event's line), times "10:00" |
+| DEF-080 | **P1 (evidence)** | perf_test.py | samples 2..n re-uploaded identical bytes to the same case → duplicate short-cut, so medians timed only the duplicate check (20 000-row CSV reported 0.35 s; real 17.8 s) | fresh case per sample; each must create a new processed record | `reports/performance.md` regenerated |
+| DEF-081 | P1 | export_openapi.py | importing the app ran `init_db()` on the default DB = the live demo's `storage/drishti.db` | throwaway store | demo DB checksum unchanged; openapi.json regenerated (missing `window` bound) |
+| DEF-082 | P2 | evaluate.py | crashed (`norm_*` moved) — the evaluation reports could not be regenerated | import fixed | re-run: all planted scenarios HIT, resolution 3/3 |
+| DEF-083 | P1 | Pipeline | storage error during scan/promotion left MALWARE_SCANNING + RUNNING job (not retryable) and a 500 | SCAN_FAILED, retryable | `test_storage_failure_during_scan_is_retryable_not_stuck` |
+| DEF-084 | P1 | Pipeline | resolution exception left ENTITY_CANDIDATES + RUNNING job and a 500 | back to EXTRACTED, job FAILED, audited, retryable | `test_resolution_failure_is_visible_and_retryable` |
+| DEF-085 | **P1 (integrity)** | Merkle | no leaf/node domain separation; last-node duplication (`root[a,b,c] == root[a,b,c,c]`; internal node accepted as a leaf); docstring claimed RFC 6962 | RFC 6962 for new anchors; `ledger_anchors.merkle_scheme` keeps legacy anchors verifiable (migration `5bcde1234570`) | `test_merkle_rfc6962.py` (both schemes, n=1..17, tamper cases) |
+| DEF-086 | P1 | DB | `create_all()` never adds columns to an existing SQLite DB, so the demo DB silently drifted from the models | additive column upgrade at startup | test + dry run on a **copy** of the live demo DB (column added; login/anchors/candidates/graph 200) |
+| DEF-087 | P2 | Graph/timeline API | `t_from`/`t_to`: ISO-`T` values ignored (graph) or compared as raw strings (timeline; `garbage` accepted) | strict parse or 422 | `test_time_window_filters_are_parsed_or_rejected_never_ignored` |
+| DEF-088 | **P1 (integrity)** | DB (PostgreSQL) | non-UTC server/database time zone shifted every stored timestamp (+05:30 for Asia/Kolkata) and made **every audit HMAC fail** after reload | each session pinned to UTC | live PostgreSQL test with database time zone Asia/Kolkata (fails without fix) |
+| DEF-089 | P2 | Analytics | bridge `touches_communities` looked up in the displayed top-12 members → real bridge reported touching no community | full community sets | `test_bridge_communities_use_full_membership_not_the_displayed_top_12` |
+| DEF-090 | **P1 (identity)** | Extraction | person entities keyed globally by source-local `person_id`: different people sharing an id in two cases merged into one entity, labelled with the first case's name (automatic person merge, §2.2; cross-case name exposure) | person ids scoped to the case (DEC-014) | `test_source_person_ids_never_merge_people_across_cases` |
+| DEF-091 | P1 (integrity) | Audit | HMAC payload `|`-joined: moving text across a field boundary kept a valid signature | JSON payload `hmac-sha256-json`; legacy signatures still verify | `test_audit_signature_is_unambiguous_and_legacy_signatures_still_verify` |
+| DEF-092 | **P1 (HITL)** | Extraction | `flag_contradictions` re-ran on every upload and turned a reviewer-APPROVED claim back into CONTRADICTORY | claims with a human review are never re-flagged | `test_reviewer_decision_on_a_contradiction_survives_later_uploads` |
+| DEF-093 | P1 | Extraction | blank callee/account created one shared entity with an empty key: phantom hub linking rows across cases | MENTION of the present party + missingness, no edge | `test_blank_identifiers_never_become_a_shared_entity` |
+| DEF-094 | P2 | Provenance | CSV row locator drifted after blank lines (opened the wrong/empty line) | `reader.line_num` | `test_csv_row_locator_is_the_physical_line_even_with_blank_lines` |
+| DEF-095 | P2 | Provenance | NER pass joined all pages and labelled hits page 1 → page-2 names opened nothing | per-page NER | `test_ner_locator_points_at_the_right_page_and_line` |
+| DEF-096 | P3 | Provenance | consecutive ownership sentences: second owner claimed twice (once on the previous line) | match must start on the line | `test_consecutive_ownership_sentences_give_one_claim_each_on_their_own_line` |
+| DEF-097 | P2 | Web (HITL) | status/search filters applied nowhere; reset threw "caseId required"; type/priority filters had no data | applied client-side; reset keeps case; dead selectors removed | browser: search 8 → 3, reset → 8 |
+
+**Recorded, not changed:** a job whose process dies mid-run stays RUNNING (needs a job lease/timeout); match candidates
+keep the signals from when they were created (later evidence does not refresh them); the golden dataset contains two
+self-calls (CALL-0026, CALL-0034 — generator quirk, kept because many tests depend on exact counts); `paddlepaddle`
+advisories; raw-file download policy for EVIDENCE_OFFICER/AUDITOR; global `Entity.label` for shared identifiers.
+Existing deployments: person entities created before DEF-090 keep their old global key until data is re-ingested.
