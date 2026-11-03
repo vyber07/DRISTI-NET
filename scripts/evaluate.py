@@ -33,7 +33,7 @@ from apps.api.app.db import SessionLocal
 from apps.api.app.main import app
 from apps.api.app.models import Claim, Entity, MatchCandidate
 from apps.api.app.seed import seed
-from apps.api.app.services import extract as extract_svc
+from apps.api.app.services import extract_common as extract_svc  # DEF-082: norm_* live in extract_common
 from apps.api.app.services import graph as graph_svc
 
 TRUTH = json.loads((SYNTHETIC_DIR / "truth-labels.json").read_text())

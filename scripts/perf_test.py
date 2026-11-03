@@ -68,20 +68,60 @@ def main() -> None:
         rows.append((op, condition, med, detail or f"{n} samples: {samples}"))
         print(f"{op} [{condition}]: median {med}s over {samples}")
 
-    # ---- scale 1: the golden dataset. Re-uploading identical bytes is fine for timing purposes: a
-    # duplicate sha256 only affects the `duplicate_of` audit field (evidence_routes.py), it does not skip
-    # scan/extract/resolve -- each call still creates a new Evidence row and runs the full pipeline.
+    # DEF-080: re-uploading identical bytes to the same case is detected as a duplicate (uix_evidence_case_sha) and
+    # returns the existing record without scanning/extracting -- so samples 2 and 3 used to time only the duplicate
+    # check (e.g. 20000-row CSV: [19.5 s, 0.05 s, 0.35 s] reported as "median 0.35 s"). Every sample now goes to a
+    # fresh case, and each response must be a newly created evidence record that reached a processed state.
+    admin_tok = client.post("/api/v1/auth/login", json={"username": "admin", "password": "admin-demo"}).json()["token"]
+    admin = {"Authorization": f"Bearer {admin_tok}"}
+    seen_ids: set[str] = set()
+    case_counter = [0]
+
+    def fresh_case() -> str:
+        case_counter[0] += 1
+        cid = f"PERF-{case_counter[0]:04d}"
+        r = client.post("/api/v1/cases", headers=admin, json={"case_id": cid, "title": "perf sample", "jurisdiction": "Demo District A",
+                                                              "purpose": "performance measurement", "authority_reference": "PERF"})
+        assert r.status_code == 201, r.text
+        for u in ("officer", "investigator"):
+            assert client.post(f"/api/v1/cases/{cid}/assign", headers=admin, json={"username": u}).status_code == 200
+        return cid
+
+    def timed_upload(case_id: str, name: str, data: bytes, label: str):
+        r = client.post(f"/api/v1/cases/{case_id}/evidence", headers=officer, files={"file": (name, data)}, data={"source_label": label})
+        assert r.status_code == 201, r.text
+        body = r.json()
+        assert body["evidence_id"] not in seen_ids, "duplicate upload: the sample did not run the pipeline"
+        seen_ids.add(body["evidence_id"])
+        assert body["status"] in ("HITL", "GRAPH_PROJECTED", "EXTRACTED", "ENTITY_CANDIDATES"), body["status"]
+
     def upload_golden_file(rel: str):
         p = SYNTHETIC_DIR / rel
-        r = client.post("/api/v1/cases/CASE-0002/evidence", headers=officer,
-                         files={"file": (p.name, p.read_bytes())}, data={"source_label": "perf"})
-        assert r.status_code == 201, r.text
+        data = p.read_bytes()
+        cid = fresh_case()  # case creation is outside the timed call below
+        return lambda: timed_upload(cid, p.name, data, "perf")
+
+    def measure_fresh(op: str, condition: str, make_call, n=3) -> None:
+        samples = []
+        for _ in range(n):
+            call = make_call()  # set-up (new case) is not timed
+            t0 = time.monotonic()
+            call()
+            samples.append(round(time.monotonic() - t0, 4))
+        med = statistics.median(samples)
+        rows.append((op, condition, med, f"{n} samples: {samples}"))
+        print(f"{op} [{condition}]: median {med}s over {samples}")
 
     for rel in ("calls.csv", "transactions.csv", "people.json", "documents/fir_001.pdf"):
-        measure(f"upload_scan_extract_resolve[{rel}]", "golden dataset file, fresh SQLite store", lambda rel=rel: upload_golden_file(rel))
+        measure_fresh(f"upload_scan_extract_resolve[{rel}]", "golden dataset file, each sample a fresh case (no duplicate short-cut)", lambda rel=rel: upload_golden_file(rel))
 
-    measure("graph_query[max_nodes=50]", "CASE-0002 after golden-file uploads above", lambda: client.get("/api/v1/cases/CASE-0002/graph?max_nodes=50", headers=investigator))
-    measure("analysis_query", "CASE-0002 after golden-file uploads above", lambda: client.get("/api/v1/cases/CASE-0002/analysis", headers=investigator))
+    # graph/analysis on one case holding the full golden dataset
+    golden_case = fresh_case()
+    for rel in ("people.json", "aliases.json", "calls.csv", "transactions.csv", "vehicles.csv", "locations.csv", "documents/fir_001.pdf"):
+        p = SYNTHETIC_DIR / rel
+        timed_upload(golden_case, p.name, p.read_bytes(), "perf-setup")
+    measure("graph_query[max_nodes=50]", "case holding the full golden dataset", lambda: client.get(f"/api/v1/cases/{golden_case}/graph?max_nodes=50", headers=investigator))
+    measure("analysis_query", "case holding the full golden dataset", lambda: client.get(f"/api/v1/cases/{golden_case}/analysis", headers=investigator))
 
     # ---- scale 2: a synthetically larger CSV, to show scaling behaviour, not just one data point
     buf = io.StringIO()
@@ -91,13 +131,15 @@ def main() -> None:
         w.writerow([f"+9190000{i % 500:05d}", f"+9190000{(i + 1) % 500:05d}", "2025-07-01T10:00:00", str(10 + i % 300), "TWR-PERF-01"])
     large_csv = buf.getvalue().encode()
 
-    def upload_large_csv():
-        r = client.post("/api/v1/cases/CASE-0002/evidence", headers=officer,
-                         files={"file": (f"perf_calls_{time.monotonic_ns()}.csv", large_csv)}, data={"source_label": "perf-scale"})
-        assert r.status_code == 201, r.text
+    large_cases: list[str] = []
 
-    measure(f"upload_scan_extract_resolve[synthetic_calls_{large_rows}_rows]", f"{large_rows}-row CSV, fresh bytes each sample", upload_large_csv, n=3)
-    measure("graph_query[max_nodes=150]_after_large_upload", "CASE-0002 after large-CSV upload above", lambda: client.get("/api/v1/cases/CASE-0002/graph?max_nodes=150", headers=investigator))
+    def upload_large_csv():
+        cid = fresh_case()
+        large_cases.append(cid)
+        return lambda: timed_upload(cid, "perf_calls.csv", large_csv, "perf-scale")
+
+    measure_fresh(f"upload_scan_extract_resolve[synthetic_calls_{large_rows}_rows]", f"{large_rows}-row CSV, each sample a fresh case", upload_large_csv, n=3)
+    measure("graph_query[max_nodes=150]_after_large_upload", f"case holding one {large_rows}-row CSV", lambda: client.get(f"/api/v1/cases/{large_cases[0]}/graph?max_nodes=150", headers=investigator))
 
     conditions = [
         f"Host: {platform.platform()}, {multiprocessing.cpu_count()} vCPU",
