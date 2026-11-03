@@ -230,13 +230,20 @@ def bounded_subgraph(G: nx.MultiDiGraph, case_id: str, center: str | None, hops:
     neo4j_store.read_bounded for why a centered hop-bounded traversal can't be paged the same way.
     """
     offset = max(0, offset)
-    # DEF-071 / DEC-010: centered traversals are bounded in-process on every backend. The Neo4j Cypher traversal
+    # DEF-071 / DEC-012: centered traversals are bounded in-process on every backend. The Neo4j Cypher traversal
     # did not apply the supernode fan-out cap (a 20-spoke hub returned all 20 neighbours, cap 12) -- found when
     # the restored supernode test ran against live Neo4j. The authoritative projection G is already in memory.
     if neo4j_store.available() and not G.graph.get("projection_stale") and (center is None or center not in G):
         try:
             nodes, _edges, truncated = neo4j_store.read_bounded(case_id, center, hops, max_nodes, offset)
-            return {n["entity_id"] for n in nodes}, truncated
+            ids = {n["entity_id"] for n in nodes}
+            if ids <= set(G.nodes):
+                return ids, truncated
+            # DEF-072: the projection disagrees with the authoritative rows (e.g. another instance wrote this case
+            # id into a shared Neo4j). Never serve it; fall back and say so.
+            logger.warning("Neo4j projection for %s disagrees with authoritative rows (%d unknown ids); using in-process",
+                           case_id, len(ids - set(G.nodes)))
+            G.graph["projection_stale"] = True
         except Exception as exc:  # DEF-043: fall back to the authoritative in-process projection
             logger.warning("Neo4j bounded read failed for %s, using in-process projection: %s", case_id, exc)
             G.graph["projection_stale"] = True
@@ -245,7 +252,12 @@ def bounded_subgraph(G: nx.MultiDiGraph, case_id: str, center: str | None, hops:
     U = G.to_undirected(as_view=True)
     udeg = lambda n: len(set(U.neighbors(n)))
     if center is None or center not in G:
-        ranked = sorted(G.nodes, key=lambda n: -udeg(n))
+        # DEF-072: page in the same order the Neo4j listing uses when Neo4j is configured, so a request that falls
+        # back mid-pagination does not mix two orderings (nodes repeated or skipped across pages).
+        if neo4j_store.available():
+            ranked = sorted(G.nodes)
+        else:
+            ranked = sorted(G.nodes, key=lambda n: -udeg(n))
         page = ranked[offset:offset + max_nodes]
         keep = set(page)
         return keep, offset + len(page) < len(ranked)

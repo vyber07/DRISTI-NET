@@ -2,7 +2,7 @@
 
 ## 1. Release classification
 
-- **Status: ENGINEERING PREVIEW** (re-assessed 2026-11-01 against the working tree on top of `e969324`, uncommitted)
+- **Status: ENGINEERING PREVIEW** (re-confirmed 2026-11-03 after independent review; see DEF-033b…072) (re-assessed 2026-11-01 against the working tree on top of `e969324`, uncommitted)
 - **Supersedes** the earlier version of this report, which read "APPROVED — STAGING CANDIDATE". That decision is
   withdrawn. Staging Candidate requires migrations that work, deployment readiness, a verified backup/restore and
   security testing to an agreed scope. On re-verification, the PostgreSQL migration chain was broken (two tables'
@@ -14,11 +14,11 @@
 
 | Gate | Result | Evidence / reason |
 |---|---|---|
-| Backend suite (SQLite) | PASS | s4: 91 passed, 5 skipped, 1 deselected (+4 security regression tests) |
-| Backend suite (live PostgreSQL + Neo4j + S3 + ClamAV) | PASS | 93 passed, 0 failed, 0 skipped, `REQUIRE_LIVE_TESTS=1` |
+| Backend suite (SQLite) | PASS | 2026-11-03: 125 passed, 5 skipped (live-store tests), 1 deselected; clean environment |
+| Backend suite (live PostgreSQL + Neo4j + S3 + ClamAV) | PASS | 2026-11-03: 131 passed, 0 failed, 0 skipped, `REQUIRE_LIVE_TESTS=1`, two consecutive runs |
 | Migrations (fresh PostgreSQL, upgrade → model diff → downgrade) | PASS after fix | Two migrations were missing (DEF-021); `5bcde1234569` added |
 | Web typecheck + build | PASS | `tsc -b --noEmit` 0 errors |
-| Browser E2E | PASS | s4: 6/6 ×2 on an isolated instance (new download-integrity test, DEF-029/030); 6/6 on a restored instance |
+| Browser E2E | PASS | 2026-11-03: 6/6 ×2 on the full live stack (evidence in S3), incl. HITL anti-fabrication and download-integrity assertions; 14-route sweep 0 console / 0 HTTP errors |
 | Browser sweep (12 case routes) | PASS | 0 console errors, 0 HTTP ≥400, valid PDF download |
 | Golden-journey dry runs | PASS | 5/5 runs × 29/29 steps (testgate scanner) |
 | Evidence gate (§19: edge opens exact source) | PASS after fix | Edge drawer lists per-claim locators; viewer opens at page 1 / line 11 (DEF-024) |

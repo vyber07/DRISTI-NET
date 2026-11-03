@@ -212,3 +212,18 @@ def test_review_reasons_are_masked_in_candidate_output(client, admin, officer, r
     assert r.status_code == 200, r.text
     reasons = [x["reason"] for x in client.get(f"/api/v1/candidates/{cid}", headers=reviewer).json()["reviews"]]
     assert reasons and not any("90000 00101" in x for x in reasons), reasons
+
+
+def test_graph_ignores_a_neo4j_projection_that_disagrees_with_authoritative_rows(client, ingested, investigator, monkeypatch):
+    """DEF-072: the uncentered listing trusted node ids returned by Neo4j. When the projection held another
+    instance's data for the same case id (seen live: two app instances sharing one Neo4j), the API returned an
+    empty graph. Ids not present in the authoritative projection must mark it stale and fall back."""
+    from ..services import neo4j_store
+
+    baseline = client.get("/api/v1/cases/CASE-0001/graph?limit=150", headers=investigator).json()
+    monkeypatch.setattr(neo4j_store, "available", lambda: True)
+    monkeypatch.setattr(neo4j_store, "write_projection", lambda *a, **k: None)
+    monkeypatch.setattr(neo4j_store, "read_bounded", lambda *a, **k: ([{"entity_id": "ENT-foreign-1"}, {"entity_id": "ENT-foreign-2"}], [], False))
+    body = client.get("/api/v1/cases/CASE-0001/graph?limit=150", headers=investigator).json()
+    assert body["projection_stale"] is True
+    assert {n["entity_id"] for n in body["nodes"]} == {n["entity_id"] for n in baseline["nodes"]}
