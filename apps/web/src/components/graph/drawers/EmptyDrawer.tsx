@@ -34,7 +34,7 @@ export function EmptyDrawer() {
           <div className="space-y-0.5">
             <p className="text-2xl font-bold text-text-primary">{edges.length}</p>
             <p className="text-[10px] uppercase tracking-wider text-text-muted font-semibold">
-              Indexed Claims
+              Relationships (aggregated)
             </p>
           </div>
         </div>
@@ -46,7 +46,7 @@ export function EmptyDrawer() {
           Graph Analytics Enabled
         </p>
         <p className="leading-relaxed">
-          The map currently displays the exact subgraph structure derived from real evidentiary claims. No fabricated mock data is injected.
+          Each relationship shown aggregates one or more source-linked claims. Select one to see the claims and open each source at its exact location.
         </p>
       </div>
     </div>

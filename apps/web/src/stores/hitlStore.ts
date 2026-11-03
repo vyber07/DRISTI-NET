@@ -129,8 +129,10 @@ export const useHITLStore = create<HITLState>((set, get) => ({
   },
 
   resetFilter: () => {
-    set({ filter: DEFAULT_FILTER });
-    get().loadTasks(DEFAULT_FILTER);
+    // DEF-097: DEFAULT_FILTER has no caseId, so reset threw "caseId required" and emptied the queue.
+    const reset = { ...DEFAULT_FILTER, caseId: get().filter.caseId };
+    set({ filter: reset });
+    get().loadTasks(reset);
   },
 
   submitDecision: async (taskId, decision) => {

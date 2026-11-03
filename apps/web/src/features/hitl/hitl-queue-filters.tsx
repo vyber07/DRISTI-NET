@@ -1,6 +1,6 @@
 ﻿import { Search, X, Filter } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import type { HITLFilter, HITLTaskStatus, HITLTaskType, HITLTaskPriority } from "@/types/hitl";
+import type { HITLFilter, HITLTaskStatus } from "@/types/hitl";
 
 interface HITLQueueFiltersProps {
   filter: HITLFilter;
@@ -17,9 +17,7 @@ export function HITLQueueFilters({
 }: HITLQueueFiltersProps) {
   const isFiltered =
     Boolean(filter.searchQuery) ||
-    filter.status !== "ALL" ||
-    filter.type !== "ALL" ||
-    filter.priority !== "ALL";
+    (filter.status ?? "ALL") !== "ALL";
 
   return (
     <div className="space-y-3 rounded-md border border-border-subtle bg-surface-1 p-3">
@@ -64,22 +62,8 @@ export function HITLQueueFilters({
 
       {/* Filter Row: Type, Status, Priority */}
       <div className="flex flex-wrap items-center gap-2 pt-2 border-t border-border-subtle/60 text-xs">
-        {/* Type Selector */}
-        <div className="flex items-center gap-1.5">
-          <span className="text-micro font-mono uppercase text-text-muted">Type:</span>
-          <select
-            value={filter.type || "ALL"}
-            onChange={(e) => onFilterChange({ type: e.target.value as HITLTaskType | "ALL" })}
-            className="bg-surface-2 border border-border-subtle rounded px-2 py-1 text-micro font-mono text-text-primary focus:outline-none focus:border-electric-blue"
-          >
-            <option value="ALL">All Types</option>
-            <option value="CONTRADICTION_RESOLUTION">Contradiction Resolution</option>
-            <option value="ENTITY_MERGE">Entity Merge</option>
-            <option value="RELATIONSHIP_ARBITRATION">Relationship Arbitration</option>
-            <option value="TIER_ELEVATION">Tier Elevation</option>
-          </select>
-        </div>
-
+        {/* DEF-097: Type and Priority selectors removed -- every candidate is an entity merge and the API assigns no
+            priority, so they filtered nothing (or, for a fixed value, everything). */}
         {/* Status Selector */}
         <div className="flex items-center gap-1.5">
           <span className="text-micro font-mono uppercase text-text-muted">Status:</span>
@@ -90,28 +74,12 @@ export function HITLQueueFilters({
           >
             <option value="ALL">All Statuses</option>
             <option value="PENDING">Pending (Action Required)</option>
-            <option value="IN_REVIEW">In Review</option>
             <option value="APPROVED">Approved / Resolved</option>
             <option value="REJECTED">Rejected</option>
             <option value="ESCALATED">Escalated</option>
           </select>
         </div>
 
-        {/* Priority Selector */}
-        <div className="flex items-center gap-1.5">
-          <span className="text-micro font-mono uppercase text-text-muted">Priority:</span>
-          <select
-            value={filter.priority || "ALL"}
-            onChange={(e) => onFilterChange({ priority: e.target.value as HITLTaskPriority | "ALL" })}
-            className="bg-surface-2 border border-border-subtle rounded px-2 py-1 text-micro font-mono text-text-primary focus:outline-none focus:border-electric-blue"
-          >
-            <option value="ALL">All Priorities</option>
-            <option value="CRITICAL">Critical Only</option>
-            <option value="HIGH">High Only</option>
-            <option value="MEDIUM">Medium Only</option>
-            <option value="LOW">Low Only</option>
-          </select>
-        </div>
       </div>
     </div>
   );
