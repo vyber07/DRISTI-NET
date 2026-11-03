@@ -63,3 +63,7 @@ Restore drill re-run on this code (fresh real-ClamAV ingest): PASS — 8/8 evide
 backend 174 passed / 7 skipped (SPA route needs `dist/`; six PostgreSQL-only tests); `npm ci` + typecheck 0 + build OK +
 `npm audit` 0. Restore drill on this code: PASS — 8/8 evidence, 52/52 audit events (all `hmac-sha256-json`), identical
 graphs, 52/52 failures under a different key. Local file only, not published.
+
+**2026-11-04 (fourth pass):** `releases/drishti-net-d295962-clean-20261103T234946Z.tar.gz`, SHA-256
+`8f6f169c88ba7a4d87ce0102b3f63647835f48a441931f7ad02fde67b3caf186` (clean tree at `d295962`). Unpacked: 0 forbidden paths;
+backend 180 passed / 7 skipped; `npm ci` + typecheck 0 + build OK + `npm audit` 0. Local file only.
