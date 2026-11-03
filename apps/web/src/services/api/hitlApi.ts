@@ -64,7 +64,11 @@ export async function listHITLTasks(filter?: HITLFilter): Promise<ApiResponse<HI
   const caseId = filter?.caseId || "";
   if (!caseId) throw new Error("caseId required");
   const data = await get(`/cases/${caseId}/candidates`);
-  const tasks = Array.isArray(data) ? data.map(mapCandidateToTask) : [];
+  // DEF-097: status and search filters were sent nowhere and applied nowhere; apply them to the API result.
+  const q = (filter?.searchQuery || "").trim().toLowerCase();
+  const tasks = (Array.isArray(data) ? data.map(mapCandidateToTask) : []).filter((t) =>
+    (!filter?.status || filter.status === "ALL" || t.status === filter.status) &&
+    (!q || [t.id, t.entityAName, t.entityBName || "", t.title].some((v) => v.toLowerCase().includes(q))));
   return { data: tasks, meta: { requestId: "req", timestamp: new Date().toISOString(), durationMs: 0, securityClassification: "REAL" } };
 }
 export async function getHITLTask(taskId: string): Promise<ApiResponse<HITLTask>> {
