@@ -57,3 +57,9 @@ directory: 0 forbidden paths (`.env`, `*.db`, `storage/`, `node_modules/`, `.git
 extra skip is the SPA-route test, which needs `dist/`); `npm ci` + typecheck 0 + build OK + `npm audit` 0. Local file only.
 Restore drill re-run on this code (fresh real-ClamAV ingest): PASS — 8/8 evidence, 33/33 audit HMACs, identical graphs,
 33/33 HMAC failures under a different key.
+
+**2026-11-03 (third pass):** `releases/drishti-net-8e8502c-clean-20261103T191830Z.tar.gz`, SHA-256
+`146dbfb3512389040e3b98917d54e5704a200d874b694499520f6b5ad2f6a2ba` (clean tree at `8e8502c`). Unpacked: 0 forbidden paths;
+backend 174 passed / 7 skipped (SPA route needs `dist/`; six PostgreSQL-only tests); `npm ci` + typecheck 0 + build OK +
+`npm audit` 0. Restore drill on this code: PASS — 8/8 evidence, 52/52 audit events (all `hmac-sha256-json`), identical
+graphs, 52/52 failures under a different key. Local file only, not published.
