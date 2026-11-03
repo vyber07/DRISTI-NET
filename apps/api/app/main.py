@@ -54,7 +54,8 @@ async def value_error(request: Request, exc: ValueError):
 @app.get("/api/v1/health")
 def health():
     return {"status": "ok", "scanner_mode": config.SCANNER_MODE, "graph_bounds": {"max_hops": config.GRAPH_MAX_HOPS, "max_nodes": config.GRAPH_MAX_NODES},
-            "storage": str(config.STORAGE_ROOT), "database": config.DATABASE_URL.split("://")[0],
+            # DEF-074: backend kind only -- this endpoint is unauthenticated and used to return the absolute path.
+            "storage": "s3" if config.S3_ENDPOINT_URL else "local", "database": config.DATABASE_URL.split("://")[0],
             "graph_store": "neo4j" if neo4j_store.available() else "in-process"}
 
 
@@ -67,7 +68,9 @@ def ready():
         if neo4j_store.available():
             neo4j_store.driver().verify_connectivity()
     except Exception as exc:
-        raise HTTPException(503, f"Service unavailable: {exc}")
+        # DEF-074: never echo driver errors (hosts, users, auth failures) to an unauthenticated caller.
+        logger.warning("readiness check failed: %s", exc)
+        raise HTTPException(503, "Service unavailable: a required dependency is not reachable")
     return {"ready": True}
 
 

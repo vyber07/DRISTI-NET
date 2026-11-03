@@ -94,7 +94,7 @@ export function CaseAnalysisPage() {
                       <span className="text-xs text-text-primary truncate">{n.label}</span>
                     </div>
                     <div className="flex items-center gap-3 text-xs text-text-muted shrink-0">
-                      <span>degree: <strong className="text-text-primary">{n.degree}</strong></span>
+                      <span>communities touched: <strong className="text-text-primary">{Array.isArray(n.touches_communities) ? n.touches_communities.length : (n.touches_communities ?? "—")}</strong></span>
                       <span>betweenness: <strong className="text-text-primary">{(n.betweenness || 0).toFixed(3)}</strong></span>
                     </div>
                   </div>
@@ -117,7 +117,7 @@ export function CaseAnalysisPage() {
                   <div key={idx} className="rounded-md bg-surface-2 border border-border-subtle p-3 space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-semibold text-text-primary">Community {idx + 1}</span>
-                      <span className="text-[10px] text-text-muted">{(comm.members || []).length} members · stability: {(comm.stability ?? 0).toFixed(2)}</span>
+                      <span className="text-[10px] text-text-muted">{comm.size ?? (comm.members || []).length} members · stability: {typeof comm.stability === "number" ? comm.stability.toFixed(2) : "n/a"}</span>
                     </div>
                     <div className="flex flex-wrap gap-1">
                       {(comm.members || []).slice(0, 5).map((m: any) => (

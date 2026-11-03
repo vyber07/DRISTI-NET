@@ -27,7 +27,7 @@ export function CaseEvidenceView() {
   } = useEvidenceStore();
 
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [uploadMsg, setUploadMsg] = useState("");
+  const [uploadMsg, setUploadMsg] = useState<{ text: string; ok: boolean } | null>(null);
 
   const caseId = routeCaseId;
 
@@ -103,19 +103,20 @@ export function CaseEvidenceView() {
                 headers: tok ? { Authorization: `Bearer ${tok}` } : {},
                 body: fd
               });
+              // DEF-076: report what the server actually said. Previously every success was shown in red, a 201 whose
+              // scan result was INFECTED read "Uploaded", and the "quarantine" branch never matched any real 4xx text.
+              let body: any = null;
+              try { body = await res.json(); } catch { /* non-JSON body */ }
               if (!res.ok) {
-                 const text = await res.text();
-                 if (text.includes("quarantine") || text.includes("virus") || text.includes("malware")) {
-                    setUploadMsg("File is in quarantine");
-                 } else {
-                    setUploadMsg("Upload failed");
-                 }
+                 setUploadMsg({ ok: false, text: `Upload rejected (${res.status}): ${typeof body?.detail === "string" ? body.detail : res.statusText}` });
               } else {
-                 setUploadMsg("Uploaded");
+                 const status: string = body?.status || "UNKNOWN";
+                 const blocked = ["INFECTED", "SCAN_FAILED", "SCAN_TIMEOUT", "SCANNER_UNAVAILABLE", "QUARANTINED", "INTEGRITY_MISMATCH", "EXTRACTION_FAILED"].includes(status);
+                 setUploadMsg({ ok: !blocked, text: blocked ? `Stored, but not processed: status ${status}${body?.scan_result ? ` (scan: ${body.scan_result})` : ""}` : `Uploaded: status ${status}` });
                  loadEvidence(caseId, entityScope);
               }
             }}>Upload</Button>
-            {uploadMsg && <span className="text-critical-red font-bold text-xs">{uploadMsg}</span>}
+            {uploadMsg && <span role="status" className={`font-bold text-xs ${uploadMsg.ok ? "text-emerald-400" : "text-critical-red"}`}>{uploadMsg.text}</span>}
           </div>
         </div>
 

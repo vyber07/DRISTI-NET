@@ -39,6 +39,15 @@ services:
       DRISHTI_REDIS_URL: redis://redis:6379/0
     volumes:
     - drishti-data:/data
+    healthcheck:  # DEF-075: api had none; probe real readiness (DB + Neo4j), not just the port
+      test:
+      - CMD
+      - python3
+      - -c
+      - import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://localhost:8000/api/v1/ready', timeout=4).status == 200 else 1)
+      interval: 10s
+      timeout: 5s
+      retries: 12
     depends_on:
       postgres:
         condition: service_healthy
@@ -110,7 +119,7 @@ services:
     healthcheck:
       test:
       - CMD-SHELL
-      - echo PING | nc localhost 3310 || exit 1
+      - echo PING | nc localhost 3310 | grep -q PONG || exit 1  # DEF-075: require the PONG reply
       interval: 10s
       timeout: 5s
       retries: 20
@@ -153,6 +162,8 @@ services:
     volumes:
     - drishti-data:/data
     depends_on:
+      clamav:
+        condition: service_healthy  # DEF-075: the worker runs the scan gate
       postgres:
         condition: service_healthy
       neo4j:
@@ -204,8 +215,8 @@ services:
     - --network=dev
     - --rpc-http-enabled
     - --rpc-http-host=0.0.0.0
-    - --rpc-http-api=ETH,NET,WEB3,DEBUG,MINER
-    - --host-allowlist=*
+    - --rpc-http-api=ETH,NET,WEB3  # DEF-075: DEBUG/MINER not needed to anchor a root
+    - --host-allowlist=besu,localhost
     expose:
     - '8545'
     volumes:

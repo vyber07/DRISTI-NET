@@ -130,7 +130,7 @@ export function EntityDrawer({ onFocusNode }: { onFocusNode?: (nodeId: string) =
                  </div>
                  <PIIField
                     label={entity.kind}
-                    value={entity.label}
+                    value={getRevealedValue(entity.entity_id, "id") || entity.label}  /* DEF-078: was the masked label even after a reveal */
                     maskedValue={entity.label}
                     isMasked={!isRevealed(entity.entity_id, "id")}
                     canRequestReveal={true}

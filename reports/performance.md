@@ -1,11 +1,11 @@
 # Performance testing
 
-Computed 2026-09-12T22:36:16+00:00 by `scripts/perf_test.py`.
+Computed 2026-11-03T15:37:08+00:00 by `scripts/perf_test.py`.
 
 ## Conditions (docs/context.md: never invent numbers without documenting how they were measured)
 
-- Host: Linux-7.0.0-1012-aws-x86_64-with-glibc2.43, 2 vCPU
-- Python: 3.14.4
+- Host: Linux-7.0.0-1006-aws-x86_64-with-glibc2.43, 2 vCPU
+- Python: 3.11.17
 - DB backend: SQLite (throwaway file, zero-install default) -- NOT the real Postgres path; see docs/adr/001
 - Scanner: DRISHTI_SCANNER_MODE=testgate (documented safe substitute, not real ClamAV -- see scripts/evaluate.py's docstring for why)
 - Transport: FastAPI TestClient (in-process ASGI calls) -- excludes real network/TLS round-trip time
@@ -15,14 +15,14 @@ Computed 2026-09-12T22:36:16+00:00 by `scripts/perf_test.py`.
 
 | operation | condition | median seconds | detail |
 |---|---|---|---|
-| upload_scan_extract_resolve[calls.csv] | golden dataset file, fresh SQLite store | 0.0767 | 3 samples: [0.159, 0.0767, 0.0759] |
-| upload_scan_extract_resolve[transactions.csv] | golden dataset file, fresh SQLite store | 0.03 | 3 samples: [0.0313, 0.0277, 0.03] |
-| upload_scan_extract_resolve[people.json] | golden dataset file, fresh SQLite store | 0.07 | 3 samples: [0.0708, 0.0698, 0.07] |
-| upload_scan_extract_resolve[documents/fir_001.pdf] | golden dataset file, fresh SQLite store | 0.0514 | 3 samples: [0.0851, 0.0514, 0.0498] |
-| graph_query[max_nodes=50] | CASE-0002 after golden-file uploads above | 0.0518 | 3 samples: [0.0518, 0.0582, 0.0338] |
-| analysis_query | CASE-0002 after golden-file uploads above | 0.0925 | 3 samples: [0.0923, 0.0928, 0.0925] |
-| upload_scan_extract_resolve[synthetic_calls_20000_rows] | 20000-row CSV, fresh bytes each sample | 15.0474 | 3 samples: [14.5775, 15.0474, 15.7641] |
-| graph_query[max_nodes=150]_after_large_upload | CASE-0002 after large-CSV upload above | 4.6133 | 3 samples: [4.2686, 4.6649, 4.6133] |
+| upload_scan_extract_resolve[calls.csv] | golden dataset file, fresh SQLite store | 0.0228 | 3 samples: [0.178, 0.0176, 0.0228] |
+| upload_scan_extract_resolve[transactions.csv] | golden dataset file, fresh SQLite store | 0.02 | 3 samples: [0.0606, 0.02, 0.0118] |
+| upload_scan_extract_resolve[people.json] | golden dataset file, fresh SQLite store | 0.0093 | 3 samples: [0.2021, 0.0075, 0.0093] |
+| upload_scan_extract_resolve[documents/fir_001.pdf] | golden dataset file, fresh SQLite store | 0.0115 | 3 samples: [7.8573, 0.0115, 0.0098] |
+| graph_query[max_nodes=50] | CASE-0002 after golden-file uploads above | 0.0393 | 3 samples: [0.0695, 0.0393, 0.0392] |
+| analysis_query | CASE-0002 after golden-file uploads above | 0.1367 | 3 samples: [0.1533, 0.1367, 0.1125] |
+| upload_scan_extract_resolve[synthetic_calls_20000_rows] | 20000-row CSV, fresh bytes each sample | 0.3476 | 3 samples: [19.5007, 0.0515, 0.3476] |
+| graph_query[max_nodes=150]_after_large_upload | CASE-0002 after large-CSV upload above | 2.605 | 3 samples: [2.605, 3.5158, 2.5966] |
 
 ## Known limitations of this measurement
 

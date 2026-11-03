@@ -4,7 +4,6 @@ from pathlib import Path
 
 # Add project root to sys.path
 import sys
-import os
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from apps.api.app.services.nlp_adapter import extract_entities

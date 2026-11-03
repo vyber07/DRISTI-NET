@@ -75,7 +75,11 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       console.warn("Backend login failed", e);
       return { 
         success: false, 
-        error: e.response?.data?.detail || "Authentication failed. Server unreachable or invalid credentials." 
+        // DEF-076: ApiError carries .status/.message (no axios `response`), so 401 and 429 throttling both showed a
+        // generic message.
+        error: e?.status === 429 ? "Too many failed attempts. Try again later."
+             : e?.status === 401 ? "Invalid credentials."
+             : (e?.message || "Authentication failed: server unreachable.") 
       };
     }
   },

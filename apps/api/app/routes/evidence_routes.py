@@ -145,8 +145,6 @@ def context(evidence_id: str, request: Request, row: int | None = None, page: in
     data = storage.read_bytes(ev.storage_path)
     ok = True
     if ev.extension == ".pdf":
-        import io
-        from pypdf import PdfReader
         pages = _pdf_pages(data)
         pno = page or 1
         lines = pages[pno - 1] if 0 < pno <= len(pages) else []
@@ -187,8 +185,6 @@ def context_reveal(evidence_id: str, body: ContextRevealIn, request: Request, us
     row, page, line, json_path, window = body.row, body.page, body.line, body.json_path, body.window
     
     if ev.extension == ".pdf":
-        import io
-        from pypdf import PdfReader
         pages = _pdf_pages(data)
         pno = page or 1
         lines = pages[pno - 1] if 0 < pno <= len(pages) else []

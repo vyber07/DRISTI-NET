@@ -27,7 +27,7 @@ export function HITLWorkspacePage() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
 
-  const caseIdFilter = caseId || "CASE-0001";
+  const caseIdFilter = caseId || "";  // every HITL route carries :caseId (DEF-077)
 
   const {
     tasks,

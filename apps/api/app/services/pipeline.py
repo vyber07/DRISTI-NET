@@ -8,11 +8,12 @@ Any non-CLEAN scan result leaves the file in quarantine (status = the scan resul
 """
 from __future__ import annotations
 
-import traceback
+import logging
 
 from sqlalchemy.orm import Session
 
 from ..models import BLOCKED_STATES, Evidence, Job, MatchCandidate
+
 
 
 class IntegrityMismatch(RuntimeError):
@@ -21,6 +22,8 @@ from . import extract as extract_svc
 from . import resolution, scanner, storage
 from . import kafka_bus
 from .audit import record_audit
+
+logger = logging.getLogger("drishti.pipeline")
 
 
 def _job(db: Session, ev: Evidence, kind: str, trace_id: str) -> Job:
@@ -92,7 +95,9 @@ def run_extract(db: Session, ev: Evidence, trace_id: str, actor_id: str | None) 
         job = db.query(Job).filter_by(idempotency_key=f"{ev.evidence_id}:EXTRACT").first()
         if job:
             job.status = "FAILED"
-            job.error = f"{type(exc).__name__}: {exc}\n{traceback.format_exc()[-800:]}"
+            # DEF-074: the traceback (server paths) goes to the server log, not into an API-visible field.
+            logger.warning("extraction failed for %s", ev.evidence_id, exc_info=True)
+            job.error = f"{type(exc).__name__}: {exc}"[:500]
         
         mismatch = isinstance(exc, IntegrityMismatch)
         ev = db.get(Evidence, ev.evidence_id) # reload evidence after rollback

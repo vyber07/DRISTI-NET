@@ -27,11 +27,11 @@ from sqlalchemy.orm import Session
 from ..auth import authorize_case, require_roles
 from ..db import get_db
 from ..models import Evidence, Entity, MatchCandidate, Review, Snapshot, User
-from ..schemas import ReportIn, CourtPdfIn
+from ..schemas import CourtPdfIn
 from ..services import graph as graph_svc
 from ..services import integrity as integrity_svc
 from ..services.audit import record_audit
-from ..services.masking import mask_analysis, mask_label, mask_text
+from ..services.masking import mask_analysis, mask_label
 from ..services.court_pdf import generate_court_pdf
 from .case_routes import case_out
 from .evidence_routes import evidence_out
@@ -182,7 +182,6 @@ def export_court_pdf(
     # Build graph snapshot (same as standard report)
     G = graph_svc.build_projection(db, case_id)
     nodes, edges, _ = graph_svc.aggregate(G)
-    labels = {n["entity_id"]: mask_label(n["kind"], n["label"]) for n in nodes}
     snap_hash = graph_svc.snapshot_hash(nodes, edges)
     snap = Snapshot(case_id=case_id, kind="GRAPH", content_hash=snap_hash, created_by=user.user_id,
                     payload={"node_count": len(nodes), "edge_count": len(edges)})
@@ -197,7 +196,7 @@ def export_court_pdf(
         last_rev = db.query(Review).filter_by(target_kind="MATCH", target_id=m.candidate_id).order_by(Review.created_at.desc()).first()
         reviews.append({
             "candidate_id": m.candidate_id, "state": m.state,
-            "left": l_ent.label if l_ent else "", "right": r_ent.label if r_ent else "",
+            "left": mask_label(l_ent.kind, l_ent.label) if l_ent else "", "right": mask_label(r_ent.kind, r_ent.label) if r_ent else "",
             "confidence": m.confidence,
             "reviewer": last_rev.reviewer_id if last_rev else None,
             "decided_at": last_rev.created_at.isoformat() if last_rev else None,

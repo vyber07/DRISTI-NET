@@ -7,12 +7,10 @@
   - Court-ready PDF route
 """
 import hashlib
-import json
 from unittest.mock import MagicMock, patch
 
 import pytest
 
-from .conftest import _login
 
 
 # ─── OCR adapter ─────────────────────────────────────────────────────────────
@@ -21,7 +19,7 @@ class TestOcrAdapter:
     def test_pypdf_fallback_is_returned_when_paddle_absent(self, tmp_path):
         """When PaddleOCR / PyMuPDF is not installed, _paddle_pages returns [] and
         the adapter falls back to the pypdf text layer.  Existing tests must not break."""
-        from apps.api.app.services.ocr_adapter import extract_text_from_pdf_bytes, _needs_ocr
+        from apps.api.app.services.ocr_adapter import extract_text_from_pdf_bytes
 
         # Minimal valid 1-page PDF with embedded text (the demo fixture)
         import os
@@ -49,7 +47,7 @@ class TestOcrAdapter:
     def test_paddle_absent_returns_empty_list(self):
         """_paddle_pages() must return [] (not raise) when paddleocr is missing."""
         with patch.dict("sys.modules", {"paddleocr": None, "fitz": None}):
-            import importlib, sys
+            import sys
             # Force reimport so the import guard runs fresh
             mod_name = "apps.api.app.services.ocr_adapter"
             if mod_name in sys.modules:
@@ -73,7 +71,6 @@ class TestNlpAdapter:
         """When transformers is not installed, extract_entities must return [] silently."""
         import sys
         with patch.dict(sys.modules, {"transformers": None}):
-            import importlib
             mod_name = "apps.api.app.services.nlp_adapter"
             if mod_name in sys.modules:
                 del sys.modules[mod_name]
@@ -84,7 +81,7 @@ class TestNlpAdapter:
 
     def test_returns_candidates_with_correct_fields(self):
         """Mock the pipeline and verify EntityCandidate fields are populated."""
-        from apps.api.app.services.nlp_adapter import extract_entities, EntityCandidate
+        from apps.api.app.services.nlp_adapter import extract_entities
         mock_pipeline = MagicMock(return_value=[
             {"entity_group": "PER", "score": 0.92, "word": "Vikram Sharma", "start": 0, "end": 13},
             # offsets corrected to match the text below (were 20/26 and 40/44, which point mid-word)
@@ -230,7 +227,7 @@ class TestKafkaBus:
         env.pop("DRISHTI_KAFKA_BOOTSTRAP_SERVERS", None)
         with patch.dict("os.environ", env, clear=True):
             # Reload to pick up the empty bootstrap
-            import importlib, sys
+            import sys
             mod = sys.modules.get("apps.api.app.services.kafka_bus")
             if mod:
                 mod._BOOTSTRAP = ""
@@ -240,7 +237,6 @@ class TestKafkaBus:
     def test_publish_returns_false_when_kafka_not_installed(self):
         import sys
         with patch.dict(sys.modules, {"kafka": None}):
-            import importlib
             mod_name = "apps.api.app.services.kafka_bus"
             if mod_name in sys.modules:
                 del sys.modules[mod_name]

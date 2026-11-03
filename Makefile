@@ -28,7 +28,8 @@ redis-up:  ## start the user-space Redis build for login-throttle (see scripts/e
 	$$HOME/.cache/drishti/redis/bin/redis-cli -p 6379 ping
 redis-down:  ## stop the user-space Redis build
 	$$HOME/.cache/drishti/redis/bin/redis-cli -p 6379 shutdown nosave || true
-clean:
+clean:  ## DEF-075: deletes the local DB and all evidence -- on the demo host that is the live demo's data
+	@test "$(CONFIRM)" = 1 || { echo 'refusing: make clean deletes storage/*.db and evidence; re-run with CONFIRM=1'; exit 2; }
 	rm -rf storage/*.db storage/*.db-shm storage/*.db-wal storage/quarantine storage/accepted storage/derived
 db-upgrade:  ## apply Alembic migrations to whatever DRISHTI_DATABASE_URL points at (no-op for sqlite; the app applies them automatically on startup too)
 	cd apps/api && $(PY) -m alembic upgrade head
@@ -47,7 +48,8 @@ test-infra-local:
 test-stack-infra:
 	docker compose exec -T api bash -c "python3 tests/infrastructure/test_infrastructure.py"
 
-test-stack:
+test-stack:  ## DEF-055/075: runs destructive test fixtures inside the deployed api container
+	@test "$(STACK_IS_DISPOSABLE)" = 1 || { echo 'refusing: test-stack resets the deployment database and Neo4j; only for a disposable stack (STACK_IS_DISPOSABLE=1)'; exit 2; }
 	set -e; trap 'docker compose down' EXIT; \
 	docker compose down; \
 	docker compose build --no-cache; \

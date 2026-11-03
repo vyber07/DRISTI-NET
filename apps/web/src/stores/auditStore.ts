@@ -54,8 +54,9 @@ export const useAuditStore = create<AuditState>((set, get) => ({
   isDrawerOpen: false,
 
   loadLogs: async (caseId?: string) => {
-    const cId = caseId || get().caseId || "CASE-0001";
-    set({ isLoading: true, error: null, caseId: cId });
+    const cId = caseId || get().caseId;  // DEF-077: no hard-coded "CASE-0001" fallback
+    if (!cId) { set({ error: "No case selected", isLoading: false }); return; }
+    set({ isLoading: true, error: null, caseId: cId, logs: [] } as any);
     try {
       const res = await listAuditLogs(cId);
       if (res.data) {

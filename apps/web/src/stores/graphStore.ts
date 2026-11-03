@@ -156,13 +156,18 @@ export const useGraphStore = create<GraphState>((set, get) => ({
       set({ selectedNodeId: null, selectedEntityDetail: null });
       return;
     }
+    // DEF-077: clear the previous entity while the new one loads, and never fall back to a hard-coded case id
+    // (the timeline's "View in graph" can select a node before any graph has loaded).
     set({
       selectedNodeId: nodeId,
       selectedEdgeId: null,
       selectedRelationshipDetail: null,
-    });
+      selectedEntityDetail: null,
+    } as any);
+    const caseId = get().caseId;
+    if (!caseId) return;
     try {
-      const res = await getEntityDetails(nodeId, get().caseId || "CASE-0001");
+      const res = await getEntityDetails(nodeId, caseId);
       set({ selectedEntityDetail: res.data });
     } catch {
       // Keep selectedNodeId

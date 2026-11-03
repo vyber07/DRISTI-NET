@@ -16,7 +16,6 @@ from alembic import command
 from alembic.config import Config
 
 from . import config
-from .db import engine
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 logger = logging.getLogger("drishti.migrations")

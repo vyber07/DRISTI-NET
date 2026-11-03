@@ -1,6 +1,4 @@
 """Vertical slice: upload → extract → candidates → review → graph → evidence → timeline → report."""
-import csv
-import io
 
 from .conftest import upload
 
@@ -111,8 +109,11 @@ def test_document_extraction_generalizes_beyond_fixture_wording(client, officer,
     claims = client.get(f"/api/v1/evidence/{ev['evidence_id']}/claims?limit=100", headers=investigator).json()
     orgs = {c["target"]["label"] for c in claims if c.get("target") and c["target"]["kind"] == "ORGANIZATION"}
     owners = {c["normalized_value"] for c in claims if c["attribute"] == "owner"}
-    # Note: Regex NER was disabled for NLP. Since model isn't downloaded in tests, we mock it.
-    pass
+    # DEF-073: this test computed both sets and asserted nothing, so it could never fail.
+    # Organisation names come from the NER adapter (replaced by conftest's fake pipeline in this suite); the vehicle
+    # owner comes from the document parser's own pattern, which must work on wording that differs from the FIR fixture.
+    assert {"Sunrise Enterprises", "Silverline Ltd"} <= orgs, orgs
+    assert "vikram nair" in owners, owners
 
 
 def test_candidates_are_explainable_and_never_auto_merged(client, investigator, ingested):

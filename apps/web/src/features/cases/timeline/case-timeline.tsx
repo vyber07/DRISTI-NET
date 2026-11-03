@@ -1,3 +1,4 @@
+import { recordedDateKey } from "@/lib/utils";
 import { useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
@@ -58,17 +59,13 @@ export function CaseTimeline({ caseId }: CaseTimelineProps) {
     }[] = [];
 
     filteredEvents.forEach((evt) => {
-      const d = new Date(evt.time);
-      const dateKey = isNaN(d.getTime()) ? "UNKNOWN" : d.toISOString().split("T")[0];
-      const displayDate = isNaN(d.getTime())
-        ? "Undated Events"
-        : new Intl.DateTimeFormat("en-IN", {
-            weekday: "short",
-            day: "2-digit",
-            month: "short",
-            year: "numeric",
-            timeZone: "Asia/Kolkata",
-          }).format(d);
+      const key = recordedDateKey(evt.time);
+      const dateKey = key ?? "UNKNOWN";
+      // Format the recorded calendar date itself (UTC used only as a neutral carrier, so no zone shift).
+      const displayDate = key
+        ? new Intl.DateTimeFormat("en-IN", { weekday: "short", day: "2-digit", month: "short", year: "numeric", timeZone: "UTC" })
+            .format(new Date(`${key}T00:00:00Z`))
+        : "Undated Events";
 
       let group = groups.find((g) => g.dateKey === dateKey);
       if (!group) {

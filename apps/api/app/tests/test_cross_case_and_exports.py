@@ -227,3 +227,28 @@ def test_graph_ignores_a_neo4j_projection_that_disagrees_with_authoritative_rows
     body = client.get("/api/v1/cases/CASE-0001/graph?limit=150", headers=investigator).json()
     assert body["projection_stale"] is True
     assert {n["entity_id"] for n in body["nodes"]} == {n["entity_id"] for n in baseline["nodes"]}
+
+
+def test_operational_endpoints_and_job_errors_do_not_leak_server_internals(client, officer, monkeypatch):
+    """DEF-074: /health (unauthenticated) returned the absolute storage path; /ready echoed exception text; failed
+    jobs stored the last 800 chars of a server traceback (file paths) and returned it to every case member."""
+    h = client.get("/api/v1/health").json()
+    assert not str(h.get("storage", "")).startswith("/"), h
+    assert h["storage"] in ("local", "s3")
+
+    from .. import main
+    class Boom:
+        def __enter__(self): raise RuntimeError("secret-host:5432 password authentication failed for user x")
+        def __exit__(self, *a): return False
+    monkeypatch.setattr(main.engine, "connect", lambda: Boom())
+    r = client.get("/api/v1/ready")
+    assert r.status_code == 503 and "password" not in r.text and "secret-host" not in r.text, r.text
+    monkeypatch.undo()
+
+    r = upload(client, officer, "CASE-0002", "corrupt/calls_corrupt.csv")
+    assert r.status_code == 201, r.text
+    jobs = client.get(f"/api/v1/evidence/{r.json()['evidence_id']}", headers=officer).json()["jobs"]
+    failed = [j for j in jobs if j["status"] == "FAILED"]
+    assert failed, jobs
+    for j in failed:
+        assert "Traceback" not in (j["error"] or "") and 'File "/' not in (j["error"] or ""), j["error"]
