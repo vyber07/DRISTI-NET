@@ -1,6 +1,6 @@
 # DRISTI-NET — Restore Test Report
 
-**Date:** 2026-11-01 (session 4) · **Code:** branch `audit/session-4-security-fixes` on top of `135edeb`
+**Date:** 2026-11-01 (session 4); re-run 2026-11-03 on `706934f`: PASS (8/8 evidence, 33/33 audit, identical graphs) · **Code:** branch `audit/session-4-security-fixes` on top of `135edeb`
 **Scope actually tested:** the single-host deployment that the demo uses — SQLite database + local object storage.
 **Not tested:** PostgreSQL + MinIO/S3 + Neo4j (Compose stack cannot start, BLK-04; no isolated host, BLK-05),
 off-host copies, backup encryption at rest, key escrow, RPO/RTO under load.
