@@ -1,6 +1,6 @@
 # Performance testing
 
-Computed 2026-11-03T15:37:08+00:00 by `scripts/perf_test.py`.
+Computed 2026-11-03T18:49:33+00:00 by `scripts/perf_test.py`.
 
 ## Conditions (docs/context.md: never invent numbers without documenting how they were measured)
 
@@ -15,14 +15,14 @@ Computed 2026-11-03T15:37:08+00:00 by `scripts/perf_test.py`.
 
 | operation | condition | median seconds | detail |
 |---|---|---|---|
-| upload_scan_extract_resolve[calls.csv] | golden dataset file, fresh SQLite store | 0.0228 | 3 samples: [0.178, 0.0176, 0.0228] |
-| upload_scan_extract_resolve[transactions.csv] | golden dataset file, fresh SQLite store | 0.02 | 3 samples: [0.0606, 0.02, 0.0118] |
-| upload_scan_extract_resolve[people.json] | golden dataset file, fresh SQLite store | 0.0093 | 3 samples: [0.2021, 0.0075, 0.0093] |
-| upload_scan_extract_resolve[documents/fir_001.pdf] | golden dataset file, fresh SQLite store | 0.0115 | 3 samples: [7.8573, 0.0115, 0.0098] |
-| graph_query[max_nodes=50] | CASE-0002 after golden-file uploads above | 0.0393 | 3 samples: [0.0695, 0.0393, 0.0392] |
-| analysis_query | CASE-0002 after golden-file uploads above | 0.1367 | 3 samples: [0.1533, 0.1367, 0.1125] |
-| upload_scan_extract_resolve[synthetic_calls_20000_rows] | 20000-row CSV, fresh bytes each sample | 0.3476 | 3 samples: [19.5007, 0.0515, 0.3476] |
-| graph_query[max_nodes=150]_after_large_upload | CASE-0002 after large-CSV upload above | 2.605 | 3 samples: [2.605, 3.5158, 2.5966] |
+| upload_scan_extract_resolve[calls.csv] | golden dataset file, each sample a fresh case (no duplicate short-cut) | 0.0869 | 3 samples: [0.1335, 0.0869, 0.0865] |
+| upload_scan_extract_resolve[transactions.csv] | golden dataset file, each sample a fresh case (no duplicate short-cut) | 0.0327 | 3 samples: [0.037, 0.0324, 0.0327] |
+| upload_scan_extract_resolve[people.json] | golden dataset file, each sample a fresh case (no duplicate short-cut) | 0.077 | 3 samples: [0.0818, 0.076, 0.077] |
+| upload_scan_extract_resolve[documents/fir_001.pdf] | golden dataset file, each sample a fresh case (no duplicate short-cut) | 0.6556 | 3 samples: [10.7153, 0.6101, 0.6556] |
+| graph_query[max_nodes=50] | case holding the full golden dataset | 0.0249 | 3 samples: [0.0466, 0.0244, 0.0249] |
+| analysis_query | case holding the full golden dataset | 0.0839 | 3 samples: [0.0885, 0.0833, 0.0839] |
+| upload_scan_extract_resolve[synthetic_calls_20000_rows] | 20000-row CSV, each sample a fresh case | 17.8306 | 3 samples: [17.8306, 17.7294, 41.1304] |
+| graph_query[max_nodes=150]_after_large_upload | case holding one 20000-row CSV | 4.8017 | 3 samples: [4.8017, 5.6215, 4.5028] |
 
 ## Known limitations of this measurement
 

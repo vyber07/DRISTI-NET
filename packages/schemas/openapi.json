@@ -620,6 +620,8 @@
             "required": false,
             "schema": {
               "type": "integer",
+              "maximum": 10,
+              "minimum": 0,
               "default": 2,
               "title": "Window"
             }
@@ -2136,7 +2138,7 @@
           "integrity"
         ],
         "summary": "Export Court Pdf",
-        "description": "Generate a court-ready evidence dossier PDF with BSA s.63(4)(c) reference fields.\n\nReturns the PDF binary (Content-Type: application/pdf).\nThe dossier includes a prominent disclaimer: it is NOT a legal certificate.\nSignature, device, custody, and examiner fields must be completed by an authorised officer.",
+        "description": "Generate an integrity-reference evidence dossier PDF with BSA s.63(4)(c) reference fields.\n\nReturns the PDF binary (Content-Type: application/pdf).\nThe dossier includes a prominent disclaimer: it is NOT a legal certificate.\nSignature, device, custody, and examiner fields must be completed by an authorised officer.",
         "operationId": "export_court_pdf_api_v1_cases__case_id__report_court_pdf_post",
         "security": [
           {
@@ -2380,6 +2382,8 @@
           },
           "window": {
             "type": "integer",
+            "maximum": 10.0,
+            "minimum": 0.0,
             "title": "Window",
             "default": 2
           }
@@ -2400,7 +2404,7 @@
         },
         "type": "object",
         "title": "CourtPdfIn",
-        "description": "Request body for the court-ready PDF dossier endpoint."
+        "description": "Request body for the integrity-reference PDF dossier endpoint."
       },
       "DecisionIn": {
         "properties": {
