@@ -1,7 +1,7 @@
 {
  "/command-center": {
   "keyboard": {
-   "stops": 115,
+   "stops": 116,
    "first_stop": "Skip to content",
    "no_focus_indicator": [],
    "focused_but_offscreen": [],
@@ -14,8 +14,8 @@
     "header": 2
    },
    "h1": 1,
-   "headings": 3,
-   "focusables": 23,
+   "headings": 4,
+   "focusables": 26,
    "unnamed": []
   },
   "axe": [],
@@ -25,7 +25,7 @@
  },
  "/cases": {
   "keyboard": {
-   "stops": 116,
+   "stops": 117,
    "first_stop": "Skip to content",
    "no_focus_indicator": [],
    "focused_but_offscreen": [],
@@ -39,7 +39,7 @@
    },
    "h1": 1,
    "headings": 1,
-   "focusables": 24,
+   "focusables": 36,
    "unnamed": []
   },
   "axe": [],
@@ -49,7 +49,7 @@
  },
  "/cases/CASE-0001": {
   "keyboard": {
-   "stops": 116,
+   "stops": 117,
    "first_stop": "Skip to content",
    "no_focus_indicator": [],
    "focused_but_offscreen": [],
@@ -62,8 +62,8 @@
     "header": 2
    },
    "h1": 1,
-   "headings": 9,
-   "focusables": 25,
+   "headings": 10,
+   "focusables": 31,
    "unnamed": []
   },
   "axe": [],
@@ -217,7 +217,7 @@
  },
  "/cases/CASE-0001/decisions": {
   "keyboard": {
-   "stops": 119,
+   "stops": 120,
    "first_stop": "Skip to content",
    "no_focus_indicator": [],
    "focused_but_offscreen": [],
@@ -231,7 +231,7 @@
    },
    "h1": 1,
    "headings": 2,
-   "focusables": 68,
+   "focusables": 128,
    "unnamed": []
   },
   "axe": [],
@@ -279,7 +279,7 @@
    },
    "h1": 1,
    "headings": 2,
-   "focusables": 430,
+   "focusables": 432,
    "unnamed": []
   },
   "axe": [],
@@ -289,7 +289,7 @@
  },
  "/profile": {
   "keyboard": {
-   "stops": 113,
+   "stops": 116,
    "first_stop": "Skip to content",
    "no_focus_indicator": [],
    "focused_but_offscreen": [],
@@ -303,7 +303,7 @@
    },
    "h1": 1,
    "headings": 5,
-   "focusables": 15,
+   "focusables": 28,
    "unnamed": []
   },
   "axe": [],

@@ -44,117 +44,94 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-bg-base flex flex-col items-center justify-center p-4">
-      {/* Background Graphic */}
-      <div className="absolute inset-0 z-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-0 w-full h-[50vh] bg-gradient-to-b from-electric-blue/5 to-transparent border-b border-electric-blue/10" />
-      </div>
+    <div className="min-h-screen bg-background lg:grid lg:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
+      {/* Brand panel: what the system is for, in the project's neutral language */}
+      <aside className="relative hidden overflow-hidden bg-[#0f2a3d] p-10 text-white lg:flex lg:flex-col lg:justify-between">
+        {/* decorative rings: plain borders, drawn identically by every engine (blurred shapes were not) */}
+        <div className="pointer-events-none absolute -right-28 -top-28 h-96 w-96 rounded-full border-[40px] border-[#2b8f8b]/15" aria-hidden="true" />
+        <div className="pointer-events-none absolute -bottom-64 -left-32 h-[28rem] w-[28rem] rounded-full border-[56px] border-[#5fc4bd]/10" aria-hidden="true" />
+        <div className="relative flex items-center gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#21706e] bg-gradient-to-br from-[#2b8f8b] to-[#1b5e5c] shadow-lg" aria-hidden="true">
+            <ShieldAlert className="h-6 w-6" />
+          </div>
+          <div>
+            <p className="text-lg font-bold tracking-wide">DRISTI&#8209;NET</p>
+            <p className="text-sm text-[#9fb4c3]">Evidence-linked case review</p>
+          </div>
+        </div>
+        <div className="relative max-w-md space-y-6">
+          <h2 className="text-3xl font-semibold leading-tight" style={{ color: "#ffffff" }}>Review relationships across authorised cases, with every link traced to its source.</h2>
+          <ul className="space-y-4 text-[15px] text-[#d6e2ea]">
+            {[
+              ["Evidence-linked", "Each candidate relationship opens the exact line of the file it came from."],
+              ["Human decisions", "Nothing is merged without a recorded reason; every decision can be reversed."],
+              ["Accountable", "Access, reveals and exports are written to a signed audit log."],
+            ].map(([t, d]) => (
+              <li key={t} className="flex gap-3">
+                <span className="mt-1 h-2 w-2 shrink-0 rounded-full bg-[#5fc4bd]" aria-hidden="true" />
+                <span><strong className="text-white">{t}.</strong> {d}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+        <p className="relative text-xs text-[#9fb4c3]">Synthetic demonstration data only · not for operational use</p>
+      </aside>
 
-      <div className="relative z-10 w-full max-w-md bg-surface-1 border border-border-subtle rounded-xl shadow-2xl overflow-hidden">
-        
-        {/* Header */}
-        <div className="px-8 py-6 border-b border-border-subtle bg-surface-2 flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-md bg-electric-blue text-white shadow-md">
+      <main className="flex min-h-screen flex-col items-center justify-center p-6">
+        <div className="w-full max-w-sm">
+          <div className="mb-8 flex items-center gap-3 lg:hidden">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#21706e] bg-gradient-to-br from-[#2b8f8b] to-[#1b5e5c] text-white" aria-hidden="true">
               <ShieldAlert className="h-5 w-5" />
             </div>
             <div>
-              <h1 className="text-lg font-bold text-text-primary tracking-tight">DRISTI-NET</h1>
-              <p className="text-xs text-text-secondary font-mono uppercase tracking-wider">Tactical Workstation</p>
+              <p className="text-base font-bold text-text-primary">DRISTI&#8209;NET</p>
+              <p className="text-xs text-text-secondary">Evidence-linked case review</p>
             </div>
           </div>
-        </div>
+          <h1 className="text-2xl font-semibold text-text-primary">Sign in</h1>
+          <p className="mt-1 text-sm text-text-secondary">Use the account issued to you. Every sign-in, successful or not, is recorded in the audit log.</p>
 
-        {/* Form Body */}
-        <div className="p-8">
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="mt-6 space-y-4 rounded-2xl border border-border-subtle bg-surface-1 p-6 shadow-[0_1px_2px_rgba(16,42,61,0.06),0_8px_24px_rgba(16,42,61,0.06)]">
             {expired && !error && (
-              <div role="status" className="p-3 bg-amber/10 border border-amber/40 text-text-primary rounded-md text-sm">
+              <div role="status" className="rounded-md border border-amber/40 bg-amber/10 p-3 text-sm text-text-primary">
                 Your session expired. Sign in again to return to the page you were on.
               </div>
             )}
             {error && (
-              <div role="alert" className="p-3 bg-red-500/10 border border-red-500/20 text-red-600 rounded-md text-sm font-medium">
+              <div role="alert" className="rounded-md border border-critical-red/30 bg-critical-red/5 p-3 text-sm font-medium text-critical-red">
                 {error}
               </div>
             )}
-            
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-text-secondary uppercase tracking-wider font-mono">
-                Officer / User ID
-              </label>
+              <label htmlFor="officer-id" className="text-sm font-medium text-text-primary">Username</label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
-                <input
-                  id="officer-id"
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className="w-full h-10 bg-surface-base border border-border-strong rounded-md pl-9 pr-3 text-sm focus:outline-none focus:border-electric-blue focus:ring-1 focus:ring-electric-blue transition-all"
-                  placeholder="Enter User ID (e.g. investigator)"
-                  autoCapitalize="none"
-                  autoComplete="username"
-                  required
-                />
+                <User className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" aria-hidden="true" />
+                <input id="officer-id" type="text" value={username} onChange={(e) => setUsername(e.target.value)}
+                  className="h-11 w-full rounded-lg border border-border-strong bg-surface-1 pl-9 pr-3 text-sm focus:border-electric-blue focus:outline-none focus:ring-2 focus:ring-electric-blue-soft"
+                  autoCapitalize="none" autoComplete="username" required />
               </div>
             </div>
-
             <div className="space-y-1.5">
-              <label className="text-xs font-semibold text-text-secondary uppercase tracking-wider font-mono">
-                Station Key
-              </label>
+              <label htmlFor="password" className="text-sm font-medium text-text-primary">Password</label>
               <div className="relative">
-                <Key className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-text-muted" />
-                <input
-                  id="password"
-                  type="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full h-10 bg-surface-base border border-border-strong rounded-md pl-9 pr-3 text-sm focus:outline-none focus:border-electric-blue focus:ring-1 focus:ring-electric-blue transition-all"
-                  placeholder="Enter Station Key"
-                  autoComplete="current-password"
-                  required
-                />
+                <Key className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" aria-hidden="true" />
+                <input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+                  className="h-11 w-full rounded-lg border border-border-strong bg-surface-1 pl-9 pr-3 text-sm focus:border-electric-blue focus:outline-none focus:ring-2 focus:ring-electric-blue-soft"
+                  autoComplete="current-password" required />
               </div>
             </div>
-
-            <Button
-              type="submit"
-              disabled={isSubmitting}
-              className="w-full h-10 mt-2 bg-electric-blue hover:bg-electric-blue-dim text-white font-medium text-xs font-mono tracking-wide uppercase flex items-center justify-center gap-2 shadow-lg transition-all"
-            >
+            <Button type="submit" variant="primary" disabled={isSubmitting} className="h-11 w-full gap-2 text-sm font-semibold">
               {isSubmitting ? (
-                <>
-                  <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                  <span>Authenticating...</span>
-                </>
+                <><div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-t-transparent" aria-hidden="true" /><span>Signing in…</span></>
               ) : (
-                <>
-                  <LogIn className="h-4 w-4" />
-                  <span>Secure Login</span>
-                </>
+                <><LogIn className="h-4 w-4" aria-hidden="true" /><span>Sign in</span></>
               )}
             </Button>
           </form>
+          {/* FE-010: the demo password used to be printed here; demo accounts are documented in the README only. */}
+          <p className="mt-6 flex items-center gap-1.5 text-xs text-text-secondary"><Server className="h-3.5 w-3.5" aria-hidden="true" />Authorised users of this synthetic demonstration only.</p>
         </div>
-
-        {/* Footer */}
-        <div className="px-8 py-4 bg-surface-2 border-t border-border-subtle flex items-center justify-between text-[11px] text-text-muted font-mono">
-          <div className="flex items-center gap-1.5">
-            <Server className="h-3.5 w-3.5" aria-hidden="true" />
-            <span>Synthetic demonstration data only</span>
-          </div>
-          <span>Every sign-in is audited</span>
-        </div>
-      </div>
-      
-      {/* Demo helper */}
-      <div className="mt-8 text-center text-xs text-text-muted font-mono">
-        Authorised users of this synthetic demonstration only. <br/>
-        {/* FE-010: the demo password was printed here for anyone who could reach the page. Demo accounts are
-            documented for testers in the README; nothing about credentials is shown publicly. */}
-        Every sign-in, successful or not, is recorded in the audit log.
-      </div>
+      </main>
     </div>
   );
 }

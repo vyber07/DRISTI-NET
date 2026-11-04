@@ -83,7 +83,7 @@ export function CaseTimeline({ caseId }: CaseTimelineProps) {
   }, [filteredEvents]);
 
   return (
-    <div className="flex flex-col h-full w-full max-w-full min-w-0 bg-background overflow-hidden">
+    <div className="flex flex-col flex-1 min-h-0 w-full max-w-full min-w-0 bg-background overflow-hidden">
       {/* Scrollable Container */}
       <div className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden">
       <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 py-5 space-y-4">

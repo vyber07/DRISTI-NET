@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useId, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Search, X } from "lucide-react";
+import { FolderOpen, Plus, Search, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { EmptyState, ErrorState, LoadingState, PageBody, PageHeader, Pager } from "@/components/layout/page";
@@ -40,8 +40,8 @@ export function CasesDirectoryPage() {
 
   const filtered = q !== "" || onlyWaiting;
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <PageHeader title="Cases" description="Every case you are assigned to in your jurisdiction. Open a case to see its evidence, reviews, graph and reports."
+    <div className="flex flex-1 min-h-0 flex-col">
+      <PageHeader icon={<FolderOpen className="h-5 w-5" />} title="Cases" description="Every case you are assigned to in your jurisdiction. Open a case to see its evidence, reviews, graph and reports."
         actions={can(role, "createCase") ? (
           <Button variant="primary" className="gap-1.5" onClick={() => setCreating(true)}><Plus className="h-4 w-4" aria-hidden="true" /> New case</Button>
         ) : undefined} />

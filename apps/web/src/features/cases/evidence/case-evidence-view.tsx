@@ -123,7 +123,7 @@ export function CaseEvidenceView() {
                       {items.map((i) => (
                         <tr key={i.evidence_id} className="hover:bg-surface-2/60" data-evidence-id={i.evidence_id}>
                           <td className="px-3 py-2.5 min-w-[12rem]">
-                            <button type="button" onClick={() => setSelected(i)} className="text-left font-medium text-electric-blue hover:underline break-all">{i.filename}</button>
+                            <button type="button" onClick={() => setSelected(i)} className="text-left font-medium text-electric-blue hover:underline break-words">{i.filename}</button>
                             <p className="text-xs text-text-secondary">{i.detected_type} · {formatBytes(i.size_bytes)}</p>
                           </td>
                           <td className="px-3 py-2.5"><StatusBadge code={i.status} /></td>

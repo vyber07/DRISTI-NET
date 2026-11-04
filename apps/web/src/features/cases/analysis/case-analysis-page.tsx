@@ -27,7 +27,7 @@ export function CaseAnalysisPage() {
   useEffect(() => { load(); }, [caseId]);
 
   return (
-    <div className="flex flex-col h-full bg-background overflow-y-auto">
+    <div className="flex flex-col flex-1 min-h-0 bg-background overflow-y-auto">
       <div className="shrink-0 border-b border-border-subtle bg-surface-1 px-4 sm:px-6 py-3 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 className="text-lg font-semibold text-text-primary">Patterns</h2>
