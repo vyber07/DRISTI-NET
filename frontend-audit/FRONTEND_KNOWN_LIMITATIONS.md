@@ -22,6 +22,11 @@
 - **About 80 explicit `any` types and 49 lint warnings remain** (117 at the start). They are code-quality debt, not failures.
 
 ## Deployment
-- The **live demo (port 80) still serves the previous build**.
-- The redesign runs as the **test site on port 8181**, on a copy of the live data, until you say stop.
-- Deploying to the live demo is your decision.
+- The **live site (port 80) runs the redesign**, deployed 2026-11-04 15:09 UTC.
+- The one-off test deployment used to try the redesign before merging it is **stopped**; it never
+  ran on port 8181 (that port was abandoned early — only 22/80/443 are reachable from outside this
+  host — in favor of nip.io host-name routing on the already-open port 80).
+- The live site itself was later migrated, same day, from SQLite/local storage to the full Docker
+  Compose stack (PostgreSQL, Neo4j, MinIO, Redis, ClamAV); see
+  `frontend-audit/FRONTEND_CONTINUATION_STATE.md`'s "Production migration" section for the
+  verified details.

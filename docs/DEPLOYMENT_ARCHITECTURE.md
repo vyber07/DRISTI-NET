@@ -1,5 +1,11 @@
 # DRISTI-NET — Deployment Architecture & Operations Guide
 
+**Current live deployment (2026-11-04):** the live host runs the Docker Compose stack described in
+section 3, not the bare-metal systemd path in section 2 — migrated from the latter on 2026-11-04;
+see `frontend-audit/FRONTEND_CONTINUATION_STATE.md`'s "Production migration" section for the
+verified details and the rollback. Section 2 is kept as documentation of that prior path and its
+rollback target (the systemd unit is still installed, just stopped).
+
 ## 1. Deployment Topology
 
 DRISTI-NET supports both a lightweight zero-install development deployment (SQLite + Local Storage + in-process graph) and an enterprise production deployment (PostgreSQL + MinIO + Neo4j + Redis + ClamAV + Nginx).

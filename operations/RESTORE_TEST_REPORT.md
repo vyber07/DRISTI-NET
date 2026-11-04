@@ -2,8 +2,13 @@
 
 **Date:** 2026-11-01 (session 4); re-run 2026-11-03 on `706934f`: PASS (8/8 evidence, 33/33 audit, identical graphs) · **Code:** branch `audit/session-4-security-fixes` on top of `135edeb`
 **Scope actually tested:** the single-host deployment that the demo uses — SQLite database + local object storage.
-**Not tested:** PostgreSQL + MinIO/S3 + Neo4j (Compose stack cannot start, BLK-04; no isolated host, BLK-05),
-off-host copies, backup encryption at rest, key escrow, RPO/RTO under load.
+**Update (2026-11-04):** BLK-04 ("Compose stack cannot start") is resolved — the full stack (Postgres, Neo4j,
+MinIO, Redis, ClamAV) now starts and runs; see `frontend-audit/FRONTEND_CONTINUATION_STATE.md`'s "Production
+migration" section. That was a one-time SQLite→Postgres/MinIO *migration* verified with
+`scripts/verify_pg_minio_migration.py` (reuses this script's own `fingerprint()` unmodified, comparing source
+against the freshly-migrated target), not a run of *this* backup→restore drill against Postgres/MinIO.
+**Not tested:** this backup→restore drill specifically against PostgreSQL + MinIO/S3 + Neo4j (no isolated
+host, BLK-05), off-host copies, backup encryption at rest, key escrow, RPO/RTO under load.
 
 ## Method
 `scripts/backup_restore_drill.py` (repeatable; reads the source, never writes to it):
