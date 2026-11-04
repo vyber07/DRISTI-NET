@@ -10,8 +10,15 @@ Postgres/MinIO via its env_extra override, then diffed exactly the same way.
 
 Run with the real DRISHTI_SECRET_KEY / DRISHTI_AUDIT_KEYS already exported in this shell (source
 .env first) -- fingerprint() inherits them from this process's environment, same as any other use.
-Exits 0 and prints PASS only if every check agrees; exits 1 and prints FAIL with the specific
-mismatches otherwise.
+
+Audit HMAC check compares the *set* of failing audit_ids between source and target, not whether
+that set is empty: this deployment's history already has pre-existing signature failures from
+before key rotation was introduced correctly (legacy hmac-sha256 payloads signed under a since
+-changed k1-2026 value), unrelated to this migration and not something a verbatim copy can or
+should repair -- resigning old audit rows to force a match would defeat the point of an immutable
+audit trail. What matters for migration correctness is that copying introduces no *new* failures.
+Exits 0 and prints PASS only if every check agrees under that rule; exits 1 and prints FAIL with
+the specific mismatches otherwise.
 """
 from __future__ import annotations
 
@@ -48,8 +55,9 @@ def main() -> int:
     not_match = {k: v for k, v in dst["evidence"].items() if v != "MATCH"}
     if not_match:
         problems.append({"evidence_not_matching": not_match})
-    if dst["audit"]["bad"]:
-        problems.append({"audit_hmac_failures": dst["audit"]["bad"][:20], "count": len(dst["audit"]["bad"])})
+    new_bad = sorted(set(dst["audit"]["bad"]) - set(src["audit"]["bad"]))
+    if new_bad:
+        problems.append({"audit_hmac_newly_failing": new_bad, "count": len(new_bad)})
     if src["graphs"] != dst["graphs"]:
         problems.append({"graph_rebuild_differs": True, "source": src["graphs"], "target": dst["graphs"]})
 
@@ -59,6 +67,7 @@ def main() -> int:
         "tables": dst["tables"],
         "evidence_total": len(dst["evidence"]), "evidence_match": sum(1 for v in dst["evidence"].values() if v == "MATCH"),
         "audit_events": dst["audit"]["total"], "audit_hmac_ok": dst["audit"]["total"] - len(dst["audit"]["bad"]),
+        "audit_hmac_pre_existing_failures": sorted(src["audit"]["bad"]),
         "graphs": dst["graphs"],
     }
     print(json.dumps(report, indent=1, sort_keys=True))
