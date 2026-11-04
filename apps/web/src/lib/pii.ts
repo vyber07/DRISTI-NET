@@ -64,7 +64,7 @@ export function maskIpAddress(ip: string): string {
 
 /**
  * Masks person names according to DRISTI-NET privacy policy:
- * e.g. "Vikram Sharma" -> "Vikram S******", "Rajesh Rathore" -> "Rajesh R******"
+ * e.g. "Example Person" -> "Example P*****"
  */
 export function maskPersonName(name: string): string {
   if (!name) return name;
@@ -96,6 +96,8 @@ export function maskGenericPii(value: string): string {
  * Comprehensive masking helper that scrubs phones, IMEIs, account numbers, Aadhaar, PAN, and sensitive names in strings.
  */
 export function maskSensitiveText(text: string): string {
+  // FE-044: hard-coded demo account numbers and person names were removed from here. Masking is the server's job
+  // (services/masking.py); these generic patterns are only a second line of defence for display.
   if (!text) return text;
   let res = maskPhoneNumbersInText(text);
 
@@ -107,11 +109,6 @@ export function maskSensitiveText(text: string): string {
     return `${prefix}********${acc.slice(-4)}`;
   });
 
-  // Mask standalone known case bank account numbers
-  res = res.replace(/\b990123456789\b/g, "********6789");
-  res = res.replace(/\b99012345678\b/g, "********5678");
-  res = res.replace(/\b501004128976\b/g, "********8976");
-
   // Mask 12-digit Aadhaar numbers: e.g. 4512-8901-2345 -> ********2345
   res = res.replace(/\b\d{4}[-\s]\d{4}[-\s](\d{4})\b/g, "********$1");
 
@@ -120,12 +117,6 @@ export function maskSensitiveText(text: string): string {
 
   // Mask raw IPv4 addresses: e.g. 103.24.188.42 -> 103.24.***.***
   res = res.replace(/\b(\d{1,3}\.\d{1,3}\.)\d{1,3}\.\d{1,3}\b/g, "$1***.***");
-
-  // Mask specific known suspect and victim names if appearing raw
-  res = res.replace(/\bVikram Sharma\b/gi, "Vikram S******");
-  res = res.replace(/\bRajesh Rathore\b/gi, "Rajesh R******");
-  res = res.replace(/\bArvind Meena\b/gi, "Arvind M******");
-  res = res.replace(/\bAmit Goyal\b/gi, "Amit G******");
 
   return res;
 }

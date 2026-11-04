@@ -1,9 +1,9 @@
-import { X, Shield, Plus, Clock, Network, Crosshair, MapPin, Building, Server, IndianRupee, Hash, Tag, ChevronDown, ChevronUp, CheckCircle2, User, HelpCircle, Layers } from "lucide-react";
+import { X, Shield, Clock, MapPin, Building, Server, IndianRupee, Tag, ChevronDown, ChevronUp, User, Layers } from "lucide-react";
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { useGraphStore } from "@/stores/graphStore";
 import { useRevealStore } from "@/stores/revealStore";
-import { Button } from "@/components/ui/button";
+
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { PIIField } from "@/components/intelligence/pii-field";
@@ -22,7 +22,7 @@ function getEntityIcon(type: string) {
 
 export function EntityDrawer({ onFocusNode }: { onFocusNode?: (nodeId: string) => void }) {
   const navigate = useNavigate();
-  const { selectedEntityDetail: entity, clearSelection, edges, nodes } = useGraphStore();
+  const { selectedEntityDetail: entity, clearSelection, edges, nodes, selectEdge } = useGraphStore();
   const { openRevealModal, isRevealed, getRevealedValue } = useRevealStore();
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [isExpanding, setIsExpanding] = useState(false);
@@ -151,20 +151,29 @@ export function EntityDrawer({ onFocusNode }: { onFocusNode?: (nodeId: string) =
               <p className="text-xs text-text-muted">No connected entities in this graph.</p>
             ) : (
               <div className="space-y-1.5">
-                {connectedEdges.map((e) => (
-                  <button
-                    key={e.id}
-                    type="button"
-                    className="w-full flex items-center justify-between rounded-md border border-border-subtle bg-surface-2 p-2.5 text-left hover:bg-surface-3 transition-colors"
-                  >
-                    <div className="space-y-1">
-                      <Badge tone="neutral" className="text-[10px]">{e.relationshipType}</Badge>
-                      <p className="text-micro font-mono text-text-muted">
-                        Claims: {e.count}
-                      </p>
-                    </div>
-                  </button>
-                ))}
+                {connectedEdges.map((e) => {
+                  // FE-033: rows had no handler and did not say who the link was with.
+                  const otherId = e.source === entity.entity_id ? e.target : e.source;
+                  const other = nodes.find((n) => n.id === otherId)?.label ?? otherId;
+                  return (
+                    <button
+                      key={e.id}
+                      type="button"
+                      onClick={() => selectEdge(e.id)}
+                      aria-label={`Show sources: ${e.relationshipType.toLowerCase().replace(/_/g, " ")} with ${other}`}
+                      className="w-full flex items-center justify-between gap-2 rounded-md border border-border-subtle bg-surface-2 p-2.5 text-left hover:bg-surface-3 transition-colors"
+                    >
+                      <div className="min-w-0 space-y-1">
+                        <p className="text-sm text-text-primary truncate">{other}</p>
+                        <p className="text-xs text-text-secondary">
+                          <Badge tone="neutral" className="mr-1.5">{e.relationshipType.toLowerCase().replace(/_/g, " ")}</Badge>
+                          {e.count} claim{e.count === 1 ? "" : "s"}
+                        </p>
+                      </div>
+                      <span className="text-xs text-electric-blue shrink-0">Sources</span>
+                    </button>
+                  );
+                })}
               </div>
             )}
           </TabsContent>

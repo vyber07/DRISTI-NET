@@ -8,6 +8,7 @@ import type {
   RelationshipType,
 } from "@/types/entity";
 import { RELATIONSHIP_TYPES } from "@/types/entity";
+import { recordedTimeMs } from "@/lib/utils";
 import type { EvidenceTier } from "@/constants/evidenceTiers";
 import { getEntityDetails } from "@/services/api/entityApi";
 import { getCaseGraph, getEdgeDetails } from "@/services/api/graphApi";
@@ -46,7 +47,7 @@ interface GraphState {
 
   loadGraph: (caseId: string) => Promise<void>;
   /** Server-reported bounds of the last load (GET /cases/{id}/graph). */
-  graphBounds: { truncated: boolean; totalNodes: number; projectionStale: boolean } | null;
+  graphBounds: { truncated: boolean; totalNodes: number; projectionStale: boolean; hasDatedEdges: boolean } | null;
   selectNode: (nodeId: string | null) => Promise<void>;
   selectEdge: (edgeId: string | null) => Promise<void>;
   clearSelection: () => void;
@@ -127,6 +128,10 @@ export const useGraphStore = create<GraphState>((set, get) => ({
   loadGraph: async (caseId: string) => {
     // DEF-061: clear the previous case's (or previous user's) graph before loading. On a 403 the old nodes,
     // edges and selection used to stay on screen, attributed to the newly requested case.
+    if (caseId !== get().caseId) {
+      // FE-048: type/confidence/search filters from another case must not silently hide this case's graph
+      set({ activeEntityTypes: new Set(ALL_ENTITY_TYPES), activeRelationshipTypes: new Set(ALL_RELATIONSHIP_TYPES), minConfidence: 0, searchTerm: "", onlyContradictions: false });
+    }
     set({ isLoading: true, error: null, caseId, nodes: [], edges: [], selectedNodeId: null, selectedEdgeId: null, selectedEntityDetail: null } as any);
     try {
       const response = await getCaseGraph(caseId);
@@ -134,9 +139,11 @@ export const useGraphStore = create<GraphState>((set, get) => ({
       const { truncated, totalNodes, projectionStale } = response.data as { truncated?: boolean; totalNodes?: number; projectionStale?: boolean };
 
       // Undated edges are excluded from the time range (they used to become 1970-01-01 via `|| 0`).
-      const edgeTimes = edges.filter((e) => e.firstSeen || e.lastSeen).map((e) => new Date((e.firstSeen || e.lastSeen) as string).getTime()).filter((t) => !isNaN(t));
-      const minT = edgeTimes.length > 0 ? Math.min(...edgeTimes) : INITIAL_MIN_TIME;
-      const maxT = edgeTimes.length > 0 ? Math.max(...edgeTimes) : INITIAL_MAX_TIME;
+      const edgeTimes = edges.map((e) => recordedTimeMs(e.firstSeen || e.lastSeen)).filter((t) => !isNaN(t));
+      // FE-058: with no dated relationship there is no time range; the slider says so instead of showing
+      // invented Feb-2026 dates (the INITIAL_* values only fill the store until a graph has loaded).
+      const minT = edgeTimes.length > 0 ? Math.min(...edgeTimes) : 0;
+      const maxT = edgeTimes.length > 0 ? Math.max(...edgeTimes) : 0;
 
       set({
         caseId,
@@ -148,7 +155,7 @@ export const useGraphStore = create<GraphState>((set, get) => ({
         currentTimestamp: maxT,
         dateRange: [minT, maxT],
         isLoading: false,
-        graphBounds: { truncated: !!truncated, totalNodes: totalNodes ?? nodes.length, projectionStale: !!projectionStale },
+        graphBounds: { truncated: !!truncated, totalNodes: totalNodes ?? nodes.length, projectionStale: !!projectionStale, hasDatedEdges: edgeTimes.length > 0 },
       });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to load case graph";
@@ -263,32 +270,25 @@ export const useGraphStore = create<GraphState>((set, get) => ({
   toggleEntityType: (type) =>
     set((state) => {
       const next = new Set(state.activeEntityTypes);
-      if (next.has(type)) {
-        if (next.size > 1) next.delete(type);
-      } else {
-        next.add(type);
-      }
+      if (next.has(type)) next.delete(type); // FE-045: removing the last type was silently refused
+      else next.add(type);
       return { activeEntityTypes: next };
     }),
 
   selectAllEntityTypes: () => set({ activeEntityTypes: new Set(ALL_ENTITY_TYPES) }),
-  clearEntityTypes: () => set({ activeEntityTypes: new Set(["PERSON"]) }),
+  clearEntityTypes: () => set({ activeEntityTypes: new Set<EntityType>() }), // FE-045: "Clear" used to mean "Person only"
 
   toggleRelationshipType: (type) =>
     set((state) => {
       const next = new Set(state.activeRelationshipTypes);
-      if (next.has(type)) {
-        if (next.size > 1) next.delete(type);
-      } else {
-        next.add(type);
-      }
+      if (next.has(type)) next.delete(type);
+      else next.add(type);
       return { activeRelationshipTypes: next };
     }),
 
   selectAllRelationshipTypes: () =>
     set({ activeRelationshipTypes: new Set(ALL_RELATIONSHIP_TYPES) }),
-  clearRelationshipTypes: () =>
-    set({ activeRelationshipTypes: new Set<RelationshipType>(["CALLED"]) }),
+  clearRelationshipTypes: () => set({ activeRelationshipTypes: new Set<RelationshipType>() }), // was "Called only"
 
   setOnlyContradictions: (only) => set({ onlyContradictions: only }),
   setMinConfidence: (conf) => set({ minConfidence: conf }),
@@ -329,3 +329,10 @@ export const useGraphStore = create<GraphState>((set, get) => ({
   setLayoutRunning: (running) => set({ isLayoutRunning: running }),
   toggleLayout: () => set((state) => ({ isLayoutRunning: !state.isLayoutRunning })),
 }));
+
+/** FE-045: how many filters narrow the graph (the old count assumed 6 relationship types; there are 7). */
+export function countActiveFilters(st: { activeEntityTypes: Set<string>; activeRelationshipTypes: Set<string>; minConfidence: number }): number {
+  return (st.activeEntityTypes.size < ALL_ENTITY_TYPES.length ? 1 : 0)
+    + (st.activeRelationshipTypes.size < ALL_RELATIONSHIP_TYPES.length ? 1 : 0)
+    + (st.minConfidence > 0 ? 1 : 0);
+}

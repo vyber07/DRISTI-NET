@@ -10,10 +10,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { useGraphStore } from "@/stores/graphStore";
-import { cn } from "@/lib/utils";
-import { formatCompactTimestamp, formatDateOnly } from "@/lib/formatters";
+import { cn, formatRecordedMs, recordedTimeMs } from "@/lib/utils";
 
 export function TemporalSlider({ className }: { className?: string }) {
+  const bounds = useGraphStore((st) => st.graphBounds);
   const { 
     minTimestamp,
     maxTimestamp,
@@ -47,10 +47,18 @@ export function TemporalSlider({ className }: { className?: string }) {
     : 100;
 
   const activeEdgeCount = edges.filter((e) => {
-    const t = new Date(e.firstSeen || e.lastSeen || 0).getTime();
+    const t = recordedTimeMs(e.firstSeen || e.lastSeen);
     return isNaN(t) || t <= currentTimestamp;
   }).length;
 
+
+  if (bounds && !bounds.hasDatedEdges) {
+    return (
+      <p className={cn("px-4 py-2.5 text-sm text-text-secondary", className)} data-testid="temporal-slider-none">
+        No relationship in this graph carries a date, so there is no time range to play through.
+      </p>
+    );
+  }
   return (
     <div
       data-testid="temporal-slider"
@@ -136,7 +144,7 @@ export function TemporalSlider({ className }: { className?: string }) {
       {/* Scrubber track */}
       <div className="flex flex-1 items-center gap-3 min-w-0">
         <span className="text-micro font-mono text-text-muted shrink-0 hidden sm:inline">
-          {formatDateOnly(minTimestamp)}
+          {formatRecordedMs(minTimestamp, false)}
         </span>
 
         <div className="relative flex-1 flex items-center py-2 group">
@@ -144,7 +152,7 @@ export function TemporalSlider({ className }: { className?: string }) {
             type="range"
             min={minTimestamp}
             max={maxTimestamp}
-            step={(maxTimestamp - minTimestamp) / 100}
+            step={Math.max(1, (maxTimestamp - minTimestamp) / 100)} /* FE-058: was 0 when every edge shared one time */
             value={currentTimestamp}
             onChange={(e) => setCurrentTimestamp(Number(e.target.value))}
             aria-label="Temporal scrubber"
@@ -159,7 +167,7 @@ export function TemporalSlider({ className }: { className?: string }) {
         </div>
 
         <span className="text-micro font-mono text-text-muted shrink-0 hidden sm:inline">
-          {formatDateOnly(maxTimestamp)}
+          {formatRecordedMs(maxTimestamp, false)}
         </span>
       </div>
 
@@ -168,7 +176,7 @@ export function TemporalSlider({ className }: { className?: string }) {
         <div className="flex items-center gap-1.5 rounded bg-surface-2 px-2 py-1 border border-border-subtle shrink-0">
           <Clock className="h-3.5 w-3.5 text-electric-blue-soft shrink-0" />
           <span className="text-xs font-mono font-medium text-text-primary whitespace-nowrap">
-            {formatCompactTimestamp(currentTimestamp)}
+            {formatRecordedMs(currentTimestamp)}
           </span>
         </div>
 

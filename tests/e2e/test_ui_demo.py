@@ -264,6 +264,9 @@ def _click_first_node(page):
 def test_graph_edge_to_source(page):
     login(page, "investigator")
     page.goto(f"{BASE}/cases/CASE-0001/graph")
+    page.wait_for_selector("[data-testid=graph-counts]")
+    if not page.evaluate("() => !!window.__graphStore"):
+        pytest.fail("this build has no E2E graph hooks: build it with `make build-web-e2e` (VITE_E2E_HOOKS=1, FE-056)")
     page.wait_for_function("() => window.__graph && window.__graph.order > 0")
     assert page.evaluate(_HAS_MERGED_NODE_JS), "expected at least one node in the rendered CASE-0001 graph"
     page.wait_for_timeout(1000)
@@ -354,3 +357,75 @@ def test_expired_session_returns_to_the_same_page(page):
     page.fill("input[id='password']", "investigator-demo")
     page.click("button[type='submit']")
     page.wait_for_url(f"{BASE}/cases/CASE-0001/evidence")
+
+
+def test_create_case_and_assign_a_person(page):
+    """New: an investigator creates a case (dated today) and assigns a reviewer, who can then open it."""
+    import time
+    cid = f"CASE-E{int(time.time()) % 100000:05d}"
+    login(page, "investigator")
+    page.goto(f"{BASE}/cases")
+    page.click("button:has-text('New case')")
+    dlg = page.locator("[data-testid=new-case-dialog]")
+    dlg.wait_for()
+    dlg.locator("button[type=submit]").click()  # empty form is refused in the dialog
+    dlg.locator("[role=alert]").wait_for()
+    dlg.locator("input").nth(0).fill(cid)
+    dlg.locator("input").nth(1).fill("E2E creation case")
+    dlg.locator("textarea").fill("Browser test of case creation")
+    dlg.locator("input").nth(2).fill("FIR-E2E-01")
+    dlg.locator("button[type=submit]").click()
+    page.wait_for_url(f"{BASE}/cases/{cid}")
+    page.wait_for_selector(f"[data-testid=case-title] >> text={cid}")
+    page.click("button:has-text('Add person')")
+    a = page.locator("[data-testid=assign-dialog]")
+    a.wait_for()
+    a.locator("select").first.select_option("reviewer")
+    a.locator("button[type=submit]").click()
+    page.wait_for_selector("text=Reviewer Meera (demo)")
+    login(page, "reviewer")
+    page.goto(f"{BASE}/cases/{cid}")
+    page.wait_for_selector(f"[data-testid=case-title] >> text={cid}")
+
+
+def test_case_search_and_paging_run_on_the_server(page):
+    login(page, "admin")  # sees every case: more than one page
+    seen = []
+    page.on("request", lambda r: seen.append(r.url) if "/api/v1/cases?" in r.url else None)
+    page.goto(f"{BASE}/cases")
+    page.wait_for_selector("[data-testid=case-table]")
+    page.wait_for_selector("[data-testid=pager]")
+    first = page.locator("[data-testid=case-table] tbody tr").first.inner_text()
+    page.click("[data-testid=pager] button:has-text('Next')")
+    page.wait_for_function("(f) => document.querySelector('[data-testid=case-table] tbody tr').innerText !== f", arg=first)
+    page.fill("input[type=search]", "lakeside")
+    page.wait_for_function("() => document.querySelectorAll('[data-testid=case-table] tbody tr').length === 1")
+    assert any("q=lakeside" in u for u in seen), seen
+    assert any("offset=25" in u for u in seen), seen
+
+
+def test_graph_list_view_by_keyboard(page):
+    """New: the relationships are usable without the canvas — keyboard only, from the view switch to the source line."""
+    login(page, "investigator")
+    page.goto(f"{BASE}/cases/CASE-0001/graph?view=list")
+    page.wait_for_selector("[data-testid=graph-relationships-table]")
+    btn = page.locator("[data-testid=graph-relationships-table] button:has-text('Sources')").first
+    btn.focus()
+    page.keyboard.press("Enter")
+    page.wait_for_selector("[data-testid=edge-claim]", timeout=10000)
+    page.locator("[data-testid=edge-claim] button").first.focus()
+    page.keyboard.press("Enter")
+    page.locator("[data-testid=provenance-viewer] [data-hit=true]").wait_for(timeout=10000)
+    page.keyboard.press("Escape")
+    page.locator("[data-testid=provenance-viewer]").wait_for(state="detached")
+
+
+def test_audit_link_opens_the_evidence_details(page):
+    login(page, "investigator")
+    tok = page.evaluate("localStorage.getItem('drishti.token')")
+    import json, urllib.request
+    req = urllib.request.Request(f"{BASE}/api/v1/cases/CASE-0001/evidence?q=calls.csv", headers={"Authorization": f"Bearer {tok}"})
+    ev = next(e for e in json.loads(urllib.request.urlopen(req).read()) if e["filename"] == "calls.csv")
+    page.goto(f"{BASE}/cases/CASE-0001/evidence?evidence={ev['evidence_id']}")
+    page.locator("[data-testid=evidence-drawer]").wait_for()
+    assert "calls.csv" in page.locator("[data-testid=evidence-drawer]").inner_text()

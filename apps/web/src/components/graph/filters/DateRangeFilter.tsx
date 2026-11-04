@@ -1,4 +1,5 @@
 import { useGraphStore } from "@/stores/graphStore";
+import { recordedTimeMs } from "@/lib/utils";
 import { cn } from "@/lib/utils";
 
 function toDateInputString(timestamp: number): string {
@@ -63,7 +64,7 @@ export function DateRangeFilter() {
   };
 
   const edgesInRange = edges.filter((e) => {
-    const t = new Date(e.firstSeen || e.lastSeen || 0).getTime();
+    const t = recordedTimeMs(e.firstSeen || e.lastSeen);
     return isNaN(t) || (t >= fromTime && t <= toTime);
   }).length;
 

@@ -56,6 +56,7 @@ export const useAuditStore = create<AuditState>((set, get) => ({
   loadLogs: async (caseId?: string) => {
     const cId = caseId || get().caseId;  // DEF-077: no hard-coded "CASE-0001" fallback
     if (!cId) { set({ error: "No case selected", isLoading: false }); return; }
+    if (cId !== get().caseId) get().resetFilters(); // FE-048: a previous case's filters hid this case's events
     set({ isLoading: true, error: null, caseId: cId, logs: [] } as any);
     try {
       const res = await listAuditLogs(cId);

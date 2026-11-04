@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { TimelineEvent } from "@/types/timeline";
 import { useProvenanceStore } from "@/stores/provenanceStore";
-import { useGraphStore } from "@/stores/graphStore";
 
 interface TimelineEventRowProps {
   event: TimelineEvent;
@@ -25,7 +24,6 @@ export function TimelineEventRow({
 }: TimelineEventRowProps) {
   const navigate = useNavigate();
   const { openProvenanceForRecord } = useProvenanceStore();
-  const { selectNode } = useGraphStore();
 
   // The API sends `missing` as an object ({} when complete). Treating it as a boolean flagged every event (audit FE).
   const missingFields = Object.keys(event.missing || {});

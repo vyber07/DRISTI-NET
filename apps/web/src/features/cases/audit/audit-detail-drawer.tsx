@@ -1,36 +1,11 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
-import {
-  X,
-  FileText,
-  Network,
-  Filter,
-  GitBranch,
-  FileCheck,
-  Award,
-  FilePlus,
-  FileEdit,
-  Trash2,
-  ShieldCheck,
-  ShieldAlert,
-  Scale,
-  Eye,
-  Download,
-  Copy,
-  Check,
-  ExternalLink,
-  ChevronRight,
-  Database,
-  User,
-  MapPin,
-  Clock,
-  Code,
-  Link2,
-} from "lucide-react";
+
+import { X, ShieldCheck, Copy, Check, Database, User, Clock, Code } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAuditStore } from "@/stores/auditStore";
 import { cn } from "@/lib/utils";
+import { useOptionalCase } from "@/features/cases/case-context";
 
 function maskIpAddress(ip: string): string {
   if (!ip || ip.includes("No IP")) return "(No IP Logged)";
@@ -66,6 +41,7 @@ function formatDetailedTimestamp(isoStr: string) {
 }
 
 export function AuditDetailDrawer() {
+  const caseCtx = useOptionalCase();
   const { selectedLog, isDrawerOpen, closeDrawer } = useAuditStore();
   const [copiedState, setCopiedState] = useState<Record<string, boolean>>({});
 
@@ -85,9 +61,7 @@ export function AuditDetailDrawer() {
     }, 2000);
   };
 
-  const actorName = selectedLog.actor_id || "System";
-  const actorRole = selectedLog.actor_id ? "USER" : "SYSTEM";
-  const ipAddress = "(No IP Logged)";
+  const actorName = selectedLog.actor_id ? (caseCtx?.personName(selectedLog.actor_id) ?? selectedLog.actor_id) : "System";
 
   return (
     <>
@@ -156,16 +130,8 @@ export function AuditDetailDrawer() {
                   <span className="text-text-primary font-medium">{actorName}</span>
                 </div>
                 <div className="grid grid-cols-[100px_1fr] gap-2 items-center">
-                  <span className="text-text-muted font-mono uppercase tracking-wider">Badge/ID:</span>
-                  <span className="text-text-primary font-mono">{actorName}</span>
-                </div>
-                <div className="grid grid-cols-[100px_1fr] gap-2 items-center">
-                  <span className="text-text-muted font-mono uppercase tracking-wider">Role Assumed:</span>
-                  <span className="text-text-primary font-sans">{actorRole}</span>
-                </div>
-                <div className="grid grid-cols-[100px_1fr] gap-2 items-center">
-                  <span className="text-text-muted font-mono uppercase tracking-wider">Source IP:</span>
-                  <span className="text-text-primary font-mono">{ipAddress}</span>
+                  <span className="text-text-muted font-mono uppercase tracking-wider">User ID:</span>
+                  <span className="text-text-primary font-mono">{selectedLog.actor_id || "—"}</span>
                 </div>
               </div>
             </div>

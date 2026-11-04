@@ -1,30 +1,11 @@
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import {
-  FileText,
-  Network,
-  Filter,
-  GitBranch,
-  FileCheck,
-  Award,
-  FilePlus,
-  FileEdit,
-  Trash2,
-  ShieldCheck,
-  ShieldAlert,
-  Scale,
-  Eye,
-  Download,
-  Copy,
-  Check,
-  ExternalLink,
-  ChevronRight,
-  Link2,
-} from "lucide-react";
+import { FileText, Network, Filter, GitBranch, FileCheck, Award, FilePlus, FileEdit, Trash2, ShieldCheck, ShieldAlert, Scale, Eye, Download, Copy, Check, ExternalLink, ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { cn } from "@/lib/utils";
+
 import type { AuditLogEntry, AuditActionType } from "@/types/audit";
+import { useOptionalCase } from "@/features/cases/case-context";
 
 interface AuditEventCardProps {
   log: AuditLogEntry;
@@ -108,6 +89,7 @@ export function AuditEventCard({
   blockNumber,
   onInspect,
 }: AuditEventCardProps) {
+  const caseCtx = useOptionalCase();
   const [copiedHash, setCopiedHash] = useState(false);
 
   const actionConfig = getActionConfig(log.action);
@@ -129,13 +111,16 @@ export function AuditEventCard({
   const getTargetLink = () => {
     if (!log.target_id) return null;
     if (log.target_kind === "ENTITY") {
-      return `/cases/${log.case_id}/graph?entityId=${encodeURIComponent(log.target_id)}`;
+      return `/cases/${log.case_id}/graph?entity=${encodeURIComponent(log.target_id)}`; // FE-030: param the graph reads
     }
     if (log.target_kind === "EVIDENCE") {
-      return `/cases/${log.case_id}/evidence?evidenceId=${encodeURIComponent(log.target_id)}`;
+      return `/cases/${log.case_id}/evidence?evidence=${encodeURIComponent(log.target_id)}`; // opens its details
     }
-    if (log.target_kind === "NOTE") {
-      return `/cases/${log.case_id}/notes?targetId=${encodeURIComponent(log.target_id)}`;
+    if (log.target_kind === "MATCH" || log.target_kind === "MATCH_CANDIDATE") {
+      return `/cases/${log.case_id}/review/${encodeURIComponent(log.target_id)}`;
+    }
+    if (log.target_kind === "CLAIM") {
+      return `/cases/${log.case_id}/decisions`;
     }
     if (log.target_kind === "GRAPH" || log.target_kind === "RELATIONSHIP") {
       return `/cases/${log.case_id}/graph`;
@@ -144,9 +129,8 @@ export function AuditEventCard({
   };
 
   const targetLink = getTargetLink();
-  const actorName = log.actor_id || "System";
-  const actorRole = log.actor_id ? "USER" : "SYSTEM";
-  const ipAddress = "(No IP Logged)";
+  // "Role: USER" and "IP: (No IP Logged)" were printed on every event without coming from any data; removed.
+  const actorName = log.actor_id ? (caseCtx?.personName(log.actor_id) ?? log.actor_id) : "System";
 
   return (
     <div
@@ -183,10 +167,6 @@ export function AuditEventCard({
           <span className="text-text-secondary font-medium">
             {actorName}
           </span>
-          <span>•</span>
-          <span>{actorRole}</span>
-          <span>•</span>
-          <span>IP: {ipAddress}</span>
 
           {log.target_kind && (
             <>

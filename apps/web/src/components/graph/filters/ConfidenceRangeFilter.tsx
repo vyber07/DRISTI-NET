@@ -11,12 +11,12 @@ const CONFIDENCE_PRESETS = [
 export function ConfidenceRangeFilter() {
   const {  minConfidence, setMinConfidence, nodes, edges } = useGraphStore();
 
-  const passingNodes = nodes.filter(
-    (n) => (1) >= minConfidence,
-  ).length;
-  const passingEdges = edges.filter(
-    (e) => (e.minConfidence ?? 1) >= minConfidence,
-  ).length;
+  // FE-046: nodes carry no confidence; a node "passes" when at least one of its relationships does
+  // (the old count compared a constant 1 and always reported every node).
+  const passing = edges.filter((e) => (e.minConfidence ?? 0) >= minConfidence);
+  const endpoints = new Set(passing.flatMap((e) => [e.source, e.target]));
+  const passingNodes = nodes.filter((n) => endpoints.has(n.id)).length;
+  const passingEdges = passing.length;
 
   const percentage = Math.round(minConfidence * 100);
 
@@ -24,7 +24,7 @@ export function ConfidenceRangeFilter() {
     <div className="space-y-2.5">
       <div className="flex items-center justify-between">
         <span className="text-micro font-semibold uppercase tracking-wider text-text-muted">
-          Min. Algorithmic Confidence
+          Minimum extraction confidence
         </span>
         <span className="font-mono text-xs font-semibold text-electric-blue-soft">
           {percentage}% ({minConfidence.toFixed(2)})

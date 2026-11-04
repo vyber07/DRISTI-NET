@@ -1,6 +1,6 @@
 import { Search, X, RotateCcw, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+
 import { useTimelineStore } from "@/stores/timelineStore";
 
 export function TimelineFilterBar() {
