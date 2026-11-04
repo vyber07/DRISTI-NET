@@ -36,7 +36,7 @@ export function RelationshipTypeFilter() {
             onClick={clearRelationshipTypes}
             className="text-text-muted hover:text-text-primary"
           >
-            Clear
+            None
           </button>
         </div>
       </div>

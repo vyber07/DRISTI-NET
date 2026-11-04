@@ -137,7 +137,6 @@ const ACTIONS: Record<Decision, { label: string; title: string; icon: typeof Che
 function CandidateDetail({ candidateId }: { candidateId: string }) {
   const { caseId, personName, reload: reloadCase } = useCase();
   const role = useAuthStore((s) => s.user?.role);
-  const navigate = useNavigate();
   const [c, setC] = useState<Candidate | null>(null);
   const [error, setError] = useState<{ message: string; trace?: string; status?: number } | null>(null);
   const [pending, setPending] = useState<Decision | null>(null);

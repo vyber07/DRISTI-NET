@@ -1,26 +1,10 @@
 import { useState } from "react";
-import {
-  ZoomIn,
-  ZoomOut,
-  Maximize2,
-  Play,
-  Pause,
-  AlertTriangle,
-  Search,
-  Filter,
-  SlidersHorizontal,
-  User,
-  Building2,
-  MapPin,
-  CalendarClock,
-  Landmark,
-  ShieldHalf,
-} from "lucide-react";
+import { ZoomIn, ZoomOut, Maximize2, Play, Pause, Search, SlidersHorizontal, User, Building2, MapPin, CalendarClock, Landmark, ShieldHalf } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { EVIDENCE_TIER_CONFIG, EVIDENCE_TIER_ORDER } from "@/constants/evidenceTiers";
+
 import type { EntityType } from "@/types/entity";
-import { useGraphStore } from "@/stores/graphStore";
+import { countActiveFilters, useGraphStore } from "@/stores/graphStore";
 import { cn } from "@/lib/utils";
 import { maskPersonName, maskSensitiveText } from "@/lib/pii";
 
@@ -67,23 +51,15 @@ export function GraphToolbar({
     toggleFilterPanel,
   } = useGraphStore();
 
-  let activeFilterCount = 0;
-  if (activeEntityTypes.size < 6) activeFilterCount++;
-  if (activeRelationshipTypes.size < 6) activeFilterCount++;
-  if (minConfidence > 0) activeFilterCount++;
+  const activeFilterCount = countActiveFilters({ activeEntityTypes, activeRelationshipTypes, minConfidence });
 
-  const [showFilterDropdown, setShowFilterDropdown] = useState(false);
   const [searchFocused, setSearchFocused] = useState(false);
 
-  const visibleEntitiesCount = nodes.filter((n) =>
-    activeEntityTypes.has((n.entityType || (n as unknown as { type: EntityType }).type) as EntityType),
-  ).length;
 
   const filteredSearchResults = searchTerm.trim()
     ? nodes
         .filter(
           (n) =>
-            (n.label as string).toLowerCase().includes(searchTerm.toLowerCase()) ||
             (n.label as string).toLowerCase().includes(searchTerm.toLowerCase()),
         )
         .slice(0, 5)
@@ -216,70 +192,7 @@ export function GraphToolbar({
             evidence tier and no edge-level contradiction flag, so they filtered nothing or hid every edge.
             Contradictions are listed on the case overview from /cases/{id}/contradictions. */}
 
-        <div className="relative shrink-0 hidden 2xl:block">
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-7 px-1.5 text-xs gap-1 text-text-secondary hover:text-text-primary shrink-0"
-                onClick={() => setShowFilterDropdown(!showFilterDropdown)}
-                aria-label="Filter entities by type"
-              >
-                <Filter className="h-3 w-3 shrink-0" />
-                <span>Entity types</span>
-                <span>
-                  ({visibleEntitiesCount === nodes.length ? `${nodes.length}` : `${visibleEntitiesCount}/${nodes.length}`})
-                </span>
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent side="bottom">
-              Show or hide entity types ({visibleEntitiesCount} of {nodes.length} entities visible)
-            </TooltipContent>
-          </Tooltip>
-
-          {showFilterDropdown && (
-            <div className="absolute right-0 top-full mt-1.5 w-48 rounded-md border border-border-strong bg-surface-raised p-2 shadow-panel z-50">
-              <p className="text-micro font-semibold uppercase tracking-wide text-text-muted mb-1.5 px-1">
-                Entity types
-              </p>
-              <div className="space-y-1">
-                {(
-                  [
-                    "PERSON",
-                    "ORGANIZATION",
-                    "LOCATION",
-                    "EVENT",
-                    "FINANCIAL",
-                    "CYBER",
-                  ] as EntityType[]
-                ).map((type) => {
-                  const Icon = POLE_ICONS[type];
-                  const isChecked = activeEntityTypes.has(type);
-                  return (
-                    <button
-                      key={type}
-                      type="button"
-                      onClick={() => toggleEntityType(type)}
-                      className={cn(
-                        "w-full flex items-center gap-2 rounded px-2 py-1 text-xs text-left transition-colors",
-                        isChecked
-                          ? "bg-surface-2 text-text-primary"
-                          : "text-text-disabled hover:bg-surface-1",
-                      )}
-                    >
-                      <Icon className="h-3.5 w-3.5 shrink-0" />
-                      <span className="capitalize">{type.toLowerCase()}</span>
-                      <span className="ml-auto font-mono text-micro text-text-muted">
-                        {isChecked ? "ON" : "OFF"}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-        </div>
+        {/* FE-047: a 2xl-only entity-type dropdown duplicated the Filter panel and never closed on outside click; removed. */}
       </div>
 
       {/* Right: Search Jump Autocomplete */}

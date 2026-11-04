@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Search, FilterX, Clock, ShieldCheck, Database, SlidersHorizontal, User } from "lucide-react";
+import { Search, FilterX, Clock, Database, SlidersHorizontal, User } from "lucide-react";
 import { useAuditStore } from "@/stores/auditStore";
 import type { AuditActionType } from "@/types/audit";
 import { Badge } from "@/components/ui/badge";

@@ -1,4 +1,5 @@
 import Graph from "graphology";
+import { recordedTimeMs } from "@/lib/utils";
 import forceAtlas2 from "graphology-layout-forceatlas2";
 import Sigma from "sigma";
 import type {
@@ -10,6 +11,7 @@ import type {
 import { RELATIONSHIP_TYPES } from "@/types/entity";
 import type { EvidenceTier } from "@/constants/evidenceTiers";
 import { maskPersonName, maskSensitiveText } from "@/lib/pii";
+import { exposeForTests } from "@/lib/test-hooks";
 
 export interface GraphEngineFilters {
   activeEntityTypes: Set<EntityType>;
@@ -64,7 +66,7 @@ export const ENTITY_COLORS: Record<EntityType, string> = {
 };
 
 export const CANONICAL_NODE_POSITIONS: Record<string, { x: number; y: number }> = {
-  // Center: Suspect Hub
+  // Centre: hub entity (legacy mock-id layout; real case ids never match this table)
   "E-PERS-01": { x: 0, y: 0 },
 
   // Northwest (Upper-Left): Threat Call & Proxy
@@ -153,7 +155,7 @@ export class GraphEngine {
 
   private initSigma(): void {
     // Expose for E2E testing
-    (window as any).__graph = this.graph;
+    exposeForTests("__graph", this.graph);
 
     const SigmaConstructor = (Sigma as unknown as { default?: typeof Sigma }).default || Sigma;
 
@@ -271,7 +273,7 @@ export class GraphEngine {
       },
     });
 
-    (window as any).__sigma = this.sigma;
+    exposeForTests("__sigma", this.sigma);
 
     // Event listeners
     this.sigma.on("clickNode", (e) => {
@@ -399,7 +401,7 @@ export class GraphEngine {
           x: n.x,
           y: n.y,
           size: n.size || 15,
-          label: n.isMasked ? n.maskedLabel : n.label,
+          label: n.label, // FE-016: maskedLabel is never set; the server already masks labels
         });
       }
     });
@@ -499,7 +501,7 @@ export class GraphEngine {
 
     // Filter by date range
     const edgeTimeStr = (attr.firstSeen || attr.lastSeen || attr.timestamp) as string | undefined;
-    const timestamp = edgeTimeStr ? new Date(edgeTimeStr).getTime() : NaN;
+    const timestamp = recordedTimeMs(edgeTimeStr); // FE-058: same time base as the slider
     if (this.filters.dateRange && !isNaN(timestamp)) {
       if (timestamp < this.filters.dateRange[0] || timestamp > this.filters.dateRange[1]) {
         return false;

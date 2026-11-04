@@ -14,8 +14,10 @@ web:
 	cd apps/web && npm run dev
 build-web:
 	cd apps/web && npm run build
+build-web-e2e:  ## build with the window.__graph* hooks the browser E2E needs (FE-056); OUT=<dir> to build elsewhere
+	cd apps/web && VITE_E2E_HOOKS=1 npx vite build $(if $(OUT),--outDir $(OUT) --emptyOutDir,)
 test: test-unit
-e2e:  ## needs a running server on :8000 and `playwright install chromium`
+e2e:  ## needs a running server (DRISHTI_UI, default :8000) serving a `make build-web-e2e` build, and `playwright install chromium`
 	NO_PROXY=localhost,127.0.0.1 $(PY) -m pytest tests/e2e -q
 setup-host:  ## one-time: Playwright Chromium
 	$(PY) -m pip install -q playwright && $(PY) -m playwright install chromium

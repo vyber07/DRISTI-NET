@@ -1,18 +1,11 @@
-import {
-  SlidersHorizontal,
-  X,
-  RotateCcw,
-  AlertTriangle,
-  Info,
-} from "lucide-react";
+import { SlidersHorizontal, X, RotateCcw, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
-import { useGraphStore } from "@/stores/graphStore";
+
+import { countActiveFilters, useGraphStore } from "@/stores/graphStore";
 import { EntityTypeFilter } from "./EntityTypeFilter";
 import { RelationshipTypeFilter } from "./RelationshipTypeFilter";
 import { ConfidenceRangeFilter } from "./ConfidenceRangeFilter";
 import { DateRangeFilter } from "./DateRangeFilter";
-import { cn } from "@/lib/utils";
 
 export function GraphFilterPanel() {
   const {
@@ -30,10 +23,7 @@ export function GraphFilterPanel() {
   if (!isFilterPanelOpen) return null;
 
   // Calculate active filter count
-  let activeFilterCount = 0;
-  if (activeEntityTypes.size < 6) activeFilterCount++;
-  if (activeRelationshipTypes.size < 6) activeFilterCount++;
-    if (minConfidence > 0) activeFilterCount++;
+  const activeFilterCount = countActiveFilters({ activeEntityTypes, activeRelationshipTypes, minConfidence });
 
   return (
     <aside
@@ -80,30 +70,10 @@ export function GraphFilterPanel() {
 
       {/* Scrollable Filter Sections */}
       <div className="flex-1 overflow-y-auto p-3 space-y-4 text-xs divide-y divide-border-subtle/70">
-        {/* Contradiction Flag Fast Filter */}
-        <div className="pb-1">
-          <label
-            htmlFor="filter-contradictions-only"
-            className={cn(
-              "flex items-center justify-between p-2 rounded border cursor-pointer transition-colors",
-              
-            )}
-          >
-            <div className="flex items-center gap-2">
-              <AlertTriangle
-                className={cn(
-                  "h-3.5 w-3.5",
-                  
-                )}
-              />
-              <span className="font-medium text-xs">
-                Conflicting entities only
-              </span>
-            </div>
-          </label>
-        </div>
+        {/* FE-034: a "Conflicting entities only" label with no control was here; no edge carries a contradiction
+            flag. Contradictions are listed, with both values, on the case Overview. */}
 
-        {/* Clue Categories */}
+        {/* Entity types */}
         <div className="pt-3">
           <EntityTypeFilter />
         </div>

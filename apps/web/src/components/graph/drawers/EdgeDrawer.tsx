@@ -1,6 +1,6 @@
-import { X, Network, Link as LinkIcon, FileText, ChevronDown, ChevronUp, Lock, CheckCircle2 } from "lucide-react";
+import { X, Network, Link as LinkIcon, FileText } from "lucide-react";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+
 import { useGraphStore } from "@/stores/graphStore";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";

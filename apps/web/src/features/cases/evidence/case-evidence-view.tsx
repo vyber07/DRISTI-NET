@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useId, useRef, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Download, FileText, Search, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge, evidenceStatusInfo } from "@/components/ui/status-badge";
 import { ReasonDialog } from "@/components/ui/reason-dialog";
 import { CaseTabBody, EmptyState, ErrorState, LoadingState, Pager, Section } from "@/components/layout/page";
 import { useDebounced } from "@/lib/use-debounced";
-import { downloadEvidence, getEvidenceSummary, searchEvidence, uploadEvidence } from "@/services/api/evidenceApi";
+import { downloadEvidence, getEvidenceById, getEvidenceSummary, searchEvidence, uploadEvidence } from "@/services/api/evidenceApi";
 import { useProvenanceStore } from "@/stores/provenanceStore";
 import { useAuthStore } from "@/stores/authStore";
 import { can, deniedReason } from "@/lib/permissions";
@@ -38,6 +39,13 @@ export function CaseEvidenceView() {
   const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);
   const searchId = useId(); const statusId = useId();
   const q = useDebounced(query.trim(), 300);
+
+  // ?evidence=<id> (from the audit log and other links) opens that item's details directly (FE-030).
+  const [params] = useSearchParams();
+  const deepLink = params.get("evidence");
+  useEffect(() => {
+    if (deepLink) getEvidenceById(deepLink).then((r) => r.data && setSelected(r.data)).catch(() => setNotice({ ok: false, text: `Evidence ${deepLink} could not be opened.` }));
+  }, [deepLink]);
 
   useEffect(() => { setOffset(0); }, [q, status]);
   // Search, status filter and paging run on the server (GET /cases/{id}/evidence?q=&status=&limit=&offset=).

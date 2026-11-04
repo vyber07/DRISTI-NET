@@ -45,7 +45,7 @@ export function EntityTypeFilter() {
             onClick={clearEntityTypes}
             className="text-text-muted hover:text-text-primary"
           >
-            Clear
+            None
           </button>
         </div>
       </div>

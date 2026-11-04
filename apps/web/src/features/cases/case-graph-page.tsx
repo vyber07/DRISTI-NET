@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { PanelRightClose, PanelRightOpen } from "lucide-react";
 import { GraphCanvas } from "@/components/graph/GraphCanvas";
 import { GraphListView } from "@/components/graph/GraphListView";
+import { exposeForTests } from "@/lib/test-hooks";
 import { EntityDrawer } from "@/components/graph/drawers/EntityDrawer";
 import { EdgeDrawer } from "@/components/graph/drawers/EdgeDrawer";
 import { EmptyDrawer } from "@/components/graph/drawers/EmptyDrawer";
@@ -33,7 +34,7 @@ export function CaseGraphPage() {
 
   useEffect(() => {
     loadGraph(caseId);
-    (window as any).__graphStore = useGraphStore; // used by the browser E2E to read the rendered graph
+    exposeForTests("__graphStore", useGraphStore); // E2E builds only (FE-056)
   }, [loadGraph, caseId]); // DEF-061: reload when the routed case changes
 
   // "Show in graph" from the timeline links here with ?entity=<id>; select it once the graph has loaded
@@ -74,7 +75,7 @@ export function CaseGraphPage() {
       <div className="relative flex flex-1 min-h-0">
         <div className="relative flex-1 min-w-0 min-h-[360px]">
           {isLoading ? <p className="p-6 text-sm text-text-secondary" role="status">Loading the relationship graph…</p>
-            : view === "list" ? <GraphListView /> : <GraphCanvas />}
+            : view === "list" ? <GraphListView /> : <GraphCanvas key={caseId} /> /* FE-016: a new engine per case */}
         </div>
         {showPanel && (
           <aside id="graph-detail" aria-label="Selection details"

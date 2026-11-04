@@ -48,6 +48,7 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
   filters: { ...INITIAL_FILTERS },
 
   loadTimeline: async (caseId: string, entityId?: string | null) => {
+    if (caseId !== get().caseId) get().resetFilters(); // FE-048: filters belong to one case
     set({ isLoading: true, error: null, caseId, entityScope: entityId || null });
     try {
       const response = await getTimelineEvents(caseId, {
