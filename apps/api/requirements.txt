@@ -1,3 +1,6 @@
+# Core runtime (S4-07). Optional features live in their own files; every optional import is lazy and falls back
+# safely when the package is absent (NER -> no model candidates, OCR -> pypdf text, Kafka -> direct pipeline,
+# ledger -> local Merkle anchor only).
 fastapi>=0.110
 uvicorn[standard]>=0.27
 sqlalchemy>=2.0
@@ -12,14 +15,3 @@ networkx>=3.2
 PyJWT>=2.8
 redis>=5.0
 boto3>=1.34
-httpx>=0.27
-pytest>=8.0
-moto[s3]
-kafka-python==2.3.2
-web3==6.15.1
-clamd==1.0.2
-paddlepaddle==2.6.2
-paddleocr==2.10.0
-pymupdf
-transformers
-torch

@@ -2,7 +2,7 @@
 PY ?= $(shell if [ -f .venv311/bin/python ]; then echo .venv311/bin/python; else echo python3; fi)
 # `source scripts/env.sh` first on hosts that need the user-space Node/ClamAV/Chromium libs.
 setup:
-	$(PY) -m pip install -q -r apps/api/requirements.txt
+	$(PY) -m pip install -q -r apps/api/requirements-dev.txt -r apps/api/requirements-ml.txt -r apps/api/requirements-kafka.txt -r apps/api/requirements-ledger.txt
 	cd apps/web && npm install --no-audit --no-fund
 data:
 	$(PY) data/synthetic/generate.py
