@@ -1,101 +1,44 @@
-import { Bell, Eye, EyeOff, Lock, MapPin, ShieldCheck, UserRound } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useEffect } from "react";
+import { useLocation } from "react-router-dom";
+import { EyeOff, LogOut, MapPin, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { useAuthStore } from "@/stores/authStore";
-import { cn } from "@/lib/utils";
+import { useUIStore } from "@/stores/uiStore";
+import { roleLabel } from "@/lib/permissions";
 
-interface StatusSegmentProps {
-  icon: React.ReactNode;
-  children: React.ReactNode;
-  className?: string;
-}
-
-function StatusSegment({ icon, children, className }: StatusSegmentProps) {
-  return (
-    <div className={cn("flex items-center gap-1.5 text-xs text-text-secondary whitespace-nowrap", className)}>
-      {icon}
-      <span className="font-medium tracking-wide">{children}</span>
-    </div>
-  );
-}
-
-function SecurityStatusBar() {
-  const navigate = useNavigate();
-  const { 
-    user,
-    piiMasked,
-    logout,
-  } = useAuthStore();
-
-
+/**
+ * Top bar: who is signed in, their role and jurisdiction (the context every request is authorized against),
+ * and Sign out. Removed: a notification bell with no handler or backend, and the duplicated role text.
+ * "Sensitive values masked" reflects the server's behaviour: API responses are masked unless a reveal with a reason
+ * is made, and revealed values are shown only inside the dialog that requested them.
+ */
+export function SecurityStatusBar() {
+  const { user, logout } = useAuthStore();
+  const { setMobileNavOpen } = useUIStore();
+  const { pathname } = useLocation();
+  useEffect(() => { setMobileNavOpen(false); }, [pathname, setMobileNavOpen]);
   if (!user) return null;
 
   return (
-    <header className="flex h-10 items-center border-b border-border-subtle bg-surface-1 px-4 w-full min-w-0 shrink-0 overflow-hidden select-none">
-      <div className="flex min-w-0 flex-1 items-center gap-2.5 overflow-hidden text-xs">
-        <StatusSegment icon={<UserRound className="h-3.5 w-3.5 text-text-muted shrink-0" />}>
-          <span className="font-semibold text-text-primary">{user.display_name} ({user.role})</span>
-        </StatusSegment>
-
-        <Separator orientation="vertical" className="h-3.5" />
-
-        <StatusSegment icon={<ShieldCheck className="h-3.5 w-3.5 text-text-muted shrink-0" />}>
-          <span>{user.role}</span>
-        </StatusSegment>
-
-        <Separator orientation="vertical" className="h-3.5 hidden md:block" />
-
-        <StatusSegment
-          icon={<MapPin className="h-3.5 w-3.5 text-text-muted shrink-0" />}
-          className="hidden md:flex"
-        >
-          <span>{user.jurisdiction}</span>
-        </StatusSegment>
+    <header className="flex h-12 items-center gap-3 border-b border-border-subtle bg-surface-1 px-3 sm:px-4 shrink-0 min-w-0">
+      <button type="button" className="lg:hidden rounded-md p-1.5 text-text-secondary hover:bg-surface-2" aria-label="Open navigation"
+        onClick={() => setMobileNavOpen(true)}>
+        <Menu className="h-5 w-5" />
+      </button>
+      <div className="flex min-w-0 flex-1 items-center gap-x-3 text-sm">
+        <span className="font-semibold text-text-primary truncate" data-testid="current-user">{user.display_name}</span>
+        <span className="hidden sm:inline text-text-secondary whitespace-nowrap">{roleLabel(user.role)}</span>
+        <span className="hidden md:inline-flex items-center gap-1 text-text-secondary whitespace-nowrap">
+          <MapPin className="h-3.5 w-3.5" aria-hidden="true" />{user.jurisdiction}
+        </span>
       </div>
-
-      <div className="flex shrink-0 items-center gap-2.5 pl-3">
-        <Separator orientation="vertical" className="h-3.5" />
-
-        <StatusSegment
-          icon={
-            piiMasked ? (
-              <EyeOff className="h-3.5 w-3.5 text-amber shrink-0" />
-            ) : (
-              <Eye className="h-3.5 w-3.5 text-critical-red shrink-0" />
-            )
-          }
-          className={piiMasked ? "text-amber font-semibold" : "text-critical-red font-semibold"}
-        >
-          <span className="hidden sm:inline">{piiMasked ? "PII MASKED (STRICT)" : "PII REVEALED"}</span>
-        </StatusSegment>
-
-        <Separator orientation="vertical" className="h-3.5" />
-
-        {/* DEF-070: a hard-coded `zeroTrustActive = true` status light was removed; it reported nothing real. */}
-
-        <Separator orientation="vertical" className="h-3.5" />
-
-        <Button variant="ghost" size="icon" className="h-7 w-7" aria-label="Notifications">
-          <Bell className="h-3.5 w-3.5 text-text-secondary" />
-        </Button>
-
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-7 px-2 text-xs text-text-secondary hover:text-text-primary hover:bg-surface-2"
-          aria-label="Lock workstation session"
-          onClick={() => {
-            logout();
-            navigate("/login");
-          }}
-        >
-          <Lock className="h-3 w-3 mr-1" />
-          <span className="hidden lg:inline">Lock</span>
-        </Button>
-      </div>
+      <span className="hidden sm:inline-flex items-center gap-1.5 text-xs text-text-secondary whitespace-nowrap" title="Phone numbers and account numbers are masked by the server unless revealed with a recorded reason">
+        <EyeOff className="h-3.5 w-3.5" aria-hidden="true" /> Sensitive values masked
+      </span>
+      <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => logout()} aria-label="Sign out">
+        <LogOut className="h-4 w-4" aria-hidden="true" />
+        <span className="hidden md:inline">Sign out</span>
+      </Button>
     </header>
   );
 }
-
-export { SecurityStatusBar };

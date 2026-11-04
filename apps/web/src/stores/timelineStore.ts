@@ -1,3 +1,4 @@
+import { recordedDateKey } from "@/lib/utils";
 import { create } from "zustand";
 import type { TimelineEvent } from "@/types/timeline";
 import { getTimelineEvents } from "@/services/api/timelineApi";
@@ -93,14 +94,13 @@ export const useTimelineStore = create<TimelineState>((set, get) => ({
 
     return events.filter((e) => {
       // Date Range filter
-      const eventTime = e.time ? new Date(e.time).getTime() : 0;
-      if (filters.startDate) {
-        const startMs = new Date(filters.startDate).getTime();
-        if (eventTime < startMs) return false;
-      }
-      if (filters.endDate) {
-        const endMs = new Date(filters.endDate).getTime();
-        if (eventTime > endMs) return false;
+      // FE-028: compare recorded calendar dates (YYYY-MM-DD strings), inclusive at both ends. Parsing the naive event
+      // time in the browser's zone against a UTC-midnight filter date mixed zones and dropped the end day itself.
+      if (filters.startDate || filters.endDate) {
+        const day = recordedDateKey(e.time);
+        if (!day) return false; // undated events are excluded once a date range is set
+        if (filters.startDate && day < filters.startDate) return false;
+        if (filters.endDate && day > filters.endDate) return false;
       }
 
       // Search Query filter

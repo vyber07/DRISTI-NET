@@ -18,7 +18,9 @@ export async function requestPiiReveal(request: RevealRequest): Promise<ApiRespo
     // DEF-064: was a hard-coded "INVESTIGATOR" and a made-up 1-hour expiry; the server records no expiry.
     authorizedBy: currentUser()?.role || "unknown",
     authorizedAt: new Date().toISOString(),
-    expiresAt: new Date().toISOString(),
+    // FE-003: expiry was set to "now", so the drawer never showed a successful reveal. The server records no expiry;
+    // this is only how long the browser keeps showing the value (memory only; cleared on sign-out by a full reload).
+    expiresAt: new Date(Date.now() + 5 * 60 * 1000).toISOString(),
     auditId: rawData.audit_id || "audit-unmask",
   };
   return { data: result, meta: { requestId: "req", timestamp: new Date().toISOString(), durationMs: 0, securityClassification: "REAL" } };

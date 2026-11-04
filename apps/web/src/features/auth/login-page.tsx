@@ -1,12 +1,19 @@
 import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { ShieldAlert, LogIn, Key, User, Server } from "lucide-react";
 import { useAuthStore } from "../../stores/authStore";
 import { Button } from "../../components/ui/button";
 
 export function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const {  login } = useAuthStore();
+  // Return to the page that required sign-in (ProtectedRoute stores it); only same-app paths, never an external URL.
+  const params = new URLSearchParams(location.search);
+  const from = (location.state as any)?.from;
+  const candidate = typeof from?.pathname === "string" ? `${from.pathname}${from.search || ""}` : params.get("next") || "";
+  const returnTo = /^\/(?!\/)/.test(candidate) && !candidate.startsWith("/login") && !candidate.includes("\\") ? candidate : "/";
+  const expired = params.get("expired") === "1";
   
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
@@ -25,7 +32,7 @@ export function LoginPage() {
     try {
       const result = await login(username, password);
       if (result.success) {
-        navigate("/");
+        navigate(returnTo, { replace: true });
       } else {
         setError(result.error || "Authentication failed");
       }
@@ -61,8 +68,13 @@ export function LoginPage() {
         {/* Form Body */}
         <div className="p-8">
           <form onSubmit={handleSubmit} className="space-y-5">
+            {expired && !error && (
+              <div role="status" className="p-3 bg-amber/10 border border-amber/40 text-text-primary rounded-md text-sm">
+                Your session expired. Sign in again to return to the page you were on.
+              </div>
+            )}
             {error && (
-              <div className="p-3 bg-red-500/10 border border-red-500/20 text-red-600 rounded-md text-sm font-medium">
+              <div role="alert" className="p-3 bg-red-500/10 border border-red-500/20 text-red-600 rounded-md text-sm font-medium">
                 {error}
               </div>
             )}
@@ -129,10 +141,10 @@ export function LoginPage() {
         {/* Footer */}
         <div className="px-8 py-4 bg-surface-2 border-t border-border-subtle flex items-center justify-between text-[11px] text-text-muted font-mono">
           <div className="flex items-center gap-1.5">
-            <Server className="h-3.5 w-3.5" />
-            <span>Connection Secure</span>
+            <Server className="h-3.5 w-3.5" aria-hidden="true" />
+            <span>Synthetic demonstration data only</span>
           </div>
-          <span>v2.0 (Verified)</span>
+          <span>Every sign-in is audited</span>
         </div>
       </div>
       

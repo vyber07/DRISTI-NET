@@ -29,6 +29,8 @@ interface RevealState {
   submitRevealRequest: (justification: string) => Promise<RevealResult>;
   isRevealed: (entityId: string, identifierType: string) => boolean;
   getRevealedValue: (entityId: string, identifierType: string) => string | null;
+  /** Hide a revealed value again in this browser (the reveal itself stays recorded in the audit log). */
+  remask: (entityId: string, identifierType: string) => void;
 }
 
 const buildKey = (entityId: string, identifierType: string) => `${entityId}:${identifierType}`;
@@ -103,6 +105,11 @@ export const useRevealStore = create<RevealState>((set, get) => ({
       set({ submissionError: e.message, isSubmitting: false });
       throw e;
     }
+  },
+
+  remask: (entityId: string, identifierType: string) => {
+    const { [buildKey(entityId, identifierType)]: _gone, ...rest } = get().activeReveals;
+    set({ activeReveals: rest, lastResult: null });
   },
 
   isRevealed: (entityId: string, identifierType: string) => {

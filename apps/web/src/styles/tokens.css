@@ -22,13 +22,13 @@
 
   --text-primary: #17324D;
   --text-secondary: #526273;
-  --text-muted: #788896;
+  --text-muted: #5D6B78; /* was #788896 (3.2–3.6:1, failed WCAG AA for small text); now ≥4.8:1 on surfaces */
   --text-disabled: #9BA8B3;
 
   /* ---------------------------------------------------------------------
      Accent / semantic colors
      --------------------------------------------------------------------- */
-  --electric-blue: #287C7A;
+  --electric-blue: #21706E; /* was #287C7A (4.3:1 on tinted fills); now ≥5.1:1 */
   --electric-blue-soft: #389B99;
   --electric-blue-dim: #1D5857;
 
@@ -38,10 +38,10 @@
   --orange: #C96827;
   --orange-dim: #8D4111;
 
-  --critical-red: #B94A48;
+  --critical-red: #A8403E;
   --critical-red-dim: #7F2B2A;
 
-  --verified-emerald: #3F7D5A;
+  --verified-emerald: #35704F;
   --verified-emerald-dim: #254F38;
 
   --court-purple: #6B5B95;

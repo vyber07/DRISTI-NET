@@ -26,7 +26,8 @@ export interface AuthState {
   piiMasked: boolean;
   
   login: (username: string, password?: string) => Promise<{ success: boolean; error?: string }>;
-  logout: () => void;
+  /** expired: the session was rejected by the server; the login page then returns the officer to this page. */
+  logout: (opts?: { expired?: boolean }) => void;
   setPiiMasked: (masked: boolean) => void;
   restoreSession: () => Promise<void>;
 }
@@ -93,7 +94,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     try {
       const {  setSession, get: apiGet } = await import("../services/api/real_client");
       // Pre-set token for the /auth/me request
-      setSession(token, undefined as any);
+      // FE-055: was setSession(token, undefined), which stored the string "undefined" as the user. Only the token is
+      // needed for /auth/me; it is already in storage under TOKEN_KEY.
       
       const meRes = await apiGet("/auth/me");
       if (meRes) {
@@ -105,15 +107,15 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           isAuthenticated: true,
         });
       } else {
-        get().logout();
+        get().logout({ expired: true });
       }
     } catch (e) {
       console.warn("Session restore failed", e);
-      get().logout();
+      get().logout({ expired: true });
     }
   },
 
-  logout: () => {
+  logout: (opts) => {
     try {
       if (typeof window !== "undefined") {
         localStorage.removeItem(STORAGE_KEY);
@@ -133,7 +135,8 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     // DEF-061: every zustand store (graph, evidence, HITL, audit, reveal) is in memory. A full page load is the
     // only reset that cannot miss one, so the next user never sees the previous user's case data or reveals.
     if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
-      window.location.assign("/login");
+      const next = window.location.pathname + window.location.search;
+      window.location.assign(opts?.expired ? `/login?expired=1&next=${encodeURIComponent(next)}` : "/login");
     }
   },
 }));

@@ -63,6 +63,7 @@ export function AuditFilterBar() {
         <div className="flex items-center gap-2">
           <Database className="h-3.5 w-3.5 text-text-muted shrink-0" />
           <select
+            aria-label="Filter by action"
             value={selectedAction}
             onChange={(e) => setActionFilter(e.target.value as AuditActionType | "ALL")}
             className="text-xs bg-surface-2 border border-border-subtle rounded px-2 py-1.5 text-text-primary focus:outline-none focus:ring-1 focus:ring-electric-blue max-w-[160px] truncate"
@@ -77,6 +78,7 @@ export function AuditFilterBar() {
         <div className="flex items-center gap-2">
           <SlidersHorizontal className="h-3.5 w-3.5 text-text-muted shrink-0" />
           <select
+            aria-label="Filter by target type"
             value={selectedTargetType}
             onChange={(e) => setTargetTypeFilter(e.target.value)}
             className="text-xs bg-surface-2 border border-border-subtle rounded px-2 py-1.5 text-text-primary focus:outline-none focus:ring-1 focus:ring-electric-blue max-w-[140px] truncate"
@@ -91,6 +93,7 @@ export function AuditFilterBar() {
         <div className="flex items-center gap-2">
           <User className="h-3.5 w-3.5 text-text-muted shrink-0" />
           <select
+            aria-label="Filter by actor"
             value={selectedActor}
             onChange={(e) => setActorFilter(e.target.value)}
             className="text-xs bg-surface-2 border border-border-subtle rounded px-2 py-1.5 text-text-primary focus:outline-none focus:ring-1 focus:ring-electric-blue max-w-[160px] truncate"
@@ -105,6 +108,7 @@ export function AuditFilterBar() {
         <div className="flex items-center gap-2 ml-auto">
           <Clock className="h-3.5 w-3.5 text-text-muted shrink-0" />
           <select
+            aria-label="Sort order"
             value={sortOrder}
             onChange={(e) => setSortOrder(e.target.value as "DESC" | "ASC")}
             className="text-xs bg-surface-2 border border-border-subtle rounded px-2 py-1.5 text-text-primary focus:outline-none focus:ring-1 focus:ring-electric-blue"

@@ -16,7 +16,7 @@ export function EdgeDrawer() {
   return (
     <div
       data-testid="edge-drawer"
-      className="absolute top-0 right-0 h-full w-[400px] border-l border-border-subtle bg-surface-1 shadow-panel flex flex-col z-10 animate-in slide-in-from-right duration-300"
+      className="h-full w-full bg-surface-1 flex flex-col animate-in slide-in-from-right duration-300"
     >
       <header className="flex h-14 items-center justify-between border-b border-border-subtle px-4 shrink-0 bg-surface-2/40">
         <div className="flex items-center gap-2.5">

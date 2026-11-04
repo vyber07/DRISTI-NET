@@ -27,6 +27,9 @@ export function TimelineEventRow({
   const { openProvenanceForRecord } = useProvenanceStore();
   const { selectNode } = useGraphStore();
 
+  // The API sends `missing` as an object ({} when complete). Treating it as a boolean flagged every event (audit FE).
+  const missingFields = Object.keys(event.missing || {});
+
   const handleViewSource = async () => {
     if (!event.evidence_id) return;
     // DEF-079: open at the claim's exact source location (it used to open line 1 of the file).
@@ -39,10 +42,9 @@ export function TimelineEventRow({
   };
 
   const handleViewInGraph = () => {
-    if (event.source?.entity_id) {
-      selectNode(event.source.entity_id);
-    }
-    navigate(`/cases/${caseId}/graph`);
+    // The graph tab selects ?entity= after it loads (selecting here was wiped by the graph load — FE-029).
+    const id = event.source?.entity_id;
+    navigate(`/cases/${encodeURIComponent(caseId)}/graph${id ? `?entity=${encodeURIComponent(id)}` : ""}`);
   };
 
   return (
@@ -63,7 +65,7 @@ export function TimelineEventRow({
       <div
         className={cn(
           "flex-1 rounded-md border p-3.5 space-y-2.5 transition-colors",
-          event.missing
+          missingFields.length
             ? "border-amber/40 bg-surface-1/95 hover:border-amber/70 shadow-sm"
             : "border-border-subtle bg-surface-1/90 hover:border-border-strong hover:bg-surface-2/40",
         )}
@@ -101,7 +103,7 @@ export function TimelineEventRow({
                 title="Open the source document at the line this event was extracted from"
               >
                 <FileText className="h-3.5 w-3.5 text-teal-primary" />
-                <span>View Evidence</span>
+                <span>Source</span>
               </Button>
             )}
 
@@ -110,21 +112,23 @@ export function TimelineEventRow({
               size="sm"
               className="h-7 px-2 text-xs gap-1 text-text-secondary hover:text-text-primary"
               onClick={handleViewInGraph}
-              title="Locate this event on the Investigation Map"
+              title="Select this entity in the relationship graph"
             >
               <Waypoints className="h-3 w-3 text-teal-primary" />
-              <span>Map</span>
+              <span>Show in graph</span>
             </Button>
           </div>
         </div>
 
+        {missingFields.length > 0 && (
+          <p className="text-xs text-amber-dim">Missing in the source: {missingFields.join(", ")}</p>
+        )}
         <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-border-subtle/60 text-xs mt-2">
           <div className="flex items-center gap-1.5 flex-wrap">
             <span className="text-micro font-semibold uppercase tracking-wider text-text-muted">
-              Entities:
+              Involves:
             </span>
-            {[event.source.entity_id, event.target?.entity_id].filter(Boolean).map((entId) => {
-              if (!entId) return null;
+            {[event.source, event.target].filter((e): e is NonNullable<typeof e> => !!e?.entity_id).map(({ entity_id: entId, label }) => {
               const isScoped = currentEntityScope === entId;
               return (
                 <button
@@ -137,10 +141,11 @@ export function TimelineEventRow({
                       ? "bg-electric-blue text-white border-electric-blue"
                       : "bg-surface-2 text-text-secondary border-border-subtle hover:border-border-strong hover:text-text-primary",
                   )}
-                  title={`Filter timeline to ${entId}`}
+                  title={`Show only events involving ${label} (${entId})`}
+                  aria-pressed={isScoped}
                 >
                   <Tag className="h-2.5 w-2.5 text-text-muted" />
-                  <span>{entId}</span>
+                  <span>{label}</span>
                 </button>
               );
             })}

@@ -73,7 +73,9 @@ REDIS_URL = _env("REDIS_URL", "")
 LOGIN_THROTTLE_MAX_ATTEMPTS = int(_env("LOGIN_THROTTLE_MAX_ATTEMPTS", "5"))
 LOGIN_THROTTLE_WINDOW_S = int(_env("LOGIN_THROTTLE_WINDOW_S", str(15 * 60)))
 SYNTHETIC_DIR = REPO_ROOT / "data" / "synthetic" / "golden"
-WEB_DIST = REPO_ROOT / "apps" / "web" / "dist"
+# DRISHTI_WEB_DIST lets a test server serve a separate build, so building for tests never replaces the files a
+# running deployment serves from apps/web/dist.
+WEB_DIST = Path(_env("WEB_DIST", str(REPO_ROOT / "apps" / "web" / "dist")))
 
 ALLOWED_EXTENSIONS = {".csv", ".json", ".pdf", ".txt", ".zip"}
 # Extensions accepted *inside* a .zip archive -- deliberately excludes ".zip" itself (no nested

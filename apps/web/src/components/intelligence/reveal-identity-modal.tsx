@@ -73,11 +73,10 @@ function RevealModalContent({ modalTarget }: RevealModalContentProps) {
     isSubmitting,
     submissionError,
     lastResult,
-    officerClearance,
     officerName,
     officerRole,
     closeRevealModal,
-    setOfficerClearance,
+    remask,
     submitRevealRequest,
   } = useRevealStore();
 
@@ -107,6 +106,8 @@ function RevealModalContent({ modalTarget }: RevealModalContentProps) {
   };
 
   const handleRevoke = async () => {
+    // FE-011: this only closed the dialog. It now hides the value again in this browser.
+    if (modalTarget) remask(modalTarget.entityId, modalTarget.identifierType);
     closeRevealModal();
   };
 
@@ -122,15 +123,12 @@ function RevealModalContent({ modalTarget }: RevealModalContentProps) {
                 <Lock className="h-4 w-4" />
               </div>
               <DialogTitle className="text-base text-text-primary">
-                Statutory Identity Unmasking Gateway
+                Reveal a masked value
               </DialogTitle>
             </div>
-            <Badge tone="amber" className="text-[10px] font-mono tracking-wider uppercase">
-              BNSS §91 Gate
-            </Badge>
           </div>
           <DialogDescription className="text-xs text-text-muted mt-1 leading-relaxed">
-            Personally Identifiable Information (PII) is masked by default under Law Enforcement Data Minimization principles. Unmasking is an audited police action.
+            Phone and account numbers are masked by default. Revealing one needs a reason and is recorded in the audit log.
           </DialogDescription>
         </DialogHeader>
 
@@ -182,7 +180,7 @@ function RevealModalContent({ modalTarget }: RevealModalContentProps) {
                 className="gap-1.5 text-xs text-critical-red hover:text-critical-red"
               >
                 <RotateCcw className="h-3.5 w-3.5" />
-                <span>Revoke &amp; Re-mask Field</span>
+                <span>Hide value again</span>
               </Button>
               <Button
                 variant="primary"
@@ -226,56 +224,22 @@ function RevealModalContent({ modalTarget }: RevealModalContentProps) {
               </div>
             </div>
 
-            {/* Officer Clearance Selector (for testing authorization thresholds) */}
-            <div className="space-y-1.5 rounded-lg border border-border-subtle bg-surface-2/40 p-3">
-              <div className="flex items-center justify-between">
-                <span className="text-micro font-semibold uppercase tracking-wider text-text-muted">
-                  Officer Requisition Clearance
-                </span>
-                <span className="text-micro font-mono text-text-secondary">
-                  {officerName} () &bull; {officerRole}
-                </span>
-              </div>
-              <div className="grid grid-cols-3 gap-2 pt-1">
-                {[
-                  { level: 1, label: "Level 1: Observer", desc: "Unauthorized / Denied" },
-                  { level: 2, label: "Level 2: Investigator", desc: "Authorized (IO)" },
-                  { level: 3, label: "Level 3: Supervisor", desc: "Supervisory DySP" },
-                ].map((c) => (
-                  <button
-                    key={c.level}
-                    type="button"
-                    onClick={() => setOfficerClearance(c.level)}
-                    className={`p-2 rounded border text-left transition-colors ${
-                      officerClearance === c.level
-                        ? "border-electric-blue bg-surface-3 text-text-primary"
-                        : "border-border-subtle bg-surface-1 text-text-muted hover:text-text-secondary"
-                    }`}
-                  >
-                    <span className="block font-semibold text-xs">{c.label}</span>
-                    <span className="block text-micro text-text-muted mt-0.5">{c.desc}</span>
-                  </button>
-                ))}
-              </div>
-              {officerClearance < 2 && (
-                <p className="text-micro text-critical-red flex items-center gap-1 mt-1">
-                  <AlertTriangle className="h-3 w-3 shrink-0" />
-                  This selector is not sent to the server: the server decides by your role, and every attempt (granted or denied) is audited.
-                </p>
-              )}
-            </div>
+            <p className="rounded-lg border border-border-subtle bg-surface-2/40 p-3 text-xs text-text-secondary">
+              Requested by <strong className="text-text-primary">{officerName || "you"}</strong>{officerRole ? ` (${officerRole})` : ""}.
+              The server decides by your role and case assignment; every attempt, granted or refused, is written to the audit log.
+            </p>
 
             {/* Denied / Error Alert */}
             {isDenied && (
               <div className="rounded-md border border-critical-red/40 bg-critical-red/10 p-3 text-critical-red flex items-start gap-2.5">
                 <ShieldAlert className="h-4 w-4 shrink-0 mt-0.5" />
                 <div className="space-y-0.5">
-                  <span className="font-semibold block">Statutory Access Requisition Denied</span>
+                  <span className="font-semibold block">Reveal refused</span>
                   <span className="text-micro block text-critical-red/90 leading-relaxed">
                     {submissionError || lastResult?.denialReason}
                   </span>
                   <span className="text-micro font-mono block text-text-muted pt-1">
-                    Denial logged permanently to case audit ledger under Officer.
+                    The refused attempt was recorded in the audit log.
                   </span>
                 </div>
               </div>
@@ -289,7 +253,7 @@ function RevealModalContent({ modalTarget }: RevealModalContentProps) {
               </div>
             )}
 
-            {/* Statutory Justification Input */}
+            {/* Reason input */}
             <div className="space-y-1.5">
               <label
                 htmlFor="reveal-justification-input"
@@ -317,7 +281,7 @@ function RevealModalContent({ modalTarget }: RevealModalContentProps) {
                 rows={3}
                 value={justification}
                 onChange={(e) => setJustification(e.target.value)}
-                placeholder="Specify exact statutory ground, case nexus, or requisition reference (e.g. Notice issued under BNSS §91 to Airtel/Bank)..."
+                placeholder="Why you need the unmasked value for this case, in your own words"
                 className="w-full rounded-md border border-border-subtle bg-surface-2 p-2.5 text-xs text-text-primary placeholder:text-text-muted focus:border-electric-blue focus:outline-none leading-relaxed"
               />
             </div>

@@ -45,7 +45,7 @@ export function GraphFilterPanel() {
         <div className="flex items-center gap-2">
           <SlidersHorizontal className="h-4 w-4 text-teal-primary" />
           <h2 className="text-xs font-semibold uppercase tracking-wider text-text-primary">
-            Filter Map Clues
+            Filter the graph
           </h2>
           {activeFilterCount > 0 && (
             <span className="rounded-full bg-teal-primary/15 border border-teal-primary/30 px-1.5 py-0.5 text-micro font-mono font-semibold text-teal-primary">
@@ -97,7 +97,7 @@ export function GraphFilterPanel() {
                 )}
               />
               <span className="font-medium text-xs">
-                Conflicting Clues Only
+                Conflicting entities only
               </span>
             </div>
           </label>
@@ -131,7 +131,7 @@ export function GraphFilterPanel() {
         <div className="flex items-center justify-between text-micro font-mono text-text-muted">
           <span>Current Map:</span>
           <span className="text-text-secondary font-medium">
-            {nodes.length} clues &bull; {edges.length} connections
+            {nodes.length} entities &bull; {edges.length} relationships
           </span>
         </div>
         <div className="flex items-center gap-1 text-micro text-text-muted">

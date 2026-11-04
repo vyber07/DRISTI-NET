@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useCase } from "../case-context";
 import { MapPin, AlertTriangle, RefreshCw, Navigation } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,7 +15,7 @@ interface Location {
 }
 
 export function InvestigationMapView() {
-  const { caseId = "" } = useParams();
+  const { caseId } = useCase();
   const [locations, setLocations] = useState<Location[]>([]);
   const [total, setTotal] = useState(0);
   const [truncated, setTruncated] = useState(false);
@@ -53,16 +53,14 @@ export function InvestigationMapView() {
   const toSvgY = (lat: number) => (1 - (lat - minLat) / (maxLat - minLat || 1)) * 360 + 20;
 
   return (
-    <div className="flex flex-col h-full bg-bg-base overflow-y-auto">
-      {/* Header */}
-      <div className="shrink-0 border-b border-border-subtle bg-surface-1 px-5 py-3.5 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <MapPin className="h-4 w-4 text-electric-blue-soft" />
-          <h2 className="text-sm font-bold font-mono tracking-wide uppercase text-text-primary">Investigation Map</h2>
-          {total > 0 && <span className="text-xs text-text-muted">· {total} location entities</span>}
+    <div className="flex flex-col h-full bg-background overflow-y-auto">
+      <div className="shrink-0 border-b border-border-subtle bg-surface-1 px-4 sm:px-6 py-3 flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-lg font-semibold text-text-primary">Locations{total > 0 && <span className="ml-2 text-sm font-normal text-text-secondary">({total})</span>}</h2>
+          <p className="text-sm text-text-secondary mt-0.5 max-w-3xl">Places that appear in the case evidence. Drawn on a simple coordinate grid in the browser — no map tiles are fetched, so case coordinates never leave this system.</p>
         </div>
-        <Button variant="ghost" size="sm" className="text-xs gap-1.5" onClick={load} disabled={isLoading}>
-          <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? "animate-spin" : ""}`} /> Refresh
+        <Button variant="secondary" size="sm" className="gap-1.5" onClick={load} disabled={isLoading}>
+          <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? "animate-spin" : ""}`} aria-hidden="true" /> Refresh
         </Button>
       </div>
 

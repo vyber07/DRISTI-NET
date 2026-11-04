@@ -1,54 +1,31 @@
-import { Info, Users, Link as LinkIcon } from "lucide-react";
+import { MousePointerClick } from "lucide-react";
 import { useGraphStore } from "@/stores/graphStore";
-import { Badge } from "@/components/ui/badge";
 
+/** Graph side panel before anything is selected: real counts and how to read the graph. */
 export function EmptyDrawer() {
-  const { nodes, edges, caseId } = useGraphStore();
-
+  const { nodes, edges } = useGraphStore();
   return (
-    <div
-      data-testid="empty-drawer"
-      className="absolute top-0 right-0 h-full w-[400px] border-l border-border-subtle bg-surface-1 shadow-panel flex flex-col z-10 p-5 space-y-6"
-    >
-      <div className="space-y-1">
-        <h2 className="text-sm font-semibold text-text-primary tracking-tight">
-          Investigation Overview
-        </h2>
-        <p className="text-xs text-text-muted">
-          Select any node or connection on the map to inspect its evidence provenance.
+    <div data-testid="empty-drawer" className="h-full w-full bg-surface-1 flex flex-col gap-5 p-5 overflow-y-auto">
+      <div>
+        <h3 className="text-[15px] font-semibold text-text-primary">Nothing selected</h3>
+        <p className="mt-1 text-sm text-text-secondary">
+          <MousePointerClick className="mr-1 inline h-4 w-4 align-text-bottom" aria-hidden="true" />
+          Click a person, phone, account or a line between them to see why they are linked and open the exact source.
         </p>
       </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        <div className="rounded-lg border border-border-subtle bg-surface-2 p-3 space-y-2">
-          <Users className="h-4 w-4 text-electric-blue" />
-          <div className="space-y-0.5">
-            <p className="text-2xl font-bold text-text-primary">{nodes.length}</p>
-            <p className="text-[10px] uppercase tracking-wider text-text-muted font-semibold">
-              Indexed Entities
-            </p>
-          </div>
+      <dl className="grid grid-cols-2 gap-3">
+        <div className="rounded-lg border border-border-subtle px-3 py-2">
+          <dt className="text-xs font-medium text-text-secondary">Entities shown</dt>
+          <dd className="text-2xl font-semibold tabular-nums text-text-primary">{nodes.length}</dd>
         </div>
-        <div className="rounded-lg border border-border-subtle bg-surface-2 p-3 space-y-2">
-          <LinkIcon className="h-4 w-4 text-teal-primary" />
-          <div className="space-y-0.5">
-            <p className="text-2xl font-bold text-text-primary">{edges.length}</p>
-            <p className="text-[10px] uppercase tracking-wider text-text-muted font-semibold">
-              Relationships (aggregated)
-            </p>
-          </div>
+        <div className="rounded-lg border border-border-subtle px-3 py-2">
+          <dt className="text-xs font-medium text-text-secondary">Relationships</dt>
+          <dd className="text-2xl font-semibold tabular-nums text-text-primary">{edges.length}</dd>
         </div>
-      </div>
-
-      <div className="rounded-md border border-border-subtle bg-surface-2/50 p-3 space-y-2 text-xs text-text-muted">
-        <p className="font-semibold text-text-secondary flex items-center gap-1.5">
-          <Info className="h-3.5 w-3.5" />
-          Graph Analytics Enabled
-        </p>
-        <p className="leading-relaxed">
-          Each relationship shown aggregates one or more source-linked claims. Select one to see the claims and open each source at its exact location.
-        </p>
-      </div>
+      </dl>
+      <p className="text-sm text-text-secondary">
+        Each line aggregates one or more source-linked claims. Lines are candidate relationships; identity merges appear only after a reviewer approves them.
+      </p>
     </div>
   );
 }

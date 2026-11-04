@@ -229,6 +229,8 @@ export function AuditEventCard({
             <button
               type="button"
               onClick={handleCopyHash}
+              aria-label={`Copy trace ID ${log.trace_id}`}
+              title="Copy trace ID"
               className="text-text-muted hover:text-electric-blue p-0.5"
             >
               {copiedHash ? (
@@ -245,6 +247,7 @@ export function AuditEventCard({
           size="sm"
           className="text-text-muted group-hover:text-electric-blue group-hover:translate-x-0.5 transition-transform p-1 h-7 w-7"
           title="Inspect full audit record"
+          aria-label="Open audit event details"
         >
           <ChevronRight className="h-4 w-4" />
         </Button>

@@ -12,7 +12,8 @@ export interface TimelineEvent {
   target: TimelineEntity | null;
   evidence_id: string;
   relevance: string;
-  missing: boolean;
+  /** Fields the source lacks for this event, e.g. {"time": "not recorded"}. `{}` when nothing is missing. */
+  missing: Record<string, unknown>;
   confidence: number;
 }
 

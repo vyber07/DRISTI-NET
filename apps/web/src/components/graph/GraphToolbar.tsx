@@ -170,7 +170,7 @@ export function GraphToolbar({
               )}
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="bottom">Automatically arrange clues cleanly</TooltipContent>
+          <TooltipContent side="bottom">Re-run the automatic layout</TooltipContent>
         </Tooltip>
       </div>
 
@@ -190,7 +190,7 @@ export function GraphToolbar({
             >
               <SlidersHorizontal className="h-3 w-3" />
               <span className="hidden sm:inline 2xl:hidden">Filter</span>
-              <span className="hidden 2xl:inline">Filter Clues</span>
+              <span className="hidden 2xl:inline">Filter entities</span>
               {activeFilterCount > 0 && (
                 <span
                   className={cn(
@@ -227,21 +227,21 @@ export function GraphToolbar({
                 aria-label="Filter entities by type"
               >
                 <Filter className="h-3 w-3 shrink-0" />
-                <span>Clue Types</span>
+                <span>Entity types</span>
                 <span>
                   ({visibleEntitiesCount === nodes.length ? `${nodes.length}` : `${visibleEntitiesCount}/${nodes.length}`})
                 </span>
               </Button>
             </TooltipTrigger>
             <TooltipContent side="bottom">
-              Filter by clue categories ({visibleEntitiesCount} of {nodes.length} clues visible)
+              Show or hide entity types ({visibleEntitiesCount} of {nodes.length} entities visible)
             </TooltipContent>
           </Tooltip>
 
           {showFilterDropdown && (
             <div className="absolute right-0 top-full mt-1.5 w-48 rounded-md border border-border-strong bg-surface-raised p-2 shadow-panel z-50">
               <p className="text-micro font-semibold uppercase tracking-wide text-text-muted mb-1.5 px-1">
-                Clue Categories
+                Entity types
               </p>
               <div className="space-y-1">
                 {(
@@ -292,8 +292,9 @@ export function GraphToolbar({
             onChange={(e) => setSearchTerm(e.target.value)}
             onFocus={() => setSearchFocused(true)}
             onBlur={() => setTimeout(() => setSearchFocused(false), 200)}
-            placeholder="Search clues..."
-            className="w-14 sm:w-16 focus:w-24 transition-all bg-transparent text-xs text-text-primary placeholder:text-text-muted focus:outline-none"
+            placeholder="Find an entity…"
+            aria-label="Search entities in this graph"
+            className="w-32 sm:w-44 bg-transparent text-xs text-text-primary placeholder:text-text-muted focus:outline-none"
           />
           {searchTerm && (
             <button

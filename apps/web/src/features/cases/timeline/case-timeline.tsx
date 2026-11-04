@@ -2,7 +2,6 @@ import { recordedDateKey } from "@/lib/utils";
 import { useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import {
-  Clock,
   Calendar,
   AlertCircle,
   FilterX,
@@ -11,6 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { TimelineFilterBar } from "./timeline-filter-bar";
 import { TimelineEventRow } from "./timeline-event-row";
+import { useCase } from "../case-context";
 import { useTimelineStore } from "@/stores/timelineStore";
 import type { TimelineEvent } from "@/types/timeline";
 
@@ -40,15 +40,19 @@ export function CaseTimeline({ caseId }: CaseTimelineProps) {
 
   const handleScopeEntity = (entityId: string) => {
     setEntityScope(entityId);
-    setSearchParams({ tab: "timeline", entityId });
+    setSearchParams({ entityId });
   };
 
   const handleClearScope = () => {
     setEntityScope(null);
-    setSearchParams({ tab: "timeline" });
+    setSearchParams({});
   };
 
   const filteredEvents = getFilteredEvents();
+  const scopeLabel = useMemo(() => {
+    const e = events.find((x) => x.source?.entity_id === entityScope || x.target?.entity_id === entityScope);
+    return (e?.source?.entity_id === entityScope ? e?.source?.label : e?.target?.label) || entityScope;
+  }, [events, entityScope]);
 
   // Group events by date key (YYYY-MM-DD)
   const groupedEvents = useMemo(() => {
@@ -80,46 +84,23 @@ export function CaseTimeline({ caseId }: CaseTimelineProps) {
 
   return (
     <div className="flex flex-col h-full w-full max-w-full min-w-0 bg-background overflow-hidden">
-      {/* Non-Technical Orientation Guide Bar */}
-      <div className="border-b border-border-subtle bg-surface-1 px-4 py-2 flex flex-wrap items-center justify-between gap-2 text-xs">
-        <div className="flex items-center gap-2 text-text-secondary">
-          <span className="font-semibold text-text-primary flex items-center gap-1.5">
-            <Clock className="h-4 w-4 text-teal-primary" />
-            Case Timeline:
-          </span>
-          <span>Chronological order of verified events &bull; Bank transfers, phone calls, and sightings</span>
-        </div>
-        <div className="text-micro text-text-muted hidden md:inline">
-          Click <strong>View Evidence</strong> on any event to inspect its original document.
-        </div>
-      </div>
-
       {/* Scrollable Container */}
-      <div className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden p-4 space-y-4">
-        {/* Timeline Header Banner */}
-        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-subtle pb-3">
-          <div className="space-y-0.5">
-            <h2 className="text-base font-semibold text-text-primary tracking-tight">
-              Investigation Timeline &amp; Event Sequence
-            </h2>
-            <p className="text-xs text-text-muted">
-              Step-by-step history of verified phone calls, cash transfers, and sightings across Jaipur, Mumbai, and Dubai.
+      <div className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden">
+      <div className="mx-auto w-full max-w-6xl px-4 sm:px-6 py-5 space-y-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 className="text-lg font-semibold text-text-primary">Timeline</h2>
+            <p className="text-sm text-text-secondary mt-0.5 max-w-3xl">
+              Dated relationships extracted from the case evidence, in order. They are candidate events, not established facts.
+              Times are shown exactly as recorded in the source (no time-zone conversion). “Source” opens the exact line each event was read from.
             </p>
           </div>
-
           {entityScope && (
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-text-muted">
-                Showing clues for: <span className="font-mono font-semibold text-text-primary">{entityScope}</span>
+            <div className="flex items-center gap-2" role="status">
+              <span className="text-sm text-text-secondary">
+                Showing events involving <strong className="text-text-primary">{scopeLabel}</strong>
               </span>
-              <Button
-                variant="secondary"
-                size="sm"
-                className="h-7 text-xs"
-                onClick={handleClearScope}
-              >
-                Show All Events
-              </Button>
+              <Button variant="secondary" size="sm" onClick={handleClearScope}>Show all events</Button>
             </div>
           )}
         </div>
@@ -239,6 +220,13 @@ export function CaseTimeline({ caseId }: CaseTimelineProps) {
           </div>
         )}
       </div>
+      </div>
     </div>
   );
+}
+
+/** Timeline tab inside the case layout. */
+export function CaseTimelineTab() {
+  const { caseId } = useCase();
+  return <CaseTimeline caseId={caseId} />;
 }

@@ -14,6 +14,8 @@ function mapBackendCaseToFrontend(backend: any): CaseDetail {
     evidence_count: backend.evidence_count || 0,
     pending_reviews: backend.pending_reviews || 0,
     assigned: backend.assigned || [],
+    people: Array.isArray(backend.people) ? backend.people : [],
+    sensitivity: backend.sensitivity,
   };
 }
 
