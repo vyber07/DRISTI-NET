@@ -3,6 +3,8 @@ import { useSearchParams } from "react-router-dom";
 import { PanelRightClose, PanelRightOpen } from "lucide-react";
 import { GraphCanvas } from "@/components/graph/GraphCanvas";
 import { GraphListView } from "@/components/graph/GraphListView";
+import { GraphCanvasBoundary } from "@/components/graph/GraphCanvasBoundary";
+import { webglAvailable } from "@/lib/webgl";
 import { exposeForTests } from "@/lib/test-hooks";
 import { EntityDrawer } from "@/components/graph/drawers/EntityDrawer";
 import { EdgeDrawer } from "@/components/graph/drawers/EdgeDrawer";
@@ -25,7 +27,9 @@ export function CaseGraphPage() {
   const { selectedNodeId, selectedEdgeId, loadGraph, isLoading, error, nodes, edges, graphBounds, selectNode } = useGraphStore();
   const [params, setParams] = useSearchParams();
   const focusEntity = params.get("entity");
-  const view = params.get("view") === "list" ? "list" : "graph";
+  const canDraw = webglAvailable();
+  // Without WebGL the canvas cannot be drawn: use the list view (same data, same detail panel) and say why.
+  const view = params.get("view") === "list" || !canDraw ? "list" : "graph";
   const setView = (v: "graph" | "list") => { const p = new URLSearchParams(params); if (v === "list") p.set("view", "list"); else p.delete("view"); setParams(p, { replace: true }); };
   const [panelOpen, setPanelOpen] = useState(true);
   // FE-032: a selection opens the panel, but "Hide details" must still be able to close it afterwards.
@@ -54,6 +58,7 @@ export function CaseGraphPage() {
         <div role="radiogroup" aria-label="View" className="inline-flex rounded-md border border-border-strong p-0.5" data-testid="graph-view-switch">
           {(["graph", "list"] as const).map((v) => (
             <button key={v} type="button" role="radio" aria-checked={view === v} onClick={() => setView(v)}
+              disabled={v === "graph" && !canDraw} title={v === "graph" && !canDraw ? "This browser cannot draw the graph (WebGL unavailable)" : undefined}
               className={cn("rounded px-2.5 py-1 text-sm", view === v ? "bg-electric-blue text-white" : "text-text-secondary hover:text-text-primary")}>
               {v === "graph" ? "Graph" : "List (keyboard / screen reader)"}
             </button>
@@ -71,11 +76,17 @@ export function CaseGraphPage() {
           {graphBounds.projectionStale && <>The graph is being rebuilt from recent changes; refresh in a moment for the current state.</>}
         </p>
       )}
+      {!canDraw && (
+        <p role="status" className="border-b border-border-subtle bg-surface-2 px-4 sm:px-6 py-2 text-sm text-text-primary" data-testid="graph-no-webgl">
+          This browser cannot draw the graph (WebGL is unavailable), so the same relationships are shown as a list.
+        </p>
+      )}
       {error && <div className="px-4 sm:px-6 pt-3"><ErrorState message={`Could not load the graph: ${error}`} onRetry={() => loadGraph(caseId)} /></div>}
       <div className="relative flex flex-1 min-h-0">
         <div className="relative flex-1 min-w-0 min-h-[360px]">
           {isLoading ? <p className="p-6 text-sm text-text-secondary" role="status">Loading the relationship graph…</p>
-            : view === "list" ? <GraphListView /> : <GraphCanvas key={caseId} /> /* FE-016: a new engine per case */}
+            : view === "list" ? <GraphListView />
+            : <GraphCanvasBoundary key={caseId} onUseList={() => setView("list")}><GraphCanvas key={caseId} /></GraphCanvasBoundary> /* FE-016: a new engine per case */}
         </div>
         {showPanel && (
           <aside id="graph-detail" aria-label="Selection details"

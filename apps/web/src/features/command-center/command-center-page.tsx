@@ -88,7 +88,7 @@ export function CommandCenterPage() {
               ) : (
                 <CaseTable cases={cases.slice(0, 8)} caption="Your cases" />
               )}
-              {cases.length > 8 && <p className="mt-2 text-xs text-text-secondary">Showing 8 of {cases.length}. <Link to="/cases" className="text-electric-blue hover:underline">See all</Link></p>}
+              {cases.length > 8 && <p className="mt-2 text-xs text-text-secondary">Showing 8 of {cases.length}. <Link to="/cases" className="text-electric-blue underline underline-offset-2">See all</Link></p>}
             </Section>
           </>
         )}

@@ -83,7 +83,7 @@ export function TimelineFilterBar() {
             onChange={(e) =>
               setDateRange(e.target.value || null, filters.endDate)
             }
-            className="rounded border border-border-subtle bg-surface-2 px-1.5 py-0.5 text-micro font-mono text-text-primary focus:outline-none"
+            className="rounded border border-border-strong bg-surface-1 px-1.5 py-0.5 text-xs font-mono text-text-primary focus:outline-none focus:ring-2 focus:ring-electric-blue-soft"
             title="Start Date"
             aria-label="Start Date"
           />
@@ -94,7 +94,7 @@ export function TimelineFilterBar() {
             onChange={(e) =>
               setDateRange(filters.startDate, e.target.value || null)
             }
-            className="rounded border border-border-subtle bg-surface-2 px-1.5 py-0.5 text-micro font-mono text-text-primary focus:outline-none"
+            className="rounded border border-border-strong bg-surface-1 px-1.5 py-0.5 text-xs font-mono text-text-primary focus:outline-none focus:ring-2 focus:ring-electric-blue-soft"
             title="End Date"
             aria-label="End Date"
           />

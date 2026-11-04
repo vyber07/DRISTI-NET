@@ -36,7 +36,8 @@ def reset_demo_candidates():
 @pytest.fixture(scope="module")
 def page():
     with pw.sync_playwright() as p:
-        browser = p.chromium.launch()
+        # DRISHTI_E2E_BROWSER=chromium|firefox|webkit (default chromium)
+        browser = getattr(p, os.environ.get("DRISHTI_E2E_BROWSER", "chromium")).launch()
         ctx = browser.new_context(viewport={"width": 1400, "height": 900})
         page = ctx.new_page()
         yield page
@@ -44,7 +45,9 @@ def page():
 
 
 def login(page, user):
-    page.goto(f"{BASE}/")
+    # Clear storage from the login page: clearing it while the app was booting at "/" raced with the app's own
+    # session check, which then (correctly) redirected to /login?expired=1 mid-test (seen on WebKit).
+    page.goto(f"{BASE}/login")
     page.evaluate("localStorage.clear()")
     page.goto(f"{BASE}/login")
     page.fill("input[id='officer-id']", user)
@@ -267,19 +270,25 @@ def test_graph_edge_to_source(page):
     page.wait_for_selector("[data-testid=graph-counts]")
     if not page.evaluate("() => !!window.__graphStore"):
         pytest.fail("this build has no E2E graph hooks: build it with `make build-web-e2e` (VITE_E2E_HOOKS=1, FE-056)")
-    page.wait_for_function("() => window.__graph && window.__graph.order > 0")
-    assert page.evaluate(_HAS_MERGED_NODE_JS), "expected at least one node in the rendered CASE-0001 graph"
-    page.wait_for_timeout(1000)
-    # Regression (2026-11-01): a frontend/backend vocabulary mismatch hid 117/117 edges and 30/56 nodes while
-    # this test still passed, because it only checked that nodes existed. Assert what Sigma actually DRAWS.
-    drawn = page.evaluate("""() => {
-        const s = window.__sigma, g = s.getGraph(); let edges = 0, nodes = 0;
-        g.forEachEdge(e => { const d = s.getEdgeDisplayData(e); if (d && !d.hidden) edges++; });
-        g.forEachNode(n => { const d = s.getNodeDisplayData(n); if (d && !d.hidden) nodes++; });
-        return { edges, nodes, totalEdges: g.size, totalNodes: g.order };
-    }""")
-    assert drawn["totalEdges"] > 0 and drawn["edges"] == drawn["totalEdges"], f"edges hidden by default filters: {drawn}"
-    assert drawn["nodes"] == drawn["totalNodes"], f"nodes hidden by default filters: {drawn}"
+    if page.locator("[data-testid=graph-no-webgl]").count():
+        # No WebGL in this browser (seen with headless Firefox): the tab must fall back to the list view instead of
+        # crashing the whole app (it showed a raw stack trace before). The source-tracing checks below still apply.
+        page.wait_for_selector("[data-testid=graph-relationships-table] tbody tr")
+        assert page.locator("[data-testid=route-error]").count() == 0
+    else:
+        page.wait_for_function("() => window.__graph && window.__graph.order > 0")
+        assert page.evaluate(_HAS_MERGED_NODE_JS), "expected at least one node in the rendered CASE-0001 graph"
+        page.wait_for_timeout(1000)
+        # Regression (2026-11-01): a frontend/backend vocabulary mismatch hid 117/117 edges and 30/56 nodes while
+        # this test still passed, because it only checked that nodes existed. Assert what Sigma actually DRAWS.
+        drawn = page.evaluate("""() => {
+            const s = window.__sigma, g = s.getGraph(); let edges = 0, nodes = 0;
+            g.forEachEdge(e => { const d = s.getEdgeDisplayData(e); if (d && !d.hidden) edges++; });
+            g.forEachNode(n => { const d = s.getNodeDisplayData(n); if (d && !d.hidden) nodes++; });
+            return { edges, nodes, totalEdges: g.size, totalNodes: g.order };
+        }""")
+        assert drawn["totalEdges"] > 0 and drawn["edges"] == drawn["totalEdges"], f"edges hidden by default filters: {drawn}"
+        assert drawn["nodes"] == drawn["totalNodes"], f"nodes hidden by default filters: {drawn}"
     page.screenshot(path=str(SHOTS / "04-graph.png"))
     # §19 Evidence gate: a selected edge must surface its supporting evidence id(s) in the drawer.
     ev_id = page.evaluate("""() => {

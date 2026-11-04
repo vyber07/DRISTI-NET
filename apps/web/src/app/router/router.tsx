@@ -18,6 +18,7 @@ import { ReportsPage } from "@/features/reports/reports-page";
 import { ProfilePage } from "@/features/profile/profile-page";
 import { GlobalAuditPage } from "@/features/audit/global-audit-page";
 import { NotFoundPage } from "@/features/not-found/not-found-page";
+import { RouteErrorPage } from "@/features/not-found/route-error-page";
 
 /** Redirect that keeps the :caseId (and optional :taskId) of an old URL. */
 function CaseRedirect({ to }: { to: string }) {
@@ -31,9 +32,10 @@ function CaseRedirect({ to }: { to: string }) {
  * case title, breadcrumb and tabs are always present. Old URLs redirect; unknown URLs get a real "not found" page.
  */
 export const router = createBrowserRouter([
-  { path: "/login", element: <LoginPage /> },
+  { path: "/login", element: <LoginPage />, errorElement: <RouteErrorPage /> },
   {
     path: "/",
+    errorElement: <RouteErrorPage />,
     element: (
       <ProtectedRoute>
         <AppShell />
