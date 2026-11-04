@@ -1,6 +1,6 @@
 # Frontend redesign: continuation state
 
-**Updated:** 2026-11-04 · **Phase:** complete through testing and documentation (phases 1–14). **Not deployed to the live demo.**
+**Updated:** 2026-11-04 · **Phase:** complete. **Deployed to the live site (port 80) on 2026-11-04 15:09 UTC** at code `cadd876`.
 
 ## Where things are
 - **Code:** commit `e3abc24` on local `main` (not pushed). Documentation is in the following commit.
@@ -63,3 +63,24 @@ sudo rm /etc/nginx/sites-enabled/dristinet-frontend-test /etc/nginx/sites-availa
 sudo nginx -t && sudo systemctl reload nginx
 # optional: rm -r /home/ubuntu/drishti-test/frontend   (the test data copy)
 ```
+
+## Live deployment (2026-11-04 15:09 UTC)
+- **Live site `http://65.0.102.181/` now runs the redesign** (visual refresh, charts, server-side search, case creation and
+  assignment, graph list view, all audit fixes). Built with `make build-web` (no E2E hooks); `dristinet-api` restarted.
+- **Backup taken first:** `/home/ubuntu/drishti-backups/pre-live-merge-20261104T150746Z` — previous web build, online DB backup (integrity ok; 48 cases, 8 evidence, 137 audit
+  events), evidence files, `.env`, nginx site, systemd unit. The live server had been running code `c4b23e8` since 00:54 UTC.
+- **Verified on the public address:** Chromium, Firefox, WebKit and Obscura — sign-in, 11 pages, quick navigation keeps the
+  session, edge → claim → exact source line; no test hooks; no failed requests.
+- **No data migration** was needed (no model changes); existing sessions stay valid (same signing key).
+
+**Rollback** (restores the previous frontend and backend):
+```bash
+B=/home/ubuntu/drishti-backups/pre-live-merge-20261104T150746Z
+cd /home/ubuntu/DRISTI-NET
+rm -rf apps/web/dist && tar -C apps/web -xzf $B/live-web-dist.tgz
+git checkout c4b23e8 -- apps/api            # backend code the live server ran before the merge
+sudo systemctl restart dristinet-api
+# database: only if needed — stop the service, copy $B/drishti.db over storage/drishti.db, start it again
+```
+The test site (`http://test.65.0.102.181.nip.io/`) is still running with its own data copy and its earlier build; stop it
+with the steps above when testing ends.
