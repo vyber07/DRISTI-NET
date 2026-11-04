@@ -13,3 +13,10 @@ build/
 .idea/
 .venv*/
 releases/
+.ruff_cache/
+.claude/
+*.db
+*.sqlite
+*.sqlite3
+*.tar.gz
+*.tgz
