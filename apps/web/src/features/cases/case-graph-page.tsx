@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { PanelRightClose, PanelRightOpen } from "lucide-react";
 import { GraphCanvas } from "@/components/graph/GraphCanvas";
+import { GraphListView } from "@/components/graph/GraphListView";
 import { EntityDrawer } from "@/components/graph/drawers/EntityDrawer";
 import { EdgeDrawer } from "@/components/graph/drawers/EdgeDrawer";
 import { EmptyDrawer } from "@/components/graph/drawers/EmptyDrawer";
@@ -21,8 +22,10 @@ import { cn } from "@/lib/utils";
 export function CaseGraphPage() {
   const { caseId } = useCase();
   const { selectedNodeId, selectedEdgeId, loadGraph, isLoading, error, nodes, edges, graphBounds, selectNode } = useGraphStore();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const focusEntity = params.get("entity");
+  const view = params.get("view") === "list" ? "list" : "graph";
+  const setView = (v: "graph" | "list") => { const p = new URLSearchParams(params); if (v === "list") p.set("view", "list"); else p.delete("view"); setParams(p, { replace: true }); };
   const [panelOpen, setPanelOpen] = useState(true);
   // FE-032: a selection opens the panel, but "Hide details" must still be able to close it afterwards.
   useEffect(() => { if (selectedNodeId || selectedEdgeId) setPanelOpen(true); }, [selectedNodeId, selectedEdgeId]);
@@ -46,10 +49,20 @@ export function CaseGraphPage() {
           <span className="font-semibold text-text-primary" data-testid="graph-counts">{isLoading ? "Loading…" : `${nodes.length} entities · ${edges.length} relationships`}</span>
           <span className="hidden md:inline"> — candidate relationships from the case evidence. Click a line to see its sources.</span>
         </p>
+        <div className="flex flex-wrap items-center gap-2">
+        <div role="radiogroup" aria-label="View" className="inline-flex rounded-md border border-border-strong p-0.5" data-testid="graph-view-switch">
+          {(["graph", "list"] as const).map((v) => (
+            <button key={v} type="button" role="radio" aria-checked={view === v} onClick={() => setView(v)}
+              className={cn("rounded px-2.5 py-1 text-sm", view === v ? "bg-electric-blue text-white" : "text-text-secondary hover:text-text-primary")}>
+              {v === "graph" ? "Graph" : "List (keyboard / screen reader)"}
+            </button>
+          ))}
+        </div>
         <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => setPanelOpen(!showPanel)} aria-expanded={showPanel} aria-controls="graph-detail">
           {showPanel ? <PanelRightClose className="h-4 w-4" aria-hidden="true" /> : <PanelRightOpen className="h-4 w-4" aria-hidden="true" />}
           {showPanel ? "Hide details" : "Show details"}
         </Button>
+        </div>
       </div>
       {graphBounds && (graphBounds.truncated || graphBounds.projectionStale) && (
         <p role="status" className="border-b border-amber/40 bg-amber/10 px-4 sm:px-6 py-2 text-sm text-text-primary" data-testid="graph-bounds">
@@ -60,7 +73,8 @@ export function CaseGraphPage() {
       {error && <div className="px-4 sm:px-6 pt-3"><ErrorState message={`Could not load the graph: ${error}`} onRetry={() => loadGraph(caseId)} /></div>}
       <div className="relative flex flex-1 min-h-0">
         <div className="relative flex-1 min-w-0 min-h-[360px]">
-          {isLoading ? <p className="p-6 text-sm text-text-secondary" role="status">Loading the relationship graph…</p> : <GraphCanvas />}
+          {isLoading ? <p className="p-6 text-sm text-text-secondary" role="status">Loading the relationship graph…</p>
+            : view === "list" ? <GraphListView /> : <GraphCanvas />}
         </div>
         {showPanel && (
           <aside id="graph-detail" aria-label="Selection details"

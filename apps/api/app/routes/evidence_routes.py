@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import Response
+from fastapi import Response as FastAPIResponse
 from sqlalchemy.orm import Session
 
 from ..auth import authorize_case, current_user, require_roles
@@ -10,6 +11,7 @@ from ..services import extract as extract_svc
 from ..services import pipeline, storage
 from ..services.audit import record_audit
 from ..services.masking import mask_text
+from .listing import MAX_LIMIT, like_pattern, page
 
 router = APIRouter(tags=["evidence"])
 
@@ -88,9 +90,28 @@ async def upload(case_id: str, request: Request, file: UploadFile = File(...), s
 
 
 @router.get("/cases/{case_id}/evidence")
-def list_evidence(case_id: str, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db)):
+def list_evidence(case_id: str, request: Request, response: FastAPIResponse, q: str | None = Query(None, max_length=200),
+                  status: str | None = Query(None, max_length=40), limit: int | None = Query(None, ge=1, le=MAX_LIMIT),
+                  offset: int = Query(0, ge=0), user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """Optional search (file name, evidence id, start of SHA-256), status filter and paging; X-Total-Count = matches."""
     authorize_case(db, user, case_id, request)
-    return [evidence_out(e) for e in db.query(Evidence).filter_by(case_id=case_id).order_by(Evidence.created_at).all()]
+    query = db.query(Evidence).filter_by(case_id=case_id)
+    if status:
+        query = query.filter(Evidence.status == status)
+    if q and q.strip():
+        pat, prefix = like_pattern(q), q.strip().lower().replace("\\", "").replace("%", "").replace("_", "") + "%"
+        query = query.filter(Evidence.filename.ilike(pat, escape="\\") | Evidence.evidence_id.ilike(pat, escape="\\")
+                             | Evidence.sha256.like(prefix))
+    return [evidence_out(e) for e in page(query.order_by(Evidence.created_at), response, limit, offset)]
+
+
+@router.get("/cases/{case_id}/evidence/summary")
+def evidence_summary(case_id: str, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """Counts by status for the whole case (filters and the overview need them without loading every row)."""
+    authorize_case(db, user, case_id, request)
+    from sqlalchemy import func
+    rows = db.query(Evidence.status, func.count()).filter_by(case_id=case_id).group_by(Evidence.status).all()
+    return {"case_id": case_id, "total": sum(n for _, n in rows), "by_status": {s: n for s, n in rows}}
 
 
 def _get_ev(db: Session, user: User, evidence_id: str, request: Request, action="EVIDENCE_VIEW") -> Evidence:

@@ -1,10 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
-from sqlalchemy import select
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
+from sqlalchemy.orm import aliased
+from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from .listing import MAX_LIMIT, like_pattern, page
 from ..auth import authorize_case, current_user, require_roles
 from ..db import get_db
-from ..models import Claim, Entity, MatchCandidate, Review, User
+from ..models import SENSITIVE_KINDS, Claim, Entity, MatchCandidate, Review, User
 from ..schemas import DecisionIn
 from ..services import pipeline
 from ..services.audit import record_audit
@@ -45,12 +47,32 @@ def candidate_out(db: Session, m: MatchCandidate, detailed: bool = True) -> dict
 
 
 @router.get("/cases/{case_id}/candidates")
-def list_candidates(case_id: str, request: Request, state: str | None = None, user: User = Depends(current_user), db: Session = Depends(get_db)):
+def list_candidates(case_id: str, request: Request, response: Response, state: str | None = None,
+                    q: str | None = Query(None, max_length=200), limit: int | None = Query(None, ge=1, le=MAX_LIMIT),
+                    offset: int = Query(0, ge=0), user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """Optional name search and paging; X-Total-Count = matches. The search never matches masked kinds (phone,
+    account): matching their raw labels would reveal whether a hidden number exists in the case."""
     authorize_case(db, user, case_id, request, action="REVIEW_QUEUE")
-    q = db.query(MatchCandidate).filter_by(case_id=case_id)
-    if state:
-        q = q.filter(MatchCandidate.state == state)
-    return [candidate_out(db, m, detailed=False) for m in q.order_by(MatchCandidate.confidence.desc()).all()]
+    query = db.query(MatchCandidate).filter_by(case_id=case_id)
+    if state:  # one state, or several separated by commas (e.g. "APPROVE,REJECT" for the "Decided" filter)
+        query = query.filter(MatchCandidate.state.in_([x.strip() for x in state.split(",") if x.strip()]))
+    if q and q.strip():
+        L, R = aliased(Entity), aliased(Entity)
+        pat = like_pattern(q)
+        query = (query.join(L, MatchCandidate.left_entity_id == L.entity_id).join(R, MatchCandidate.right_entity_id == R.entity_id)
+                 .filter(((L.label.ilike(pat, escape="\\")) & L.kind.notin_(SENSITIVE_KINDS))
+                         | ((R.label.ilike(pat, escape="\\")) & R.kind.notin_(SENSITIVE_KINDS))
+                         | MatchCandidate.candidate_id.ilike(pat, escape="\\")))
+    rows = page(query.order_by(MatchCandidate.confidence.desc(), MatchCandidate.candidate_id), response, limit, offset)
+    return [candidate_out(db, m, detailed=False) for m in rows]
+
+
+@router.get("/cases/{case_id}/candidates/summary")
+def candidates_summary(case_id: str, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """Counts by review state for any case member (GET /stats is limited to roles that may decide)."""
+    authorize_case(db, user, case_id, request, action="REVIEW_QUEUE")
+    rows = db.query(MatchCandidate.state, func.count()).filter_by(case_id=case_id).group_by(MatchCandidate.state).all()
+    return {"case_id": case_id, "total": sum(n for _, n in rows), "by_state": {s: n for s, n in rows}}
 
 
 @router.get("/candidates/{candidate_id}")

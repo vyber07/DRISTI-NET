@@ -1,4 +1,4 @@
-import { get, post } from "@/services/api/real_client";
+import { get, getPaged, post, type Paged } from "@/services/api/real_client";
 
 /** Identity-match candidate exactly as the API returns it (routes/review_routes.py candidate_out). */
 export interface RecordProfile {
@@ -20,3 +20,9 @@ export const listCandidates = (caseId: string) => get<Candidate[]>(`/cases/${enc
 export const getCandidate = (id: string) => get<Candidate>(`/candidates/${encodeURIComponent(id)}`);
 export const decide = (id: string, decision: Decision, reason: string) =>
   post<Candidate>(`/candidates/${encodeURIComponent(id)}/decision`, { decision, reason });
+
+/** Server-side state filter (one or several, comma-separated), name search and paging. */
+export const searchCandidates = (caseId: string, opts: { state?: string; q?: string; limit?: number; offset?: number }): Promise<Paged<Candidate>> =>
+  getPaged<Candidate>(`/cases/${encodeURIComponent(caseId)}/candidates`, opts);
+export const candidatesSummary = (caseId: string) =>
+  get<{ case_id: string; total: number; by_state: Record<string, number> }>(`/cases/${encodeURIComponent(caseId)}/candidates/summary`);

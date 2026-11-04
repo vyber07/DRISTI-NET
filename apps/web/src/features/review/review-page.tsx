@@ -1,23 +1,25 @@
-import { useCallback, useEffect, useId, useMemo, useState } from "react";
+import { useCallback, useEffect, useId, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, CheckCircle2, PauseCircle, RotateCcw, Search, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge, reviewStatusInfo } from "@/components/ui/status-badge";
 import { ReasonDialog } from "@/components/ui/reason-dialog";
-import { CaseTabBody, EmptyState, ErrorState, LoadingState, Section } from "@/components/layout/page";
+import { CaseTabBody, EmptyState, ErrorState, LoadingState, Pager, Section } from "@/components/layout/page";
+import { useDebounced } from "@/lib/use-debounced";
 import { useAuthStore } from "@/stores/authStore";
 import { can, deniedReason } from "@/lib/permissions";
 import { useCase } from "@/features/cases/case-context";
 import { formatDateTime } from "@/features/cases/evidence/evidence-format";
-import { decide, getCandidate, listCandidates, type Candidate, type Decision, type RecordProfile, type Signal } from "./review-api";
+import { candidatesSummary, decide, getCandidate, searchCandidates, type Candidate, type Decision, type RecordProfile, type Signal } from "./review-api";
 import { SourcePane } from "./source-pane";
 
 const FILTERS = [
-  { id: "open", label: "Needs review", match: (c: Candidate) => c.state === "REVIEW_REQUIRED" },
-  { id: "deferred", label: "Deferred", match: (c: Candidate) => c.state === "DEFER" },
-  { id: "decided", label: "Decided", match: (c: Candidate) => c.state === "APPROVE" || c.state === "REJECT" },
-  { id: "all", label: "All", match: () => true },
+  { id: "open", label: "Needs review", states: "REVIEW_REQUIRED" },
+  { id: "deferred", label: "Deferred", states: "DEFER" },
+  { id: "decided", label: "Decided", states: "APPROVE,REJECT" },
+  { id: "all", label: "All", states: undefined },
 ] as const;
+const PAGE_SIZE = 25;
 type FilterId = (typeof FILTERS)[number]["id"];
 
 const pct = (x: number) => `${Math.round(x * 100)}%`;
@@ -36,84 +38,91 @@ export function ReviewQueuePage() {
 function Queue() {
   const { caseId } = useCase();
   const navigate = useNavigate();
-  const [items, setItems] = useState<Candidate[] | null>(null);
+  const [rows, setRows] = useState<Candidate[] | null>(null);
+  const [total, setTotal] = useState(0);
+  const [byState, setByState] = useState<Record<string, number> | null>(null);
   const [error, setError] = useState<{ message: string; trace?: string } | null>(null);
   const [filter, setFilter] = useState<FilterId>("open");
   const [query, setQuery] = useState("");
+  const [offset, setOffset] = useState(0);
+  const q = useDebounced(query.trim(), 300);
   const searchId = useId();
 
+  useEffect(() => { setOffset(0); }, [q, filter]);
+  // Filter, search and paging run on the server; counts come from GET /cases/{id}/candidates/summary.
   const load = useCallback(() => {
     setError(null);
-    listCandidates(caseId).then(setItems).catch((e) => setError({ message: e?.message || "Request failed", trace: e?.trace }));
-  }, [caseId]);
-  useEffect(() => { setItems(null); load(); }, [load]);
-
-  const counts = useMemo(() => Object.fromEntries(FILTERS.map((f) => [f.id, (items ?? []).filter(f.match).length])), [items]);
-  const rows = useMemo(() => {
     const f = FILTERS.find((x) => x.id === filter)!;
-    const t = query.trim().toLowerCase();
-    return (items ?? []).filter((c) => f.match(c) && (!t || pair(c).toLowerCase().includes(t) || c.candidate_id.toLowerCase().includes(t)))
-      .sort((a, b) => b.confidence - a.confidence);
-  }, [items, filter, query]);
+    searchCandidates(caseId, { state: f.states, q, limit: PAGE_SIZE, offset })
+      .then((r) => { setRows(r.items); setTotal(r.total); })
+      .catch((e) => setError({ message: e?.message || "Request failed", trace: e?.trace }));
+    candidatesSummary(caseId).then((r) => setByState(r.by_state)).catch(() => setByState(null));
+  }, [caseId, filter, q, offset]);
+  useEffect(load, [load]);
+
+  const count = (id: FilterId) => {
+    if (!byState) return null;
+    const f = FILTERS.find((x) => x.id === id)!;
+    return f.states ? f.states.split(",").reduce((n, st) => n + (byState[st] || 0), 0) : Object.values(byState).reduce((a, b) => a + b, 0);
+  };
   const base = `/cases/${encodeURIComponent(caseId)}/review`;
 
   return (
     <CaseTabBody title="Review queue" description="Possible matches between records. A shared name, phone or organisation is a candidate, not proof that two records are the same person — nothing is merged without a recorded human decision.">
-      {error ? <ErrorState message={error.message} trace={error.trace} onRetry={load} /> : items === null ? <LoadingState label="Loading candidates…" /> : (
-        <>
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div role="tablist" aria-label="Filter candidates" className="inline-flex flex-wrap gap-1 rounded-lg bg-surface-2 p-1">
-              {FILTERS.map((f) => (
-                <button key={f.id} role="tab" type="button" aria-selected={filter === f.id} onClick={() => setFilter(f.id)}
-                  className={`rounded-md px-3 py-1.5 text-sm ${filter === f.id ? "bg-surface-1 font-semibold text-text-primary shadow-xs" : "text-text-secondary hover:text-text-primary"}`}>
-                  {f.label} <span className="tabular-nums text-text-secondary">({counts[f.id]})</span>
-                </button>
-              ))}
-            </div>
-            <div className="min-w-[14rem]">
-              <label htmlFor={searchId} className="sr-only">Search candidates</label>
-              <div className="relative">
-                <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" aria-hidden="true" />
-                <input id={searchId} type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search names"
-                  className="w-full rounded-md border border-border-strong bg-surface-1 py-2 pl-8 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-electric-blue-soft" />
-              </div>
-            </div>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div role="tablist" aria-label="Filter candidates" className="inline-flex flex-wrap gap-1 rounded-lg bg-surface-2 p-1">
+          {FILTERS.map((f) => (
+            <button key={f.id} role="tab" type="button" aria-selected={filter === f.id} onClick={() => setFilter(f.id)}
+              className={`rounded-md px-3 py-1.5 text-sm ${filter === f.id ? "bg-surface-1 font-semibold text-text-primary shadow-xs" : "text-text-secondary hover:text-text-primary"}`}>
+              {f.label}{count(f.id) !== null && <span className="tabular-nums text-text-secondary"> ({count(f.id)})</span>}
+            </button>
+          ))}
+        </div>
+        <div className="min-w-[14rem]">
+          <label htmlFor={searchId} className="sr-only">Search candidates by name</label>
+          <div className="relative">
+            <Search className="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" aria-hidden="true" />
+            <input id={searchId} type="search" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search names"
+              className="w-full rounded-md border border-border-strong bg-surface-1 py-2 pl-8 pr-3 text-sm focus:outline-none focus:ring-2 focus:ring-electric-blue-soft" />
           </div>
-          {rows.length === 0 ? (
-            <EmptyState title={filter === "open" ? "Nothing waits for review" : "No candidates here"} icon={CheckCircle2}>
-              {filter === "open" ? "Every candidate in this case has a decision." : "Choose another filter or clear the search."}
-            </EmptyState>
-          ) : (
-            <div className="overflow-x-auto rounded-lg border border-border-subtle bg-surface-1">
-              <table className="w-full text-sm" data-testid="review-queue">
-                <caption className="sr-only">Candidates — {FILTERS.find((x) => x.id === filter)!.label}</caption>
-                <thead className="bg-surface-2 text-left text-xs font-semibold uppercase tracking-wide text-text-secondary">
-                  <tr>
-                    <th scope="col" className="px-3 py-2">Records</th>
-                    <th scope="col" className="px-3 py-2 text-right">Matcher score</th>
-                    <th scope="col" className="px-3 py-2 hidden md:table-cell">Why suggested</th>
-                    <th scope="col" className="px-3 py-2">Status</th>
+        </div>
+      </div>
+      {error ? <ErrorState message={error.message} trace={error.trace} onRetry={load} /> : rows === null ? <LoadingState label="Loading candidates…" /> : rows.length === 0 ? (
+        <EmptyState title={filter === "open" && !q ? "Nothing waits for review" : "No candidates here"} icon={CheckCircle2}>
+          {filter === "open" && !q ? "Every candidate in this case has a decision." : "Choose another filter or clear the search."}
+        </EmptyState>
+      ) : (
+        <>
+          <div className="overflow-x-auto rounded-lg border border-border-subtle bg-surface-1">
+            <table className="w-full text-sm" data-testid="review-queue">
+              <caption className="sr-only">Candidates — {FILTERS.find((x) => x.id === filter)!.label}</caption>
+              <thead className="bg-surface-2 text-left text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                <tr>
+                  <th scope="col" className="px-3 py-2">Records</th>
+                  <th scope="col" className="px-3 py-2 text-right">Matcher score</th>
+                  <th scope="col" className="px-3 py-2 hidden md:table-cell">Why suggested</th>
+                  <th scope="col" className="px-3 py-2">Status</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border-subtle">
+                {rows.map((c) => (
+                  <tr key={c.candidate_id} className="cursor-pointer hover:bg-surface-2/60" onClick={() => navigate(`${base}/${c.candidate_id}`)}>
+                    <td className="px-3 py-2.5">
+                      <Link to={`${base}/${c.candidate_id}`} onClick={(e) => e.stopPropagation()} className="font-medium text-electric-blue hover:underline">{pair(c)}</Link>
+                      {c.conflicts?.length > 0 && <span className="ml-2 text-xs text-orange-dim">{c.conflicts.length} conflict{c.conflicts.length === 1 ? "" : "s"}</span>}
+                    </td>
+                    <td className="px-3 py-2.5 text-right tabular-nums">{pct(c.confidence)}</td>
+                    <td className="px-3 py-2.5 hidden md:table-cell text-text-secondary">{(c.positive_signals || []).map((s) => (s.signal || "").replace(/_/g, " ")).filter(Boolean).join(", ") || "—"}</td>
+                    <td className="px-3 py-2.5"><StatusBadge kind="review" code={c.state} /></td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-border-subtle">
-                  {rows.map((c) => (
-                    <tr key={c.candidate_id} className="cursor-pointer hover:bg-surface-2/60" onClick={() => navigate(`${base}/${c.candidate_id}`)}>
-                      <td className="px-3 py-2.5">
-                        <Link to={`${base}/${c.candidate_id}`} onClick={(e) => e.stopPropagation()} className="font-medium text-electric-blue hover:underline">{pair(c)}</Link>
-                        {c.conflicts?.length > 0 && <span className="ml-2 text-xs text-orange-dim">{c.conflicts.length} conflict{c.conflicts.length === 1 ? "" : "s"}</span>}
-                      </td>
-                      <td className="px-3 py-2.5 text-right tabular-nums">{pct(c.confidence)}</td>
-                      <td className="px-3 py-2.5 hidden md:table-cell text-text-secondary">{(c.positive_signals || []).map((s) => (s.signal || "").replace(/_/g, " ")).filter(Boolean).join(", ") || "—"}</td>
-                      <td className="px-3 py-2.5"><StatusBadge kind="review" code={c.state} /></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-          <p className="text-xs text-text-secondary">The matcher score orders the queue; it is not a probability that the records are the same person.</p>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <Pager offset={offset} limit={PAGE_SIZE} total={total} onChange={setOffset} label="candidates" />
         </>
       )}
+      <p className="text-xs text-text-secondary">The matcher score orders the queue; it is not a probability that the records are the same person.</p>
     </CaseTabBody>
   );
 }
@@ -146,8 +155,8 @@ function CandidateDetail({ candidateId }: { candidateId: string }) {
     try {
       const updated = await decide(candidateId, pending, reason);
       setC(updated);
-      const next = (await listCandidates(caseId).catch(() => [] as Candidate[]))
-        .filter((x) => x.state === "REVIEW_REQUIRED" && x.candidate_id !== candidateId).sort((a, b) => b.confidence - a.confidence)[0];
+      const next = (await searchCandidates(caseId, { state: "REVIEW_REQUIRED", limit: 2 }).catch(() => ({ items: [] as Candidate[], total: 0 })))
+        .items.find((x) => x.candidate_id !== candidateId);
       setDone({ decision: pending, next: next?.candidate_id ?? null });
       reloadCase();
       return null;

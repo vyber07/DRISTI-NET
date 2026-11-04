@@ -1,4 +1,4 @@
-import { get, post, type ApiResponse } from "./real_client";
+import { get, getPaged, post, type ApiResponse, type Paged } from "./real_client";
 import type { CaseDetail, CaseSummary } from "@/types/case";
 
 function mapBackendCaseToFrontend(backend: any): CaseDetail {
@@ -64,4 +64,20 @@ export async function getCaseReviews(caseId: string): Promise<ApiResponse<any[]>
 export async function assignCase(caseId: string, username: string, purpose = "investigator"): Promise<ApiResponse<any>> {
   const data = await post(`/cases/${caseId}/assign`, { username, purpose });
   return { data, meta: { requestId: "req", timestamp: new Date().toISOString(), durationMs: 0, securityClassification: "REAL" } };
+}
+
+/** Server-side search and paging over the cases this account may open (X-Total-Count = all matches). */
+export async function searchCases(opts: { q?: string; awaitingReview?: boolean; limit?: number; offset?: number }): Promise<Paged<CaseSummary>> {
+  const r = await getPaged(`/cases`, { q: opts.q, awaiting_review: opts.awaitingReview, limit: opts.limit, offset: opts.offset });
+  return { items: r.items.map(mapBackendCaseToFrontend), total: r.total };
+}
+
+export async function createCase(body: { case_id: string; title: string; jurisdiction: string; purpose: string; authority_reference: string }): Promise<CaseDetail> {
+  return mapBackendCaseToFrontend(await post(`/cases`, body));
+}
+
+export interface UserSummary { user_id: string; username: string; display_name: string; role: string; jurisdiction: string }
+/** GET /users — allowed for ADMIN, AUDITOR, INVESTIGATOR (others get 403; the assign dialog then asks for a username). */
+export function listUsers(): Promise<UserSummary[]> {
+  return get(`/users`);
 }

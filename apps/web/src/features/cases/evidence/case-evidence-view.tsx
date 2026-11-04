@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useId, useRef, useState } from "react";
 import { Download, FileText, Search, Upload } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { StatusBadge, evidenceStatusInfo } from "@/components/ui/status-badge";
 import { ReasonDialog } from "@/components/ui/reason-dialog";
-import { CaseTabBody, EmptyState, ErrorState, LoadingState, Section } from "@/components/layout/page";
-import { downloadEvidence, listEvidence, uploadEvidence } from "@/services/api/evidenceApi";
+import { CaseTabBody, EmptyState, ErrorState, LoadingState, Pager, Section } from "@/components/layout/page";
+import { useDebounced } from "@/lib/use-debounced";
+import { downloadEvidence, getEvidenceSummary, searchEvidence, uploadEvidence } from "@/services/api/evidenceApi";
 import { useProvenanceStore } from "@/stores/provenanceStore";
 import { useAuthStore } from "@/stores/authStore";
 import { can, deniedReason } from "@/lib/permissions";
@@ -14,6 +15,7 @@ import { EvidenceDetailDrawer } from "./evidence-detail-drawer";
 import { formatBytes, formatDateTime, NOT_PROCESSED } from "./evidence-format";
 
 const ACCEPT = ".csv,.json,.pdf,.txt,.zip"; // config.ALLOWED_EXTENSIONS
+const PAGE_SIZE = 25;
 
 /**
  * Evidence tab: upload (for roles that may), find an item by name, hash or status, and open its details.
@@ -25,26 +27,31 @@ export function CaseEvidenceView() {
   const role = useAuthStore((s) => s.user?.role);
   const openSource = useProvenanceStore((s) => s.openProvenanceForRecord);
   const [items, setItems] = useState<EvidenceItem[] | null>(null);
+  const [total, setTotal] = useState(0);
+  const [summary, setSummary] = useState<{ total: number; by_status: Record<string, number> } | null>(null);
   const [error, setError] = useState<{ message: string; trace?: string } | null>(null);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState("ALL");
+  const [offset, setOffset] = useState(0);
   const [selected, setSelected] = useState<EvidenceItem | null>(null);
   const [downloadFor, setDownloadFor] = useState<EvidenceItem | null>(null);
   const [notice, setNotice] = useState<{ ok: boolean; text: string } | null>(null);
   const searchId = useId(); const statusId = useId();
+  const q = useDebounced(query.trim(), 300);
 
+  useEffect(() => { setOffset(0); }, [q, status]);
+  // Search, status filter and paging run on the server (GET /cases/{id}/evidence?q=&status=&limit=&offset=).
   const load = useCallback(() => {
     setError(null);
-    listEvidence(caseId).then((r) => setItems(r.data)).catch((e) => setError({ message: e?.message || "Request failed", trace: e?.trace }));
-  }, [caseId]);
-  useEffect(() => { setItems(null); load(); }, [load]);
+    searchEvidence(caseId, { q, status: status === "ALL" ? undefined : status, limit: PAGE_SIZE, offset })
+      .then((r) => { setItems(r.items); setTotal(r.total); })
+      .catch((e) => setError({ message: e?.message || "Request failed", trace: e?.trace }));
+    getEvidenceSummary(caseId).then(setSummary).catch(() => setSummary(null)); // counts only; the list above reports errors
+  }, [caseId, q, status, offset]);
+  useEffect(load, [load]);
 
-  const statuses = useMemo(() => [...new Set((items ?? []).map((i) => i.status))].sort(), [items]);
-  const filtered = useMemo(() => {
-    const t = query.trim().toLowerCase();
-    return (items ?? []).filter((i) => (status === "ALL" || i.status === status) &&
-      (!t || i.filename.toLowerCase().includes(t) || i.sha256.startsWith(t) || i.evidence_id.toLowerCase().includes(t)));
-  }, [items, query, status]);
+  const statuses = Object.keys(summary?.by_status ?? {}).sort();
+  const caseHasNone = summary?.total === 0;
 
   const doDownload = async (reason: string): Promise<string | null> => {
     if (!downloadFor) return null;
@@ -64,7 +71,7 @@ export function CaseEvidenceView() {
       {can(role, "upload") && <UploadPanel caseId={caseId} onUploaded={() => { load(); reloadCase(); }} />}
       {notice && <p role="status" className={`text-sm ${notice.ok ? "text-verified-emerald" : "text-critical-red"}`}>{notice.text}</p>}
 
-      {error ? <ErrorState message={error.message} trace={error.trace} onRetry={load} /> : items === null ? <LoadingState label="Loading evidence…" /> : items.length === 0 ? (
+      {caseHasNone ? (
         <EmptyState title="No evidence yet">{can(role, "upload") ? "Upload a file above to start." : "An evidence officer or investigator uploads files for this case."}</EmptyState>
       ) : (
         <>
@@ -81,55 +88,62 @@ export function CaseEvidenceView() {
               <label htmlFor={statusId} className="text-xs font-medium text-text-secondary">Status</label>
               <select id={statusId} value={status} onChange={(e) => setStatus(e.target.value)}
                 className="mt-1 block rounded-md border border-border-strong bg-surface-1 py-2 pl-2 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-electric-blue-soft">
-                <option value="ALL">All statuses ({items.length})</option>
-                {statuses.map((s) => <option key={s} value={s}>{evidenceStatusInfo(s).label} ({items.filter((i) => i.status === s).length})</option>)}
+                <option value="ALL">All statuses{summary ? ` (${summary.total})` : ""}</option>
+                {statuses.map((st) => <option key={st} value={st}>{evidenceStatusInfo(st).label} ({summary?.by_status[st]})</option>)}
               </select>
             </div>
           </div>
-          <p className="text-xs text-text-secondary" role="status" aria-live="polite">{filtered.length === items.length ? `${items.length} items` : `${filtered.length} of ${items.length} items match`}</p>
-          {filtered.length === 0 ? <EmptyState title="Nothing matches">Clear the search or choose another status.</EmptyState> : (
-            <div className="overflow-x-auto rounded-lg border border-border-subtle bg-surface-1">
-              <table className="w-full text-sm" data-testid="evidence-table">
-                <caption className="sr-only">Evidence for this case</caption>
-                <thead className="bg-surface-2 text-left text-xs font-semibold uppercase tracking-wide text-text-secondary">
-                  <tr>
-                    <th scope="col" className="px-3 py-2">File</th>
-                    <th scope="col" className="px-3 py-2">Status</th>
-                    <th scope="col" className="px-3 py-2 hidden md:table-cell">Uploaded</th>
-                    <th scope="col" className="px-3 py-2 hidden lg:table-cell">SHA-256</th>
-                    <th scope="col" className="px-3 py-2 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-border-subtle">
-                  {filtered.map((i) => (
-                    <tr key={i.evidence_id} className="hover:bg-surface-2/60" data-evidence-id={i.evidence_id}>
-                      <td className="px-3 py-2.5 min-w-[12rem]">
-                        <button type="button" onClick={() => setSelected(i)} className="text-left font-medium text-electric-blue hover:underline break-all">{i.filename}</button>
-                        <p className="text-xs text-text-secondary">{i.detected_type} · {formatBytes(i.size_bytes)}</p>
-                      </td>
-                      <td className="px-3 py-2.5"><StatusBadge code={i.status} /></td>
-                      <td className="px-3 py-2.5 hidden md:table-cell text-text-secondary whitespace-nowrap">
-                        {formatDateTime(i.created_at)}<span className="block text-xs">{personName(i.uploaded_by)}</span>
-                      </td>
-                      <td className="px-3 py-2.5 hidden lg:table-cell"><span className="font-mono text-xs text-text-secondary" title={i.sha256}>{i.sha256.slice(0, 16)}…</span></td>
-                      <td className="px-3 py-2.5">
-                        <div className="flex justify-end gap-1">
-                          <Button variant="ghost" size="sm" onClick={() => openSource(i.evidence_id)} className="gap-1" aria-label={`Open source of ${i.filename}`}>
-                            <FileText className="h-3.5 w-3.5" aria-hidden="true" /><span className="hidden xl:inline">Source</span>
-                          </Button>
-                          <Button variant="ghost" size="sm" onClick={() => setSelected(i)} aria-label={`Details of ${i.filename}`}>Details</Button>
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setDownloadFor(i)} disabled={!can(role, "downloadOriginal")}
-                            aria-label="Download original evidence file"
-                            title={can(role, "downloadOriginal") ? `Download the original ${i.filename} (reason recorded)` : deniedReason(role, "download unmasked originals")}>
-                            <Download className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+          {error ? <ErrorState message={error.message} trace={error.trace} onRetry={load} /> : items === null ? <LoadingState label="Loading evidence…" /> : (
+            <>
+              <p className="text-xs text-text-secondary" role="status" aria-live="polite">
+                {q || status !== "ALL" ? `${total} item${total === 1 ? "" : "s"} match` : `${total} item${total === 1 ? "" : "s"}`}
+              </p>
+              {items.length === 0 ? <EmptyState title="Nothing matches">Clear the search or choose another status.</EmptyState> : (
+                <div className="overflow-x-auto rounded-lg border border-border-subtle bg-surface-1">
+                  <table className="w-full text-sm" data-testid="evidence-table">
+                    <caption className="sr-only">Evidence for this case</caption>
+                    <thead className="bg-surface-2 text-left text-xs font-semibold uppercase tracking-wide text-text-secondary">
+                      <tr>
+                        <th scope="col" className="px-3 py-2">File</th>
+                        <th scope="col" className="px-3 py-2">Status</th>
+                        <th scope="col" className="px-3 py-2 hidden md:table-cell">Uploaded</th>
+                        <th scope="col" className="px-3 py-2 hidden lg:table-cell">SHA-256</th>
+                        <th scope="col" className="px-3 py-2 text-right">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border-subtle">
+                      {items.map((i) => (
+                        <tr key={i.evidence_id} className="hover:bg-surface-2/60" data-evidence-id={i.evidence_id}>
+                          <td className="px-3 py-2.5 min-w-[12rem]">
+                            <button type="button" onClick={() => setSelected(i)} className="text-left font-medium text-electric-blue hover:underline break-all">{i.filename}</button>
+                            <p className="text-xs text-text-secondary">{i.detected_type} · {formatBytes(i.size_bytes)}</p>
+                          </td>
+                          <td className="px-3 py-2.5"><StatusBadge code={i.status} /></td>
+                          <td className="px-3 py-2.5 hidden md:table-cell text-text-secondary whitespace-nowrap">
+                            {formatDateTime(i.created_at)}<span className="block text-xs">{personName(i.uploaded_by)}</span>
+                          </td>
+                          <td className="px-3 py-2.5 hidden lg:table-cell"><span className="font-mono text-xs text-text-secondary" title={i.sha256}>{i.sha256.slice(0, 16)}…</span></td>
+                          <td className="px-3 py-2.5">
+                            <div className="flex justify-end gap-1">
+                              <Button variant="ghost" size="sm" onClick={() => openSource(i.evidence_id)} className="gap-1" aria-label={`Open source of ${i.filename}`}>
+                                <FileText className="h-3.5 w-3.5" aria-hidden="true" /><span className="hidden xl:inline">Source</span>
+                              </Button>
+                              <Button variant="ghost" size="sm" onClick={() => setSelected(i)} aria-label={`Details of ${i.filename}`}>Details</Button>
+                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setDownloadFor(i)} disabled={!can(role, "downloadOriginal")}
+                                aria-label="Download original evidence file"
+                                title={can(role, "downloadOriginal") ? `Download the original ${i.filename} (reason recorded)` : deniedReason(role, "download unmasked originals")}>
+                                <Download className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+              <Pager offset={offset} limit={PAGE_SIZE} total={total} onChange={setOffset} label="items" />
+            </>
           )}
         </>
       )}
