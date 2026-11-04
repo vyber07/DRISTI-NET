@@ -23,7 +23,7 @@ every role and reason requirement read in `apps/api/app/routes/*` and `schemas.p
 
 ---
 
-## Status after the redesign (commit e3abc24, 2026-11-04)
+## Status after the redesign (commits e3abc24 and e61188e/fa3e0bc, 2026-11-04)
 
 The findings below were made by reading the code at `817bfd0`, before the redesign. This table records what happened to each.
 **Fixed** means the code was changed and the fix was checked by a test, a scan or a screenshot (named under Evidence).
@@ -40,14 +40,14 @@ The findings below were made by reading the code at `817bfd0`, before the redesi
 | FE-007 "verified" claims in legend and timeline | Fixed | wording replaced; E2E asserts the timeline text is gone |
 | FE-008 legend colours differ from graph | Fixed | legend imports the engine's `ENTITY_COLORS` |
 | FE-009 profile PII switch | Removed | Account page has no such control |
-| FE-010 demo credentials on the login page | **Open — owner decision** | demo convention (CLAUDE.md §6); remove before any non-demo exposure |
+| FE-010 demo credentials on the login page | Fixed (owner asked, 2026-11-04) | password no longer printed; demo accounts documented in the README only (`e61188e`) |
 | FE-011 reveal modal: fake clearance, broken officer line, no-op Revoke, legal claims | Fixed | clearance tiles and BNSS badge removed; "Hide value again" re-masks (`revealStore.remask`) |
 | FE-012 / FE-013 Settings fake success; no-op profile cards | Removed | `/settings` redirects to Account |
 | FE-014 audit "blocks / sequence linked" | Fixed | wording now "events"; "Sequence Linked" and "LIVE" removed |
 | FE-015 non-multi graph crash (latent) | Fixed | `new Graph({ multi: true })`; the current data has no duplicate pairs, so it is not exercised by a test |
-| FE-016 engine mixes cases on route change (latent) | Open | not addressed; the graph store reloads per case (DEF-061) |
+| FE-016 engine mixes cases on route change (latent) | Fixed | canvas keyed by case; `applyDelta` no longer reads the never-set `maskedLabel` (`e61188e`) |
 | FE-017 undefined `teal-primary` token | Fixed | token defined in `index.css` |
-| FE-018 TypeScript `strict` off | Open | enabling it is a separate, large change |
+| FE-018 TypeScript `strict` off | Not a defect | TypeScript 6 enables `strict` by default (TS7006 implicit-any errors fire); `"strict": true` now explicit; ~80 explicit `any` remain as code-quality debt |
 | FE-019 no 401 handling | Fixed | `real_client.ts` + `authStore.logout({expired})`; E2E `test_expired_session_returns_to_the_same_page` |
 | FE-020 login ignores destination | Fixed | same E2E (same-app paths only) |
 | FE-021 global audit request before role check | Fixed | E2E `test_global_audit_denied_without_request` (no request sent) |
@@ -58,11 +58,11 @@ The findings below were made by reading the code at `817bfd0`, before the redesi
 | FE-027 CSV not escaped | Fixed | every field quoted; leading `= + - @` neutralised |
 | FE-028 timeline end date excluded, zones mixed | Fixed | compares recorded YYYY-MM-DD strings, inclusive |
 | FE-029 timeline → graph selection lost | Fixed | `?entity=` link; `x_tablet_graph_entity.png` |
-| FE-030 audit "open in context" links | Open | not addressed |
+| FE-030 audit "open in context" links | Fixed | entity → `graph?entity=`, evidence → `evidence?evidence=` (opens details), candidate → review page, claim → decisions; fake "Role: USER / IP" removed; E2E `test_audit_link_opens_the_evidence_details` |
 | FE-031 graph header "Case", Share, Export | Fixed / Removed | graph sits under the case title; Share and Export removed (exports on Reports) |
 | FE-032 cannot hide panel while selected | Fixed | panel state is independent of selection |
-| FE-033 entity drawer "Links" rows have no handler | Open | |
-| FE-034 "Conflicting … only" has no control | Open | label reworded only |
+| FE-033 entity drawer "Links" rows have no handler | Fixed | rows open the relationship's sources and name the other entity |
+| FE-034 "Conflicting … only" has no control | Removed | no edge carries a contradiction flag; contradictions are on the Overview |
 | FE-035 bell; "Lock" is a logout | Fixed | bell removed; button says "Sign out" |
 | FE-036 people as raw IDs | Fixed for case members | additive `people` field; actors outside the case (e.g. an auditor in the audit log) still show IDs |
 | FE-037 statuses always blue | Fixed | `StatusBadge` maps every state to a label, icon and tone |
@@ -72,8 +72,8 @@ The findings below were made by reading the code at `817bfd0`, before the redesi
 | FE-041 custom dialogs lack semantics | Partly | reason, source viewer, evidence drawer and reveal use Radix; the audit detail drawer is still custom |
 | FE-042 four case layouts | Fixed | one `CaseLayout` |
 | FE-043 phones get only a notice | Fixed | phone captures of every case tab |
-| FE-044 client masking hard-codes demo names | Open | server masking is authoritative; delete in a follow-up |
-| FE-045 – FE-048 graph filter details | Open | not addressed |
+| FE-044 client masking hard-codes demo names | Fixed | names and account numbers removed (and the "suspect and victim" comment); server masking authoritative |
+| FE-045 – FE-048 graph filter details | Fixed | "None" clears; last type can be unticked; real type counts; "nodes passing" from passing relationships; duplicate 2xl dropdown removed; filters reset per case |
 | FE-049 reviews view errors and tone | Fixed | Decisions tab rewritten |
 | FE-050 `window.prompt` for reasons | Fixed | `ReasonDialog` (none remain) |
 | FE-051 reveal reason minimum, persistence | Fixed | at least 5 characters (matches the server); cleared on close |
@@ -81,13 +81,15 @@ The findings below were made by reading the code at `817bfd0`, before the redesi
 | FE-053 resolved view shows decision as badge | Fixed | decision history shows reviewer name, decision and reason |
 | FE-054 reason minimums differ from server | Partly | download and reveal = 5 (the server's); decisions need 10 in the UI and 3 on the server (stricter on purpose) |
 | FE-055 `restoreSession` writes "undefined" | Fixed | `authStore.ts` |
-| FE-056 test hooks exposed in production | Open | `window.__graph`, `__sigma` and `__graphStore` are used by the E2E suite; gate behind a build flag in a follow-up |
+| FE-056 test hooks exposed in production | Fixed | hooks only in `VITE_E2E_HOOKS=1` builds (`make build-web-e2e`); normal builds have none |
 | FE-057 timestamp formatting inconsistent | Partly | new pages use `formatDate` / `formatDateTime`; the temporal slider still labels times "IST" |
-| FE-058 temporal slider edge cases | Open | |
+| FE-058 temporal slider edge cases | Fixed | one zone-free time base (`recordedTimeMs`) for slider, filter and engine; no invented range; step never 0; "no dated relationships" note |
 | FE-059 case workspace loading/error states | Fixed | `CaseLayout` loading, denied and error states |
 | FE-060 unused code and dependencies | Partly | 20 files removed (old HITL, evidence card/row/filter, workspace, settings, foundation preview, investigation shell); unused npm packages still listed |
 
-**Counts (by defect ID, 60 IDs):** 39 fixed, 3 removed, 5 partly fixed, 13 open (FE-010 needs an owner decision).
+**Found after the audit and fixed (`fa3e0bc`):** FE-061 — without WebGL the graph crashed the whole app and showed a JavaScript stack trace (Firefox run); now a list-view fallback, an error boundary and a stack-trace-free error page. FE-062 — Chromium date input's calendar button had no visible focus (keyboard audit). FE-063 — every new case was dated 2025-01-01 and blank title/purpose/authority were accepted (backend schema).
+
+**Counts (by defect ID, 60 IDs):** 50 fixed, 4 removed, 5 partly fixed, 1 not a defect, 0 open.
 
 ---
 

@@ -1,0 +1,326 @@
+{
+ "/command-center": {
+  "keyboard": {
+   "stops": 115,
+   "first_stop": "Skip to content",
+   "no_focus_indicator": [],
+   "focused_but_offscreen": [],
+   "trap_detected": false
+  },
+  "tree": {
+   "landmarks": {
+    "main": 1,
+    "nav": 1,
+    "header": 2
+   },
+   "h1": 1,
+   "headings": 3,
+   "focusables": 23,
+   "unnamed": []
+  },
+  "axe": [],
+  "reflow_320": {
+   "page_scrolls_horizontally": false
+  }
+ },
+ "/cases": {
+  "keyboard": {
+   "stops": 116,
+   "first_stop": "Skip to content",
+   "no_focus_indicator": [],
+   "focused_but_offscreen": [],
+   "trap_detected": false
+  },
+  "tree": {
+   "landmarks": {
+    "main": 1,
+    "nav": 1,
+    "header": 2
+   },
+   "h1": 1,
+   "headings": 1,
+   "focusables": 24,
+   "unnamed": []
+  },
+  "axe": [],
+  "reflow_320": {
+   "page_scrolls_horizontally": false
+  }
+ },
+ "/cases/CASE-0001": {
+  "keyboard": {
+   "stops": 116,
+   "first_stop": "Skip to content",
+   "no_focus_indicator": [],
+   "focused_but_offscreen": [],
+   "trap_detected": false
+  },
+  "tree": {
+   "landmarks": {
+    "main": 1,
+    "nav": 3,
+    "header": 2
+   },
+   "h1": 1,
+   "headings": 9,
+   "focusables": 25,
+   "unnamed": []
+  },
+  "axe": [],
+  "reflow_320": {
+   "page_scrolls_horizontally": false
+  }
+ },
+ "/cases/CASE-0001/evidence": {
+  "keyboard": {
+   "stops": 118,
+   "first_stop": "Skip to content",
+   "no_focus_indicator": [],
+   "focused_but_offscreen": [],
+   "trap_detected": false
+  },
+  "tree": {
+   "landmarks": {
+    "main": 1,
+    "nav": 3,
+    "header": 2
+   },
+   "h1": 1,
+   "headings": 3,
+   "focusables": 50,
+   "unnamed": []
+  },
+  "axe": [],
+  "reflow_320": {
+   "page_scrolls_horizontally": false
+  }
+ },
+ "/cases/CASE-0001/review": {
+  "keyboard": {
+   "stops": 116,
+   "first_stop": "Skip to content",
+   "no_focus_indicator": [],
+   "focused_but_offscreen": [],
+   "trap_detected": false
+  },
+  "tree": {
+   "landmarks": {
+    "main": 1,
+    "nav": 3,
+    "header": 2
+   },
+   "h1": 1,
+   "headings": 2,
+   "focusables": 27,
+   "unnamed": []
+  },
+  "axe": [],
+  "reflow_320": {
+   "page_scrolls_horizontally": false
+  }
+ },
+ "/cases/CASE-0001/graph?view=list": {
+  "keyboard": {
+   "stops": 120,
+   "first_stop": "Skip to content",
+   "no_focus_indicator": [],
+   "focused_but_offscreen": [],
+   "trap_detected": false
+  },
+  "tree": {
+   "landmarks": {
+    "main": 1,
+    "nav": 3,
+    "header": 2
+   },
+   "h1": 1,
+   "headings": 2,
+   "focusables": 145,
+   "unnamed": []
+  },
+  "axe": [],
+  "reflow_320": {
+   "page_scrolls_horizontally": false
+  }
+ },
+ "/cases/CASE-0001/timeline": {
+  "keyboard": {
+   "stops": 120,
+   "first_stop": "Skip to content",
+   "no_focus_indicator": [],
+   "focused_but_offscreen": [],
+   "trap_detected": false
+  },
+  "tree": {
+   "landmarks": {
+    "main": 1,
+    "nav": 3,
+    "header": 2
+   },
+   "h1": 1,
+   "headings": 219,
+   "focusables": 889,
+   "unnamed": []
+  },
+  "axe": [],
+  "reflow_320": {
+   "page_scrolls_horizontally": false
+  }
+ },
+ "/cases/CASE-0001/locations": {
+  "keyboard": {
+   "stops": 115,
+   "first_stop": "Skip to content",
+   "no_focus_indicator": [],
+   "focused_but_offscreen": [],
+   "trap_detected": false
+  },
+  "tree": {
+   "landmarks": {
+    "main": 1,
+    "nav": 3,
+    "header": 2
+   },
+   "h1": 1,
+   "headings": 2,
+   "focusables": 23,
+   "unnamed": []
+  },
+  "axe": [],
+  "reflow_320": {
+   "page_scrolls_horizontally": false
+  }
+ },
+ "/cases/CASE-0001/analysis": {
+  "keyboard": {
+   "stops": 114,
+   "first_stop": "Skip to content",
+   "no_focus_indicator": [],
+   "focused_but_offscreen": [],
+   "trap_detected": false
+  },
+  "tree": {
+   "landmarks": {
+    "main": 1,
+    "nav": 3,
+    "header": 2
+   },
+   "h1": 1,
+   "headings": 6,
+   "focusables": 18,
+   "unnamed": []
+  },
+  "axe": [],
+  "reflow_320": {
+   "page_scrolls_horizontally": false
+  }
+ },
+ "/cases/CASE-0001/decisions": {
+  "keyboard": {
+   "stops": 119,
+   "first_stop": "Skip to content",
+   "no_focus_indicator": [],
+   "focused_but_offscreen": [],
+   "trap_detected": false
+  },
+  "tree": {
+   "landmarks": {
+    "main": 1,
+    "nav": 3,
+    "header": 2
+   },
+   "h1": 1,
+   "headings": 2,
+   "focusables": 68,
+   "unnamed": []
+  },
+  "axe": [],
+  "reflow_320": {
+   "page_scrolls_horizontally": false
+  }
+ },
+ "/cases/CASE-0001/reports": {
+  "keyboard": {
+   "stops": 115,
+   "first_stop": "Skip to content",
+   "no_focus_indicator": [],
+   "focused_but_offscreen": [],
+   "trap_detected": false
+  },
+  "tree": {
+   "landmarks": {
+    "main": 1,
+    "nav": 3,
+    "header": 2
+   },
+   "h1": 1,
+   "headings": 5,
+   "focusables": 22,
+   "unnamed": []
+  },
+  "axe": [],
+  "reflow_320": {
+   "page_scrolls_horizontally": false
+  }
+ },
+ "/cases/CASE-0001/audit": {
+  "keyboard": {
+   "stops": 120,
+   "first_stop": "Skip to content",
+   "no_focus_indicator": [],
+   "focused_but_offscreen": [],
+   "trap_detected": false
+  },
+  "tree": {
+   "landmarks": {
+    "main": 1,
+    "nav": 3,
+    "header": 2
+   },
+   "h1": 1,
+   "headings": 2,
+   "focusables": 430,
+   "unnamed": []
+  },
+  "axe": [],
+  "reflow_320": {
+   "page_scrolls_horizontally": false
+  }
+ },
+ "/profile": {
+  "keyboard": {
+   "stops": 113,
+   "first_stop": "Skip to content",
+   "no_focus_indicator": [],
+   "focused_but_offscreen": [],
+   "trap_detected": false
+  },
+  "tree": {
+   "landmarks": {
+    "main": 1,
+    "nav": 1,
+    "header": 2
+   },
+   "h1": 1,
+   "headings": 5,
+   "focusables": 15,
+   "unnamed": []
+  },
+  "axe": [],
+  "reflow_320": {
+   "page_scrolls_horizontally": false
+  }
+ },
+ "dialog:new-case-dialog": {
+  "focus_moves_into_dialog": true,
+  "focus_trapped_in_dialog": true,
+  "escape_closes": true,
+  "axe": []
+ },
+ "dialog:assign-dialog": {
+  "focus_moves_into_dialog": true,
+  "focus_trapped_in_dialog": true,
+  "escape_closes": true,
+  "axe": []
+ }
+}

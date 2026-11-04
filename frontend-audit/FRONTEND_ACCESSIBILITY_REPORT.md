@@ -43,3 +43,31 @@ Raw results: `a11y-before.json`, `a11y-after.json`.
 - Audit event cards are clickable `<div>`s with a button inside. The button works with the keyboard, but the card-level click target is mouse-only.
 - Zoom to 400% and reflow were not tested. The 390 px phone captures show no horizontal page scroll (`FRONTEND_RESPONSIVE_REPORT.md`).
 - No screen-reader session (NVDA, VoiceOver) was run.
+
+## 4. Keyboard and structure audit (added 2026-11-04, `tests/ui-evaluation/keyboard_audit.py`)
+Investigator role, 1280×900, Chromium. Raw results are in `keyboard-audit.json`.
+
+| Check (per page) | Result on 13 pages |
+|---|---|
+| First Tab stop is "Skip to content" | 13/13 |
+| Every Tab stop (first 120) shows a visible focus indicator (outline or ring) | 13/13 after one fix (below) |
+| No keyboard trap (focus stuck on one element) | 13/13 |
+| Exactly one H1; `main`, `nav` and `header` landmarks present | 13/13 |
+| Focusable controls without an accessible name | 0 |
+| Reflow at 320 CSS px (WCAG 1.4.10, the equivalent of 400% zoom): no horizontal page scroll | 13/13 |
+| axe-core (WCAG 2.x A/AA) | 0 violations |
+
+| Dialog | Focus moves in | Focus stays in (Tab ×15) | Escape closes | axe |
+|---|---|---|---|---|
+| New case | yes | yes | yes | 0 |
+| Add person | yes | yes | yes | 0 |
+
+**Found and fixed during the audit:**
+- Chromium's date input contains a focusable calendar button with no visible focus. Fixed with an `input[type=date]:focus-within` outline.
+- The Home "See all" link inside a sentence was distinguished only by colour (axe `link-in-text-block`). It is now underlined.
+
+The first run's "keyboard trap" and "no indicator" reports came from the audit script itself: element identity and timing. They were fixed and re-verified by tracing the Tab order and taking screenshots.
+
+**Graph:** the canvas remains mouse and touch only. The **List view** (`/graph?view=list`) is the keyboard and screen-reader equivalent. It is E2E-tested by keyboard only: Tab to "Sources", Enter, Tab to a claim, Enter, then the source line is highlighted and Escape closes it.
+
+**Still not done:** a session with a person using a screen reader (NVDA, JAWS or VoiceOver).
