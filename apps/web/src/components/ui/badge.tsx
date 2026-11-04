@@ -15,8 +15,8 @@ const badgeVariants = cva(
       tone: {
         neutral: "bg-surface-2 border-border-subtle text-text-secondary",
         blue: "bg-electric-blue/10 border-electric-blue/30 text-electric-blue",
-        amber: "bg-amber/10 border-amber/30 text-amber",
-        orange: "bg-orange/10 border-orange/30 text-orange",
+        amber: "bg-amber/10 border-amber/40 text-amber-dim",
+        orange: "bg-orange/10 border-orange/40 text-orange-dim",
         emerald: "bg-verified-emerald/10 border-verified-emerald/30 text-verified-emerald",
         purple: "bg-court-purple/10 border-court-purple/30 text-court-purple",
         red: "bg-critical-red/10 border-critical-red/30 text-critical-red",

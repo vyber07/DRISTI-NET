@@ -7,6 +7,7 @@ import { AuditFilterBar } from "./audit-filter-bar";
 import { AuditEventCard } from "./audit-event-card";
 import { AuditDetailDrawer } from "./audit-detail-drawer";
 import { Button } from "@/components/ui/button";
+import { useCase } from "../case-context";
 
 interface CaseAuditViewProps {
   caseId: string;
@@ -118,7 +119,7 @@ export function CaseAuditView({ caseId }: CaseAuditViewProps) {
               No matching audit events
             </h3>
             <p className="text-xs text-text-muted mt-1 max-w-sm">
-              No ledger blocks match your search query or filter combination.
+              No events match the search or filters.
             </p>
             <Button
               variant="secondary"
@@ -135,8 +136,7 @@ export function CaseAuditView({ caseId }: CaseAuditViewProps) {
         {!isLoading && !error && filteredLogs.length > 0 && (
           <div className="space-y-2">
             <div className="flex items-center justify-between px-1 text-micro text-text-muted font-mono uppercase tracking-wider">
-              <span>Displaying {filteredLogs.length} of {logs.length} Blocks</span>
-              <span>Sequence Linked</span>
+              <span>Showing {filteredLogs.length} of {logs.length} events</span>
             </div>
 
             {filteredLogs.map((log) => {
@@ -158,4 +158,10 @@ export function CaseAuditView({ caseId }: CaseAuditViewProps) {
       <AuditDetailDrawer />
     </div>
   );
+}
+
+/** Audit log tab inside the case layout. */
+export function CaseAuditTab() {
+  const { caseId } = useCase();
+  return <CaseAuditView caseId={caseId} />;
 }

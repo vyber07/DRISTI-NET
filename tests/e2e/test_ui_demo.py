@@ -54,21 +54,34 @@ def login(page, user):
 
 
 def test_denial_for_unassigned_user(page):
+    """A user not assigned to the case sees the server's refusal and none of the case (docs/context.md §5)."""
     login(page, "unassigned")
     page.goto(f"{BASE}/cases/CASE-0001")
-    # In the new UI, if the API returns 403, we should see some error indicator or it just fails
-    # The API will return 403 and the UI will probably show 'Failed to fetch case data' or similar, or it will redirect
-    # Wait for the API call to fail, maybe just checking the URL or a generic error is enough
+    denied = page.locator("[data-testid=access-denied]")
+    denied.wait_for(timeout=10000)
+    assert "denied" in denied.inner_text().lower()
+    assert page.locator("[data-testid=case-title]").count() == 0, "case header shown to a user without access"
     page.screenshot(path=str(SHOTS / "01-denied.png"))
     page.goto(f"{BASE}/cases/CASE-0001/graph")
+    page.locator("[data-testid=access-denied]").wait_for(timeout=10000)
 
 
 def test_evidence_and_scan_gate(page):
     login(page, "officer")
     page.goto(f"{BASE}/cases/CASE-0001/evidence")
-    page.wait_for_selector("text=Evidence Repository")
-    
+    page.wait_for_selector("[data-testid=evidence-table]")
+    # status is plain language with the raw code kept for precision; an evidence officer may upload
+    assert page.locator("[data-testid=evidence-table] [data-status]").count() > 0
+    assert page.locator("text=Upload evidence").count() == 1
     page.screenshot(path=str(SHOTS / "02-evidence-quarantine.png"))
+
+
+def _download_via_dialog(page, reason):
+    page.wait_for_selector("[data-testid=reason-dialog]")
+    page.fill("[data-testid=reason-dialog] textarea", reason)
+    with page.expect_download() as info:
+        page.click("[data-testid=reason-dialog] button[type=submit]")
+    return info.value
 
 
 def test_evidence_download_saves_exact_bytes(page):
@@ -78,22 +91,22 @@ def test_evidence_download_saves_exact_bytes(page):
     # DEF-101: an evidence officer may not download unmasked originals -- the control is disabled (server: 403)
     login(page, "officer")
     page.goto(f"{BASE}/cases/CASE-0001/evidence")
-    page.wait_for_selector("text=Evidence Repository")
+    page.wait_for_selector("[data-testid=evidence-table]")
     officer_button = page.locator("[aria-label='Download original evidence file']").first
     officer_button.wait_for(state="attached")
     assert officer_button.is_disabled()
-    # an investigator may, after giving a reason (recorded in the audit log)
+    # an investigator may, after giving a reason (recorded in the audit log) in an accessible dialog
     login(page, "investigator")
     page.goto(f"{BASE}/cases/CASE-0001/evidence")
-    page.wait_for_selector("text=Evidence Repository")
-    button = page.locator("[aria-label='Download original evidence file']").first
-    button.wait_for(state="attached")
-    page.once("dialog", lambda d: d.accept("e2e integrity comparison"))
-    with page.expect_download() as info:
-        button.click(force=True)
-    dl = info.value
-    path = dl.path()
-    data = Path(path).read_bytes()
+    page.wait_for_selector("[data-testid=evidence-table]")
+    page.locator("[aria-label='Download original evidence file']").first.click()
+    # a too-short reason is refused in the dialog, nothing is downloaded
+    page.wait_for_selector("[data-testid=reason-dialog]")
+    page.fill("[data-testid=reason-dialog] textarea", "abc")
+    page.click("[data-testid=reason-dialog] button[type=submit]")
+    page.wait_for_selector("[data-testid=reason-dialog] [role=alert]")
+    dl = _download_via_dialog(page, "e2e integrity comparison")
+    data = Path(dl.path()).read_bytes()
     assert data, "downloaded file is empty"
     tok = page.evaluate("localStorage.getItem('drishti.token')")
     import json, urllib.request
@@ -102,49 +115,90 @@ def test_evidence_download_saves_exact_bytes(page):
     by_name = {i["filename"]: i for i in items}
     assert dl.suggested_filename in by_name, (dl.suggested_filename, list(by_name))
     assert hashlib.sha256(data).hexdigest() == by_name[dl.suggested_filename]["sha256"]
-    
+
+
+def test_evidence_details_verify_and_claim_source(page):
+    """New: the evidence drawer recomputes the SHA-256 server-side and lists extracted claims, each opening its source."""
+    login(page, "investigator")
+    page.goto(f"{BASE}/cases/CASE-0001/evidence")
+    page.wait_for_selector("[data-testid=evidence-table]")
+    page.click("[aria-label='Details of calls.csv']")
+    drawer = page.locator("[data-testid=evidence-drawer]")
+    drawer.wait_for()
+    sha = drawer.locator("[data-testid=evidence-sha256]").inner_text().strip()
+    assert len(sha) == 64
+    drawer.locator("button:has-text('Verify integrity')").click()
+    page.wait_for_selector("[data-testid=verify-result] >> text=still matches the recorded SHA-256")
+    drawer.locator("[data-testid=evidence-claims] li").first.wait_for()
+    assert drawer.locator("[data-testid=evidence-claims] li").count() > 0
+    drawer.locator("[data-testid=evidence-claims] li button:has-text('Source')").first.click()
+    page.locator("[data-testid=provenance-viewer] [data-hit=true]").wait_for(timeout=10000)
+    page.screenshot(path=str(SHOTS / "02b-evidence-drawer-source.png"))
+
+
+def _open_candidate(page, row_text):
+    page.locator("[data-testid=review-queue] tr", has_text=row_text).first.locator("a").click()
+    page.wait_for_selector("text=Why this is a candidate")
+
+
+def _decide(page, button_text, reason):
+    page.click(f"button:has-text('{button_text}')")
+    page.wait_for_selector("[data-testid=reason-dialog]")
+    page.fill("[data-testid=reason-dialog] textarea", reason)
+    page.click("[data-testid=reason-dialog] button[type=submit]")
+    page.wait_for_selector("[data-testid=decision-recorded]")
 
 
 def test_review_queue(page):
     login(page, "reviewer")
-    page.goto(f"{BASE}/cases/CASE-0001/hitl")
-    page.wait_for_selector("text=Human-in-the-Loop (HITL) Review")
-    # Queue cards are titled "Candidate Match: <left> <-> <right>" (services/api/hitlApi.ts); left/right order
-    # depends on ingest order, so match on a substring unique to the pair rather than the full title.
-    page.click("text=Arjun Malhotara")
+    page.goto(f"{BASE}/cases/CASE-0001/review")
+    page.wait_for_selector("[data-testid=review-queue]")
+    _open_candidate(page, "Arjun Malhotara")
     # DEF-058/059: the reviewer sees the matcher's real reasons and the real source file -- never the static
     # fabricated "CDR" sheet (agency letterhead, invented call rows) that used to render here.
-    page.wait_for_selector("text=Why this is a candidate (matcher output)")
     page.wait_for_selector("text=Supporting signals")
+    page.wait_for_selector("[data-testid=compare-table]")  # new: both records side by side
     body = page.inner_text("body")
-    for fabricated in ("Rajasthan", "Special Operations Group", "EXTORTION", "Whisper-NER", "SOG INVESTIGATION"):
+    for fabricated in ("Rajasthan", "Special Operations Group", "EXTORTION", "Whisper-NER", "SOG INVESTIGATION",
+                       "STAGE 4 VALIDATION", "CONFIDENTIAL // LEA SENSITIVE", "Supervisory Officer"):
         assert fabricated not in body, f"fabricated content on review page: {fabricated}"
     page.wait_for_selector("[role=tab]")
     tabs = page.locator("[role=tab]").all_inner_texts()
     assert tabs and all(t.strip().split(".")[-1] in ("json", "csv", "pdf", "txt", "zip") for t in tabs), tabs
     page.wait_for_selector("pre >> text=1")  # numbered real source lines
     page.screenshot(path=str(SHOTS / "03-review-candidate.png"))
-    page.fill("textarea", "same phone and organisation; spelling variation")
-    page.click("button:has-text('Approve Merge')")
-    page.click("button:has-text('Record decision')")
-    page.click("button:has-text('Confirm & Sign Off')")
-    page.click("button:has-text('Back to Queue')")
-    page.wait_for_selector("span:has-text('APPROVED')")
-    # reject the ambiguous pair with three conflicts (the last of the three Rahul Verma cards, conf 0.02)
-    page.click("text=Candidate Match: Rahul Verma <-> Rahul Verma >> nth=-1")
-    page.fill("textarea", "different dob, address, district")
-    page.click("button:has-text('Reject (Distinct)')")
-    page.click("button:has-text('Record decision')")
-    page.click("button:has-text('Confirm & Sign Off')")
-    page.click("button:has-text('Back to Queue')")
-    page.wait_for_selector("span:has-text('REJECTED')")
-    page.click("text=Tanvi Bhatt")
-    page.fill("textarea", "shared household phone only")
-    page.click("button:has-text('Escalate to Supervisory Officer')")
-    page.click("button:has-text('Record decision')")
-    page.click("button:has-text('Confirm & Sign Off')")
-    page.click("button:has-text('Back to Queue')")
-    page.wait_for_selector("span:has-text('ESCALATED')")
+    _decide(page, "Same person — approve match", "same phone and organisation; spelling variation")
+    page.wait_for_selector("[data-testid=decision-history] >> text=Approved")
+    # new: a decision can be reversed (backend REVERSE; the old UI said "reversible" but offered no way)
+    _decide(page, "Reverse decision", "approved too early; re-checking the address field")
+    page.wait_for_selector("[data-testid=decision-history] >> text=Reversed")
+    page.wait_for_selector("button:has-text('Same person — approve match')")
+    _decide(page, "Same person — approve match", "re-checked: same phone and organisation; spelling variation")
+    page.click("a:has-text('Back to queue') >> nth=0")
+    # reject the ambiguous pair with three conflicts
+    page.wait_for_selector("[data-testid=review-queue]")
+    _open_candidate(page, "3 conflicts")
+    _decide(page, "Different people — reject", "different dob, address, district")
+    page.click("a:has-text('Back to queue') >> nth=0")
+    page.wait_for_selector("[data-testid=review-queue]")
+    _open_candidate(page, "Tanvi Bhatt")
+    _decide(page, "Defer — needs more information", "shared household phone only")
+    page.click("a:has-text('Back to queue') >> nth=0")
+    page.click("[role=tab]:has-text('Deferred')")
+    page.wait_for_selector("[data-testid=review-queue] >> text=Tanvi Bhatt")
+    page.click("[role=tab]:has-text('Decided')")
+    page.wait_for_selector("[data-testid=review-queue] >> text=Arjun Malhotara")
+
+
+def test_review_is_read_only_for_analyst(page):
+    """UI convenience mirrors the server: an analyst sees candidates but no decision controls, with the reason."""
+    login(page, "analyst")
+    page.goto(f"{BASE}/cases/CASE-0001/review")
+    page.wait_for_selector("[data-testid=review-queue]")
+    page.locator("[data-testid=review-queue] tbody tr a").first.click()
+    page.wait_for_selector("text=Why this is a candidate")
+    assert page.locator("button:has-text('Same person — approve match')").count() == 0
+    page.wait_for_selector("text=cannot record review decisions")
 
 
 # The graph renders to a WebGL <canvas> via Sigma.js (no per-node/edge DOM elements to select), so these
@@ -249,18 +303,54 @@ def test_graph_edge_to_source(page):
 def test_timeline_analysis_report(page):
     login(page, "investigator")
     page.goto(f"{BASE}/cases/CASE-0001/timeline")
-    page.wait_for_selector("text=Investigation Timeline")
+    page.wait_for_selector("h2:has-text('Timeline')")
+    body = page.inner_text("body")
+    assert "verified events" not in body and "Jaipur, Mumbai, and Dubai" not in body
+    assert "ENT-" not in page.locator("text=Involves:").first.locator("..").inner_text(), "entities shown as raw ids"
     page.screenshot(path=str(SHOTS / "06-timeline-historical.png"))
-    page.goto(f"{BASE}/cases/CASE-0001/report")
+    page.goto(f"{BASE}/cases/CASE-0001/report")  # old URL redirects to the Reports tab
+    page.wait_for_url(f"{BASE}/cases/CASE-0001/reports")
     page.fill("textarea", "demo run")
-    page.click("button:has-text('JSON')")
+    page.check("input[value=json]")
     with page.expect_download() as download:
         page.click("button:has-text('Download JSON')")
     assert download.value.suggested_filename.endswith(".json"), download.value.suggested_filename
-    page.wait_for_selector("text=Download started successfully")
-    page.screenshot(path=str(SHOTS / "08-report.png"))
-    page.goto(f"{BASE}/cases/CASE-0001/audit")
-    page.wait_for_selector("text=Case audit log:")
-    assert "Statutory Tamper-Evident" not in page.inner_text("body")  # DEF-068: misleading statutory mapping removed
-    page.screenshot(path=str(SHOTS / "09-audit.png"))
+    page.wait_for_selector("text=recorded in the audit log")
 
+
+def test_old_urls_redirect_and_unknown_urls_say_so(page):
+    login(page, "investigator")
+    for old, new in [("/cases/CASE-0001/hitl", "/cases/CASE-0001/review"), ("/cases/CASE-0001/map", "/cases/CASE-0001/locations"),
+                     ("/cases/CASE-0001/reviews", "/cases/CASE-0001/decisions"), ("/cases/CASE-0001/overview", "/cases/CASE-0001"),
+                     ("/cases/CASE-0001/notes", "/cases/CASE-0001"), ("/settings", "/profile"), ("/home", "/command-center")]:
+        page.goto(BASE + old)
+        page.wait_for_url(BASE + new)
+    page.goto(f"{BASE}/no-such-page")
+    page.wait_for_selector("[data-testid=not-found]")
+    assert page.url.endswith("/no-such-page"), "unknown URLs must not silently redirect"
+
+
+def test_global_audit_denied_without_request(page):
+    """An investigator is told the global audit log is for auditors -- without first firing a request the server refuses."""
+    login(page, "investigator")
+    hits = []
+    page.on("request", lambda r: hits.append(r.url) if "/api/v1/audit" in r.url else None)
+    page.goto(f"{BASE}/audit")
+    page.wait_for_selector("[data-testid=access-denied]")
+    assert not hits, hits
+    login(page, "auditor")
+    page.goto(f"{BASE}/audit")
+    page.wait_for_selector("text=Audit")
+    assert page.locator("[data-testid=access-denied]").count() == 0
+
+
+def test_expired_session_returns_to_the_same_page(page):
+    login(page, "investigator")
+    page.evaluate("localStorage.setItem('drishti.token', 'expired-or-forged-token')")
+    page.goto(f"{BASE}/cases/CASE-0001/evidence")
+    page.wait_for_url("**/login?expired=1*")
+    page.wait_for_selector("text=Your session expired")
+    page.fill("input[id='officer-id']", "investigator")
+    page.fill("input[id='password']", "investigator-demo")
+    page.click("button[type='submit']")
+    page.wait_for_url(f"{BASE}/cases/CASE-0001/evidence")

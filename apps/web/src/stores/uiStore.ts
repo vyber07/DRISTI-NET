@@ -4,6 +4,9 @@ interface UIState {
   sidebarCollapsed: boolean;
   toggleSidebar: () => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
+  /** Navigation drawer on screens narrower than 1024px. */
+  mobileNavOpen: boolean;
+  setMobileNavOpen: (open: boolean) => void;
   caseInfoPanelExpanded: boolean;
   toggleCaseInfoPanel: () => void;
   setCaseInfoPanelExpanded: (expanded: boolean) => void;
@@ -18,6 +21,8 @@ export const useUIStore = create<UIState>((set) => ({
   sidebarCollapsed: false,
   toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
   setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
+  mobileNavOpen: false,
+  setMobileNavOpen: (open) => set({ mobileNavOpen: open }),
   caseInfoPanelExpanded: true,
   toggleCaseInfoPanel: () => set((state) => ({ caseInfoPanelExpanded: !state.caseInfoPanelExpanded })),
   setCaseInfoPanelExpanded: (expanded) => set({ caseInfoPanelExpanded: expanded }),

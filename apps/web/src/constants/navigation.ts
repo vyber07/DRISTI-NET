@@ -1,27 +1,18 @@
-import { Home, FileStack, ShieldCheck } from "lucide-react";
+import { FolderOpen, Home, ScrollText } from "lucide-react";
+import type { Capability } from "@/lib/permissions";
 
 export interface NavItem {
   label: string;
   path: string;
   icon: typeof Home;
-  tooltip: string;
-  section?: "primary" | "system";
-  roles?: string[]; // if set, only show for these roles
+  description: string;
+  /** Shown only to roles with this capability (UI convenience; the backend enforces it). */
+  requires?: Capability;
 }
 
-export const PRIMARY_NAV_ITEMS: NavItem[] = [
-  { label: "Dashboard",      path: "/command-center", icon: Home,       tooltip: "Overview & active cases" },
-  { label: "Case Directory", path: "/cases",           icon: FileStack,  tooltip: "View all active investigations" },
+/** Global navigation. Everything about one case lives in the case tabs, not here. */
+export const NAV_ITEMS: NavItem[] = [
+  { label: "Home", path: "/command-center", icon: Home, description: "Your cases and work waiting for you" },
+  { label: "Cases", path: "/cases", icon: FolderOpen, description: "All cases you may open" },
+  { label: "Audit log", path: "/audit", icon: ScrollText, description: "Audit events across all cases", requires: "globalAudit" },
 ];
-
-export const SYSTEM_NAV_ITEMS: NavItem[] = [
-  {
-    label: "Audit Trail",
-    path: "/audit",
-    icon: ShieldCheck,
-    tooltip: "Global tamper-evident audit log",
-    roles: ["AUDITOR", "ADMIN"],
-  },
-];
-
-export const ALL_NAV_ITEMS: NavItem[] = [...PRIMARY_NAV_ITEMS, ...SYSTEM_NAV_ITEMS];

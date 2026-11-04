@@ -45,6 +45,8 @@ interface GraphState {
   isLayoutRunning: boolean;
 
   loadGraph: (caseId: string) => Promise<void>;
+  /** Server-reported bounds of the last load (GET /cases/{id}/graph). */
+  graphBounds: { truncated: boolean; totalNodes: number; projectionStale: boolean } | null;
   selectNode: (nodeId: string | null) => Promise<void>;
   selectEdge: (edgeId: string | null) => Promise<void>;
   clearSelection: () => void;
@@ -95,6 +97,7 @@ export const useGraphStore = create<GraphState>((set, get) => ({
   nodes: [],
   edges: [],
   selectedNodeId: null,
+  graphBounds: null,
   selectedEdgeId: null,
   hoveredNodeId: null,
   hoveredEdgeId: null,
@@ -128,6 +131,7 @@ export const useGraphStore = create<GraphState>((set, get) => ({
     try {
       const response = await getCaseGraph(caseId);
       const {  nodes, edges, caseTitle } = response.data;
+      const { truncated, totalNodes, projectionStale } = response.data as { truncated?: boolean; totalNodes?: number; projectionStale?: boolean };
 
       // Undated edges are excluded from the time range (they used to become 1970-01-01 via `|| 0`).
       const edgeTimes = edges.filter((e) => e.firstSeen || e.lastSeen).map((e) => new Date((e.firstSeen || e.lastSeen) as string).getTime()).filter((t) => !isNaN(t));
@@ -144,6 +148,7 @@ export const useGraphStore = create<GraphState>((set, get) => ({
         currentTimestamp: maxT,
         dateRange: [minT, maxT],
         isLoading: false,
+        graphBounds: { truncated: !!truncated, totalNodes: totalNodes ?? nodes.length, projectionStale: !!projectionStale },
       });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Failed to load case graph";

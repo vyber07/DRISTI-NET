@@ -1,148 +1,101 @@
-import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
-import { CheckSquare, RefreshCw, AlertTriangle, ChevronRight, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
+import { StatusBadge } from "@/components/ui/status-badge";
+import { ReasonDialog } from "@/components/ui/reason-dialog";
+import { CaseTabBody, EmptyState, ErrorState, LoadingState } from "@/components/layout/page";
 import { getCaseReviews } from "@/services/api/casesApi";
 import { makeClaimDecision } from "@/services/api/claimsApi";
+import { useAuthStore } from "@/stores/authStore";
+import { can, deniedReason } from "@/lib/permissions";
+import { useCase } from "../case-context";
+import { formatDateTime } from "../evidence/evidence-format";
 
+const CLAIM_DECISIONS = [
+  { code: "APPROVE", label: "Approve" },
+  { code: "REJECT", label: "Reject" },
+  { code: "CONTRADICTORY", label: "Mark contradictory" },
+  { code: "REVERSE", label: "Reverse" },
+];
+
+/**
+ * Decisions: every review decision in the case, newest first, with the reviewer's name and reason. Match decisions
+ * link to their candidate; claim decisions can be revised (with a reason) by roles that may decide.
+ */
 export function CaseReviewsView() {
-  const { caseId = "" } = useParams();
-  const [reviews, setReviews] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [actionState, setActionState] = useState<Record<string, string>>({});
+  const { caseId, personName } = useCase();
+  const role = useAuthStore((s) => s.user?.role);
+  const [rows, setRows] = useState<any[] | null>(null);
+  const [error, setError] = useState<{ message: string; trace?: string } | null>(null);
+  const [pending, setPending] = useState<{ claimId: string; decision: string; label: string } | null>(null);
+  const [notice, setNotice] = useState<string | null>(null);
 
-  const load = () => {
-    if (!caseId) return;
-    setIsLoading(true);
-    getCaseReviews(caseId)
-      .then((r) => setReviews(r.data || []))
-      .catch((e) => setError(e.message || "Failed to load reviews"))
-      .finally(() => setIsLoading(false));
-  };
+  const load = useCallback(() => {
+    setError(null);
+    getCaseReviews(caseId).then((r) => setRows(r.data)).catch((e) => setError({ message: e?.message || "Request failed", trace: e?.trace }));
+  }, [caseId]);
+  useEffect(() => { setRows(null); load(); }, [load]);
 
-  useEffect(() => { load(); }, [caseId]);
-
-  const handleClaimDecision = async (claimId: string, decision: string) => {
-    setActionState((s) => ({ ...s, [claimId]: "loading" }));
+  const submit = async (reason: string) => {
+    if (!pending) return null;
     try {
-      // DEF-065: a fixed reason ("Reviewed via UI") recorded no real rationale; ask the reviewer.
-      const reason = window.prompt(`Reason for ${decision} (min. 5 characters, recorded in the audit log):`) || "";
-      if (reason.trim().length < 5) {
-        setActionState((s) => ({ ...s, [claimId]: "error: a reason of at least 5 characters is required" }));
-        return;
-      }
-      await makeClaimDecision(claimId, decision, reason.trim());
-      setActionState((s) => ({ ...s, [claimId]: "done" }));
+      await makeClaimDecision(pending.claimId, pending.decision, reason);
+      setNotice(`Recorded “${pending.label}” for claim ${pending.claimId}.`);
       load();
+      return null;
     } catch (e: any) {
-      setActionState((s) => ({ ...s, [claimId]: `error: ${e.message}` }));
+      return e?.status === 403 ? deniedReason(role, "record review decisions") : (e?.message || "The decision was not recorded.");
     }
   };
 
-  const decisionIcon = (d: string) => {
-    if (d === "APPROVE" || d === "ALLOWED") return <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400" />;
-    if (d === "REJECT") return <XCircle className="h-3.5 w-3.5 text-red-400" />;
-    return <Clock className="h-3.5 w-3.5 text-amber-400" />;
-  };
-
-  const decisionTone = (d: string) => {
-    if (d === "APPROVE" || d === "ALLOWED") return "green";
-    if (d === "REJECT") return "red";
-    return "neutral";
-  };
-
   return (
-    <div className="flex flex-col h-full bg-bg-base overflow-y-auto">
-      <div className="shrink-0 border-b border-border-subtle bg-surface-1 px-5 py-3.5 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <CheckSquare className="h-4 w-4 text-electric-blue-soft" />
-          <h2 className="text-sm font-bold font-mono tracking-wide uppercase text-text-primary">
-            Reviews &amp; Decisions
-          </h2>
-          {reviews.length > 0 && <span className="text-xs text-text-muted">· {reviews.length} records</span>}
-        </div>
-        <Button variant="ghost" size="sm" className="text-xs gap-1.5" onClick={load} disabled={isLoading}>
-          <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? "animate-spin" : ""}`} /> Refresh
-        </Button>
-      </div>
-
-      {isLoading && (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="h-7 w-7 animate-spin rounded-full border-2 border-electric-blue border-t-transparent" />
-        </div>
-      )}
-
-      {error && (
-        <div className="m-5 rounded-lg border border-red-400/30 bg-red-400/5 p-4 text-xs text-red-400 flex items-center gap-2">
-          <AlertTriangle className="h-4 w-4" /> {error}
-        </div>
-      )}
-
-      {!isLoading && !error && reviews.length === 0 && (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center space-y-2">
-            <CheckCircle2 className="h-10 w-10 text-text-muted mx-auto" />
-            <p className="text-sm text-text-muted">No review decisions recorded for this case.</p>
-          </div>
-        </div>
-      )}
-
-      {!isLoading && !error && reviews.length > 0 && (
-        <div className="p-5 space-y-3 max-w-4xl mx-auto w-full">
-          {reviews.map((r: any) => (
-            <div key={r.review_id} className="rounded-xl border border-border-subtle bg-surface-1 p-4 space-y-3 shadow-xs">
-              <div className="flex items-center justify-between gap-3 flex-wrap">
-                <div className="flex items-center gap-2 min-w-0">
-                  {decisionIcon(r.decision)}
-                  <span className="font-mono text-xs font-semibold text-text-primary">{r.review_id}</span>
-                  <ChevronRight className="h-3 w-3 text-text-muted shrink-0" />
-                  <span className="text-xs text-text-muted">{r.target_kind}</span>
-                  <span className="font-mono text-xs text-text-secondary truncate">{r.target_id}</span>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <Badge tone={decisionTone(r.decision) as any} className="text-micro">{r.decision}</Badge>
-                  <span className="text-[10px] text-text-muted">{r.created_at?.substring(0, 10)}</span>
-                </div>
-              </div>
-
-              {r.reason && (
-                <p className="text-xs text-text-secondary italic border-l-2 border-border-strong pl-2">
-                  "{r.reason}"
-                </p>
-              )}
-
-              <div className="flex items-center justify-between text-[10.5px] text-text-muted border-t border-border-subtle pt-2">
-                <span>Reviewer: <span className="font-mono">{r.reviewer_id}</span></span>
-                {r.supersedes_id && <span>Supersedes: <span className="font-mono">{r.supersedes_id}</span></span>}
-              </div>
-
-              {/* Claim-level action buttons */}
-              {r.target_kind === "CLAIM" && (
-                <div className="flex items-center gap-2 pt-1">
-                  <span className="text-[10.5px] text-text-muted">Override decision:</span>
-                  {["APPROVE", "REJECT", "CONTRADICTORY", "REVERSE"].map((d) => (  /* DEF-065: "ALLOWED" is not a valid decision -> 422 */
-                    <Button
-                      key={d}
-                      variant="ghost"
-                      size="sm"
-                      className="text-[10px] h-6 px-2"
-                      disabled={actionState[r.target_id] === "loading"}
-                      onClick={() => handleClaimDecision(r.target_id, d)}
-                    >
-                      {d}
-                    </Button>
-                  ))}
-                  {actionState[r.target_id] && actionState[r.target_id] !== "loading" && (
-                    <span role="status" className={`text-[10px] ${actionState[r.target_id].startsWith("error") ? "text-critical-red" : "text-emerald-400"}`}>{actionState[r.target_id]}</span>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
+    <CaseTabBody title="Decisions" description="Every human review decision in this case, newest first. A later decision supersedes an earlier one; nothing is deleted.">
+      {notice && <p role="status" className="text-sm text-verified-emerald">{notice}</p>}
+      {error ? <ErrorState message={error.message} trace={error.trace} onRetry={load} /> : rows === null ? <LoadingState label="Loading decisions…" /> : rows.length === 0 ? (
+        <EmptyState title="No decisions yet">
+          Decisions appear here once a reviewer acts on the <Link className="text-electric-blue hover:underline" to={`/cases/${encodeURIComponent(caseId)}/review`}>review queue</Link>.
+        </EmptyState>
+      ) : (
+        <div className="overflow-x-auto rounded-lg border border-border-subtle bg-surface-1">
+          <table className="w-full text-sm" data-testid="decisions-table">
+            <caption className="sr-only">Review decisions</caption>
+            <thead className="bg-surface-2 text-left text-xs font-semibold uppercase tracking-wide text-text-secondary">
+              <tr>
+                <th scope="col" className="px-3 py-2">Decision</th>
+                <th scope="col" className="px-3 py-2">About</th>
+                <th scope="col" className="px-3 py-2">Reason</th>
+                <th scope="col" className="px-3 py-2">By</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border-subtle">
+              {rows.map((r) => (
+                <tr key={r.review_id} className="align-top">
+                  <td className="px-3 py-2.5"><StatusBadge kind="review" code={r.decision} />{r.supersedes_id && <span className="mt-1 block text-xs text-text-secondary">supersedes an earlier decision</span>}</td>
+                  <td className="px-3 py-2.5">
+                    {r.target_kind === "MATCH"
+                      ? <Link className="text-electric-blue hover:underline" to={`/cases/${encodeURIComponent(caseId)}/review/${r.target_id}`}>Identity candidate</Link>
+                      : <span>{r.target_kind === "CLAIM" ? "Claim" : r.target_kind}</span>}
+                    <span className="block font-mono text-xs text-text-secondary">{r.target_id}</span>
+                    {r.target_kind === "CLAIM" && can(role, "decide") && (
+                      <div className="mt-1.5 flex flex-wrap gap-1">
+                        {CLAIM_DECISIONS.map((d) => (
+                          <Button key={d.code} variant="ghost" size="sm" onClick={() => setPending({ claimId: r.target_id, decision: d.code, label: d.label })}>{d.label}</Button>
+                        ))}
+                      </div>
+                    )}
+                  </td>
+                  <td className="px-3 py-2.5 text-text-primary max-w-md">{r.reason || "—"}</td>
+                  <td className="px-3 py-2.5 text-text-secondary whitespace-nowrap">{personName(r.reviewer_id)}<span className="block text-xs">{formatDateTime(r.created_at)}</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       )}
-    </div>
+      <ReasonDialog open={!!pending} onOpenChange={(o) => { if (!o) setPending(null); }}
+        title={pending ? `${pending.label}: claim ${pending.claimId}` : ""}
+        description="This adds a new decision that supersedes the current one. The earlier decision stays in the history."
+        confirmLabel="Record decision" onConfirm={submit} />
+    </CaseTabBody>
   );
 }

@@ -36,6 +36,9 @@
   --color-electric-blue: var(--electric-blue);
   --color-electric-blue-soft: var(--electric-blue-soft);
   --color-electric-blue-dim: var(--electric-blue-dim);
+  /* FE-017: 13 components used bg-/text-teal-primary, which was never defined (active graph buttons rendered
+     white text on no background). It is the same brand teal. */
+  --color-teal-primary: var(--electric-blue);
 
   --color-amber: var(--amber);
   --color-amber-dim: var(--amber-dim);

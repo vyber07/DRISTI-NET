@@ -1,200 +1,101 @@
-import { NavLink, useNavigate } from "react-router-dom";
-import { ChevronsLeft, ChevronsRight, Compass } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
-import { PRIMARY_NAV_ITEMS, SYSTEM_NAV_ITEMS, type NavItem } from "@/constants/navigation";
+import { NavLink } from "react-router-dom";
+import { ChevronsLeft, ChevronsRight, Compass, UserRound, X } from "lucide-react";
+import { NAV_ITEMS } from "@/constants/navigation";
 import { useUIStore } from "@/stores/uiStore";
 import { useAuthStore } from "@/stores/authStore";
+import { can, roleLabel } from "@/lib/permissions";
 import { cn } from "@/lib/utils";
 
-function NavItemLink({ item, collapsed }: { item: NavItem; collapsed: boolean }) {
-  const Icon = item.icon;
-
-  const content = (
-    <NavLink
-      to={item.path}
-      className={({ isActive }) =>
-        cn(
-          "flex items-center gap-3 rounded-md px-2.5 py-2 text-sm font-medium transition-colors duration-[var(--motion-fast)]",
-          isActive
-            ? "bg-electric-blue/10 text-electric-blue font-semibold"
-            : "text-text-secondary hover:bg-surface-2 hover:text-text-primary",
-        )
-      }
-    >
-      <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
-      {!collapsed && <span className="truncate">{item.label}</span>}
-    </NavLink>
-  );
-
-  return (
-    <li>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <div>{content}</div>
-        </TooltipTrigger>
-        <TooltipContent side="right" className="text-xs">
-          <p className="font-semibold text-text-primary">{item.label}</p>
-          <p className="text-micro text-text-secondary">{item.tooltip}</p>
-        </TooltipContent>
-      </Tooltip>
-    </li>
+function itemClass(isActive: boolean, collapsed: boolean) {
+  return cn(
+    "flex items-center gap-3 rounded-md px-2.5 py-2 text-sm transition-colors",
+    collapsed && "justify-center",
+    isActive ? "bg-electric-blue/10 text-electric-blue font-semibold" : "text-text-secondary hover:bg-surface-2 hover:text-text-primary",
   );
 }
 
-function ProfileButton({ collapsed }: { collapsed: boolean }) {
-  const navigate = useNavigate();
+/**
+ * Global navigation: Home, Cases, Audit log (auditor/admin), Account.
+ * ≥1024px: fixed column that can collapse to icons. <1024px: overlay drawer opened from the top bar menu button.
+ */
+export function Sidebar() {
+  const { sidebarCollapsed, toggleSidebar, mobileNavOpen, setMobileNavOpen } = useUIStore();
   const { user } = useAuthStore();
+  const items = NAV_ITEMS.filter((i) => !i.requires || can(user?.role, i.requires));
+  const close = () => setMobileNavOpen(false);
 
-  if (!user) return null;
-
-  const initials = user.display_name
-    .split(" ")
-    .slice(0, 2)
-    .map((w: string) => w[0])
-    .join("")
-    .toUpperCase();
-
-  const button = (
-    <button
-      onClick={() => navigate("/profile")}
-      className={cn(
-        "w-full flex items-center gap-2.5 rounded-md px-2 py-2 transition-colors duration-[var(--motion-fast)]",
-        "text-text-secondary hover:bg-surface-2 hover:text-text-primary",
-        "[&.active]:bg-electric-blue/10 [&.active]:text-electric-blue"
-      )}
-      aria-label="View profile"
-    >
-      {/* Avatar circle */}
-      <div className="h-7 w-7 rounded-full bg-electric-blue/20 border border-electric-blue/30 flex items-center justify-center shrink-0">
-        <span className="font-mono text-[10px] font-bold text-electric-blue">{initials}</span>
-      </div>
-      {!collapsed && (
-        <div className="flex-1 min-w-0 text-left">
-          <p className="text-xs font-semibold text-text-primary truncate leading-tight">
-            {user.display_name}
-          </p>
-          <p className="text-[10px] text-text-muted font-mono truncate leading-tight">
-            {user.role}
-          </p>
-        </div>
-      )}
-    </button>
-  );
-
-  if (collapsed) {
-    return (
-      <Tooltip>
-        <TooltipTrigger asChild>{button}</TooltipTrigger>
-        <TooltipContent side="right" className="text-xs">
-          <p className="font-semibold text-text-primary">{user.display_name}</p>
-          <p className="text-micro text-text-secondary">{user.role} · {user.jurisdiction}</p>
-        </TooltipContent>
-      </Tooltip>
-    );
-  }
-
-  return button;
-}
-
-function Sidebar() {
-  const { sidebarCollapsed, toggleSidebar } = useUIStore();
-  const { user } = useAuthStore();
-
-  return (
-    <aside
-      className={cn(
-        "flex h-full flex-col border-r border-border-subtle bg-surface-1 transition-[width] duration-[var(--motion-base)] ease-[var(--motion-ease)] select-none",
-        sidebarCollapsed ? "w-14" : "w-60",
-      )}
-    >
-      {/* Brand Header */}
-      <div className="flex h-14 items-center gap-2.5 px-4 shrink-0">
+  const body = (collapsed: boolean, mobile: boolean) => (
+    <>
+      <div className="flex h-14 items-center gap-2.5 px-3 shrink-0 border-b border-border-subtle">
         <div className="flex h-8 w-8 items-center justify-center rounded-md bg-electric-blue/10 text-electric-blue shrink-0">
           <Compass className="h-5 w-5" aria-hidden="true" />
         </div>
-        {!sidebarCollapsed && (
-          <div className="min-w-0">
-            <span className="text-sm font-bold tracking-tight text-text-primary block leading-none">
-              DRISTI&#8209;NET
-            </span>
-            <span className="text-[10.5px] text-text-muted font-medium block mt-0.5 truncate">
-              Investigation Platform
-            </span>
+        {!collapsed && (
+          <div className="min-w-0 flex-1">
+            <span className="block text-sm font-bold text-text-primary leading-none">DRISTI&#8209;NET</span>
+            <span className="block text-xs text-text-secondary mt-0.5 truncate">Case evidence review</span>
           </div>
         )}
-      </div>
-
-      <Separator />
-
-      {/* Navigation list */}
-      <nav className="flex-1 overflow-y-auto py-3 space-y-4">
-        <div className="px-2">
-          {!sidebarCollapsed && (
-            <div className="px-2 pb-1.5 text-[10.5px] font-semibold uppercase tracking-wider text-text-muted">
-              Investigation
-            </div>
-          )}
-          <ul className="flex flex-col gap-0.5">
-            {PRIMARY_NAV_ITEMS.map((item) => (
-              <NavItemLink key={item.path} item={item} collapsed={sidebarCollapsed} />
-            ))}
-          </ul>
-        </div>
-
-        {/* Role-filtered system items */}
-        {SYSTEM_NAV_ITEMS.filter((item) => !item.roles || item.roles.includes(user?.role || "")).length > 0 && (
-          <>
-            <Separator />
-            <div className="px-2">
-              {!sidebarCollapsed && (
-                <div className="px-2 pb-1.5 text-[10.5px] font-semibold uppercase tracking-wider text-text-muted">
-                  System
-                </div>
-              )}
-              <ul className="flex flex-col gap-0.5">
-                {SYSTEM_NAV_ITEMS
-                  .filter((item) => !item.roles || item.roles.includes(user?.role || ""))
-                  .map((item) => (
-                    <NavItemLink key={item.path} item={item} collapsed={sidebarCollapsed} />
-                  ))}
-              </ul>
-            </div>
-          </>
+        {mobile && (
+          <button type="button" onClick={close} aria-label="Close navigation" className="rounded-md p-1.5 text-text-secondary hover:bg-surface-2">
+            <X className="h-4 w-4" />
+          </button>
         )}
+      </div>
+      <nav aria-label="Main" className="flex-1 overflow-y-auto p-2">
+        <ul className="flex flex-col gap-0.5">
+          {items.map((item) => {
+            const Icon = item.icon;
+            return (
+              <li key={item.path}>
+                <NavLink to={item.path} onClick={mobile ? close : undefined} title={collapsed ? `${item.label} — ${item.description}` : undefined}
+                  className={({ isActive }) => itemClass(isActive, collapsed)}>
+                  <Icon className="h-4 w-4 shrink-0" aria-hidden="true" />
+                  {collapsed ? <span className="sr-only">{item.label}</span> : <span className="truncate">{item.label}</span>}
+                </NavLink>
+              </li>
+            );
+          })}
+        </ul>
       </nav>
-
-      <Separator />
-
-      {/* Profile button */}
-      <div className="px-2 py-2 shrink-0">
-        <ProfileButton collapsed={sidebarCollapsed} />
+      <div className="border-t border-border-subtle p-2 shrink-0 space-y-1">
+        {user && (
+          <NavLink to="/profile" onClick={mobile ? close : undefined} title={collapsed ? `Account — ${user.display_name}` : undefined}
+            className={({ isActive }) => itemClass(isActive, collapsed)}>
+            <UserRound className="h-4 w-4 shrink-0" aria-hidden="true" />
+            {collapsed ? <span className="sr-only">Account</span> : (
+              <span className="min-w-0 text-left">
+                <span className="block truncate text-sm">Account</span>
+                <span className="block truncate text-xs text-text-secondary font-normal">{roleLabel(user.role)}</span>
+              </span>
+            )}
+          </NavLink>
+        )}
+        {!mobile && (
+          <button type="button" onClick={toggleSidebar}
+            className={cn("flex w-full items-center gap-2 rounded-md px-2.5 py-2 text-xs text-text-secondary hover:bg-surface-2 hover:text-text-primary", collapsed && "justify-center")}
+            aria-label={collapsed ? "Expand navigation" : "Collapse navigation"} aria-expanded={!collapsed}>
+            {collapsed ? <ChevronsRight className="h-4 w-4" /> : <><ChevronsLeft className="h-4 w-4" /><span>Collapse</span></>}
+          </button>
+        )}
       </div>
+    </>
+  );
 
-      <Separator />
-
-      {/* Collapse Footer */}
-      <div className="p-2 shrink-0">
-        <Button
-          variant="ghost"
-          size="sm"
-          className="w-full justify-center text-xs text-text-secondary hover:text-text-primary"
-          onClick={toggleSidebar}
-          aria-label={sidebarCollapsed ? "Expand navigation" : "Collapse navigation"}
-        >
-          {sidebarCollapsed ? (
-            <ChevronsRight className="h-4 w-4" />
-          ) : (
-            <>
-              <ChevronsLeft className="h-4 w-4" />
-              <span>Collapse Menu</span>
-            </>
-          )}
-        </Button>
-      </div>
-    </aside>
+  return (
+    <>
+      <aside className={cn("hidden lg:flex h-full flex-col border-r border-border-subtle bg-surface-1 shrink-0 transition-[width] duration-[var(--motion-base)]",
+        sidebarCollapsed ? "w-14" : "w-56")}>
+        {body(sidebarCollapsed, false)}
+      </aside>
+      {mobileNavOpen && (
+        <div className="lg:hidden fixed inset-0 z-40" role="dialog" aria-modal="true" aria-label="Navigation">
+          <div className="absolute inset-0 bg-black/40" onClick={close} aria-hidden="true" />
+          <aside className="absolute inset-y-0 left-0 flex w-64 max-w-[85vw] flex-col bg-surface-1 shadow-drawer">
+            {body(false, true)}
+          </aside>
+        </div>
+      )}
+    </>
   );
 }
-
-export { Sidebar };

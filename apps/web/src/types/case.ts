@@ -9,6 +9,15 @@ export interface CaseStats {
   pendingTasks?: number;
 }
 
+/** A person assigned to the case, as returned by the API (`people`, added 2026-11-04). */
+export interface CasePerson {
+  user_id: string;
+  display_name: string;
+  role: string;
+  purpose: string;
+  is_owner: boolean;
+}
+
 export interface CaseSummary {
   id: string;
   title: string;
@@ -21,6 +30,8 @@ export interface CaseSummary {
   evidence_count: number;
   pending_reviews: number;
   assigned: string[];
+  people: CasePerson[];
+  sensitivity?: string;
 }
 
 export interface CaseDetail extends CaseSummary {

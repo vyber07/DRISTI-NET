@@ -55,6 +55,10 @@ export async function getCaseGraph(caseId: string): Promise<ApiResponse<CaseGrap
   const data = {
     caseId: rawData.case_id || caseId,
     caseTitle: rawData.case_title || `Case ${caseId}`,
+    // Bounds reported by the server. Previously dropped, so a partial graph looked complete.
+    truncated: !!rawData.truncated,
+    totalNodes: typeof rawData.total_nodes === "number" ? rawData.total_nodes : mappedNodes.length,
+    projectionStale: !!rawData.projection_stale,
     nodes: mappedNodes,
     edges: mappedEdges,
     stats: {

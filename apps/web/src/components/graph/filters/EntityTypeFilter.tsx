@@ -29,7 +29,7 @@ export function EntityTypeFilter() {
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <span className="text-micro font-semibold uppercase tracking-wider text-text-muted">
-          Clue Categories
+          Entity types
         </span>
         <div className="flex items-center gap-2 text-micro">
           <button

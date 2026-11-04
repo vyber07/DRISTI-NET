@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { listGlobalAuditLogs } from "@/services/api/auditApi";
 import { useAuthStore } from "@/stores/authStore";
+import { can, deniedReason } from "@/lib/permissions";
+import { DeniedState } from "@/components/layout/page";
 
 const ACTION_TONES: Record<string, string> = {
   LOGIN: "blue", LOGOUT: "neutral",
@@ -16,7 +18,7 @@ const ACTION_TONES: Record<string, string> = {
   GRAPH_VIEW: "neutral", AUDIT_VIEW: "neutral",
 };
 
-export function GlobalAuditPage() {
+function GlobalAuditContent() {
   const { user } = useAuthStore();
   const [logs, setLogs] = useState<any[]>([]);
   const [filtered, setFiltered] = useState<any[]>([]);
@@ -139,4 +141,16 @@ export function GlobalAuditPage() {
       </div>
     </div>
   );
+}
+
+/**
+ * Global audit log (AUDITOR, ADMIN). The role check now happens before any request; the page used to fire
+ * GET /audit (a guaranteed 403, itself audited as ACCESS_DENIED) for every other role before showing its notice.
+ */
+export function GlobalAuditPage() {
+  const role = useAuthStore((s) => s.user?.role);
+  if (!can(role, "globalAudit")) {
+    return <div className="p-6"><DeniedState message={deniedReason(role, "view the audit log across all cases") + " Each case's own audit log is on its Audit log tab."} backTo="/command-center" backLabel="Back to Home" /></div>;
+  }
+  return <GlobalAuditContent />;
 }

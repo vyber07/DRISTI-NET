@@ -31,6 +31,15 @@ export async function api<T = any>(path: string, init: RequestInit = {}): Promis
   if (init.body && !(init.body instanceof FormData)) headers['Content-Type'] = 'application/json'
   const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || "/api/v1"}${path}`, { ...init, headers })
   const trace = res.headers.get('X-Trace-Id') || undefined
+  if (res.status === 401 && t && !path.startsWith('/auth/')) {
+    // FE-019: an expired or revoked token used to leave every page showing "request failed". Clear the session and
+    // return to sign-in; the login page brings the officer back to this page afterwards (same-app paths only).
+    clearSession()
+    if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
+      const next = window.location.pathname + window.location.search
+      window.location.assign(`/login?expired=1&next=${encodeURIComponent(next)}`)
+    }
+  }
   if (!res.ok) {
     let detail = res.statusText
     try { const j = await res.json(); detail = typeof j.detail === 'string' ? j.detail : JSON.stringify(j.detail) } catch { /* ignore */ }

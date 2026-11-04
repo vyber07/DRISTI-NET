@@ -1,15 +1,15 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useCase } from "../case-context";
 import {
-  BarChart2, GitBranch, Users, AlertTriangle, TrendingUp,
-  RefreshCw, ChevronRight, Network, Hash,
+  GitBranch, Users, AlertTriangle, TrendingUp,
+  RefreshCw, Network, Hash,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getCaseAnalysis } from "@/services/api/casesApi";
 
 export function CaseAnalysisPage() {
-  const { caseId = "" } = useParams();
+  const { caseId } = useCase();
   const [data, setData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
@@ -27,15 +27,14 @@ export function CaseAnalysisPage() {
   useEffect(() => { load(); }, [caseId]);
 
   return (
-    <div className="flex flex-col h-full bg-bg-base overflow-y-auto">
-      {/* Header */}
-      <div className="shrink-0 border-b border-border-subtle bg-surface-1 px-5 py-3.5 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <BarChart2 className="h-4 w-4 text-electric-blue-soft" />
-          <h2 className="text-sm font-bold font-mono tracking-wide uppercase text-text-primary">Graph Intelligence Analysis</h2>
+    <div className="flex flex-col h-full bg-background overflow-y-auto">
+      <div className="shrink-0 border-b border-border-subtle bg-surface-1 px-4 sm:px-6 py-3 flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="text-lg font-semibold text-text-primary">Patterns</h2>
+          <p className="text-sm text-text-secondary mt-0.5 max-w-3xl">Structural observations from the case graph: well-connected entities, possible bridges between groups, communities and repeated activity. They are review priorities, not findings about any person.</p>
         </div>
-        <Button variant="ghost" size="sm" className="text-xs gap-1.5" onClick={load} disabled={isLoading}>
-          <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? "animate-spin" : ""}`} /> Refresh
+        <Button variant="secondary" size="sm" className="gap-1.5" onClick={load} disabled={isLoading}>
+          <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? "animate-spin" : ""}`} aria-hidden="true" /> Refresh
         </Button>
       </div>
 
@@ -117,7 +116,7 @@ export function CaseAnalysisPage() {
                   <div key={idx} className="rounded-md bg-surface-2 border border-border-subtle p-3 space-y-2">
                     <div className="flex items-center justify-between">
                       <span className="text-xs font-semibold text-text-primary">Community {idx + 1}</span>
-                      <span className="text-[10px] text-text-muted">{comm.size ?? (comm.members || []).length} members · stability: {typeof comm.stability === "number" ? comm.stability.toFixed(2) : "n/a"}</span>
+                      <span className="text-[10px] text-text-muted">{comm.size ?? (comm.members || []).length} members</span>
                     </div>
                     <div className="flex flex-wrap gap-1">
                       {(comm.members || []).slice(0, 5).map((m: any) => (

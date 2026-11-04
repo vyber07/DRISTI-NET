@@ -1,4 +1,5 @@
 import Graph from "graphology";
+import forceAtlas2 from "graphology-layout-forceatlas2";
 import Sigma from "sigma";
 import type {
   GraphNodeAttributes,
@@ -44,7 +45,16 @@ const TIER_COLORS: Record<EvidenceTier, string> = {
   6: "#6B5B95", // purple
 };
 
-const ENTITY_COLORS: Record<EntityType, string> = {
+/** Deterministic pseudo-random start position from an id (FNV-1a), so the same case always lays out the same way. */
+function seededPosition(id: string): { x: number; y: number } {
+  let h = 2166136261;
+  for (let i = 0; i < id.length; i++) { h ^= id.charCodeAt(i); h = Math.imul(h, 16777619); }
+  const a = ((h >>> 0) % 10000) / 10000, b = (((h >>> 0) / 10000) % 10000) / 10000;
+  return { x: a * 100, y: b * 100 };
+}
+
+/** Node colours actually drawn; the legend imports this so the two can never disagree (FE-008). */
+export const ENTITY_COLORS: Record<EntityType, string> = {
   PERSON: "#287C7A",       // Teal (Person)
   ORGANIZATION: "#526273", // Slate (Business)
   LOCATION: "#B9822B",     // Amber (Location)
@@ -120,7 +130,8 @@ export class GraphEngine {
   ) {
     this.container = container;
     this.callbacks = callbacks;
-    this.graph = new Graph({ multi: false, type: "directed" });
+    // multi: two relationship types between the same pair are two edges (a non-multi graph threw on the second — FE-015)
+    this.graph = new Graph({ multi: true, type: "directed" });
 
     // Create an overlay canvas for custom POLE+ shape glyphs, dashed/dotted edges, and contradiction badges
     this.overlayCanvas = document.createElement("canvas");
@@ -373,8 +384,8 @@ export class GraphEngine {
       }
     });
 
-    this.refresh();
-    this.updateCustomBBoxAndFit(false);
+    // Lay out real data on load (it used to start from random positions until "Organize" was clicked).
+    this.organizeMap();
   }
 
   public applyDelta(
@@ -1020,13 +1031,30 @@ export class GraphEngine {
     }
 
     // 1. Reset all nodes to calibrated canonical non-overlapping positions
+    let canonicalCount = 0;
     this.graph.forEachNode((nodeId) => {
       const canonical = CANONICAL_NODE_POSITIONS[nodeId];
       if (canonical) {
+        canonicalCount++;
         this.graph.setNodeAttribute(nodeId, "x", canonical.x);
         this.graph.setNodeAttribute(nodeId, "y", canonical.y);
       }
     });
+
+    // 1b. FE-006: the canonical table only knows the old mock ids, so on real case data "Organize" changed nothing and
+    // nodes kept random positions. Run ForceAtlas2 (bounded, synchronous) from deterministic seed positions instead.
+    if (canonicalCount < this.graph.order) {
+      this.graph.forEachNode((nodeId) => {
+        if (CANONICAL_NODE_POSITIONS[nodeId]) return;
+        const p = seededPosition(nodeId);
+        this.graph.setNodeAttribute(nodeId, "x", p.x);
+        this.graph.setNodeAttribute(nodeId, "y", p.y);
+      });
+      forceAtlas2.assign(this.graph, {
+        iterations: Math.min(300, 60 + this.graph.order * 2),
+        settings: { ...forceAtlas2.inferSettings(this.graph), barnesHutOptimize: this.graph.order > 200, adjustSizes: true },
+      });
+    }
 
     // 2. Re-anchor Vikram S****** (E-PERS-01) at (0, 0) if present
     if (this.graph.hasNode("E-PERS-01")) {

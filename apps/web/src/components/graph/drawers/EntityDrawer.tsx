@@ -35,7 +35,7 @@ export function EntityDrawer({ onFocusNode }: { onFocusNode?: (nodeId: string) =
   return (
     <div
       data-testid="entity-drawer"
-      className="absolute top-0 right-0 h-full w-[400px] border-l border-border-subtle bg-surface-1 shadow-panel flex flex-col z-10 animate-in slide-in-from-right duration-300"
+      className="h-full w-full bg-surface-1 flex flex-col animate-in slide-in-from-right duration-300"
     >
       <header className="flex h-14 items-center justify-between border-b border-border-subtle px-4 shrink-0 bg-surface-2/40">
         <div className="flex items-center gap-2.5">
@@ -115,7 +115,7 @@ export function EntityDrawer({ onFocusNode }: { onFocusNode?: (nodeId: string) =
                     ))}
                     {entity.cross_case.restricted_case_count > 0 && (
                        <Badge tone="red" className="opacity-70">
-                          +{entity.cross_case.restricted_case_count} Classified Cases
+                          +{entity.cross_case.restricted_case_count} other case(s) you cannot open
                        </Badge>
                     )}
                  </div>
@@ -148,7 +148,7 @@ export function EntityDrawer({ onFocusNode }: { onFocusNode?: (nodeId: string) =
 
           <TabsContent value="relationships" className="space-y-2 mt-0">
             {connectedEdges.length === 0 ? (
-              <p className="text-xs text-text-muted">No connected clues on map.</p>
+              <p className="text-xs text-text-muted">No connected entities in this graph.</p>
             ) : (
               <div className="space-y-1.5">
                 {connectedEdges.map((e) => (

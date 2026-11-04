@@ -1,10 +1,8 @@
 import {
   ShieldCheck,
-  Download,
   FileSpreadsheet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { useAuditStore } from "@/stores/auditStore";
 
 interface AuditIntegrityHeaderProps {
@@ -17,9 +15,15 @@ export function AuditIntegrityHeader({ caseId }: AuditIntegrityHeaderProps) {
 
   const handleExportDossier = () => {
     // Generate a quick CSV of the logs
+    // Quote every field and neutralise leading = + - @ so a spreadsheet never evaluates an audit value as a formula.
+    const cell = (v: unknown) => {
+      let t = String(v ?? "");
+      if (/^[=+\-@\t\r]/.test(t)) t = "'" + t;
+      return `"${t.replace(/"/g, '""')}"`;
+    };
     const csvHeader = "Timestamp,Action,Actor,Target Kind,Target ID,Outcome\n";
-    const csvContent = logs.map(l => 
-      `${l.created_at},${l.action},${l.actor_id || ""},${l.target_kind || ""},${l.target_id || ""},${l.outcome}`
+    const csvContent = logs.map(l =>
+      [l.created_at, l.action, l.actor_id, l.target_kind, l.target_id, l.outcome].map(cell).join(",")
     ).join("\n");
     
     const blob = new Blob([csvHeader + csvContent], { type: "text/csv;charset=utf-8;" });
@@ -38,14 +42,11 @@ export function AuditIntegrityHeader({ caseId }: AuditIntegrityHeaderProps) {
         <div className="flex items-center gap-2">
           <h2 className="text-lg font-semibold text-text-primary tracking-tight flex items-center gap-2">
             <ShieldCheck className="h-5 w-5 text-emerald-500" />
-            Case Audit Ledger
+            Audit log
           </h2>
-          <Badge tone="emerald" className="text-micro font-mono">
-            LIVE
-          </Badge>
         </div>
         <p className="text-xs text-text-secondary max-w-xl leading-relaxed">
-          Most recent audit events for Case {caseId} (latest 200 loaded).
+          Who did what in case {caseId}, newest first (the latest 200 events). Each event carries an HMAC signature; open one to see whether it verifies.
         </p>
       </div>
 
