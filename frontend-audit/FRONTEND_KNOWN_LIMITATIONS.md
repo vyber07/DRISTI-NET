@@ -1,37 +1,27 @@
-# Frontend: known limitations after the redesign
+# Frontend: known limitations (updated 2026-11-04, after commit `fa3e0bc`)
 
-## Not deployed
-The live demo (127.0.0.1:8000 behind nginx) still serves the **previous** build from `apps/web/dist`. The redesign was
-built and tested only in isolated test directories. To deploy, run `make build-web`, check the demo, and keep the
-previous `dist` as a rollback copy. This is an owner decision because it changes what demo users see.
+## Resolved since the first version of this list
+| Was listed as | Now |
+|---|---|
+| 13 open audit defects | All resolved: 50 fixed, 4 removed, 5 partly fixed, 1 not a defect, 0 open (`FRONTEND_DEFECT_REGISTER.md`) |
+| No screen to create cases or assign people | **New case** dialog on Cases (investigator/admin); **Add person** on the Overview (case owner/admin). The backend also now rejects blank case fields and dates new cases today instead of 2025-01-01. E2E-tested |
+| Search ran in the browser over the full list | Cases, Evidence and the Review queue search, filter and page **on the server** (`?q=&status=/state=&limit=&offset=`, `X-Total-Count`); summaries give the filter counts. Backend-tested, including that a candidate search cannot probe masked phone/account numbers |
+| The graph could not be used by keyboard or screen reader | The **List view** on the graph tab shows entities and relationships as accessible tables, using the same detail panel and sources. E2E-tested keyboard-only, from the list to the exact source line |
+| Only Chromium tested; no manual accessibility audit | E2E **15/15 on Chromium, Firefox and WebKit**. Keyboard audit (tab order, visible focus, traps, skip link, landmarks, names, 320 px reflow, dialog focus): **0 issues** on 13 pages and 2 dialogs. axe: 0 violations |
 
-## Open defects (see `FRONTEND_DEFECT_REGISTER.md`)
-- **FE-010:** the login page prints a demo username and password. This is acceptable for the synthetic demo by
-  convention (CLAUDE.md §6). It must be removed before any exposure beyond the demo.
-- **FE-016:** possible graph mixing when a mounted graph page changes case (latent).
-- **FE-018:** TypeScript `strict` is off; about 80 `any` remain.
-- **FE-030:** audit "open in context" links.
-- **FE-033:** entity drawer "Links" rows look clickable but do nothing.
-- **FE-034:** the "Conflicting only" graph filter has no control.
-- **FE-044:** client-side masking hard-codes demo names. The server's masking is authoritative.
-- **FE-045 – FE-048:** graph filter details.
-- **FE-056:** `window.__graph`, `__sigma` and `__graphStore` test hooks ship in production builds.
-- **FE-058:** temporal slider edge cases. The slider also labels times "IST" while the rest of the UI shows recorded times without a zone.
+## Still true
+- **No screen-reader session with a person.** The accessibility tree, names and keyboard paths are checked automatically, but nobody has used the app with NVDA, JAWS or VoiceOver. This is not a WCAG conformance claim.
+- **The keyboard audit checks the first 120 Tab stops per page.** Long pages (timeline, audit log, graph list) have more. The later stops reuse the same row components, but they were not individually checked.
+- **The graph canvas itself is mouse/touch only.** The List view is the accessible equivalent. In browsers without WebGL, the List view is shown automatically.
+- **No server-side sort on Cases.** Columns sort only when the results fit on one page; across pages, results come in case-number order.
+- **People outside the case** (for example an auditor or admin in the audit log) still show as user IDs. Only case members are resolved to names.
+- **No first decision on a contradictory claim.** The Decisions tab revises claims that already have a review; the Overview lists contradictions but has no decide button.
+- **No unassign.** The backend has no endpoint to remove someone from a case.
+- **The usability comparison is scripted.** No officers took part.
+- **Five audit items are only partly fixed:** silent catches in optional enrichments, the audit card's clickable `<div>`, the custom audit drawer, decision reason minimum 10 in the UI vs 3 on the server, and some unused legacy code and packages (see the defect register).
+- **About 80 explicit `any` types and 49 lint warnings remain** (117 at the start). They are code-quality debt, not failures.
 
-## Functional gaps (not built)
-- **No case creation or assignment UI.** `POST /cases` and `POST /cases/{id}/assign` exist; the old UI had no screen for them either.
-- **No user administration.** No backend exists beyond `GET /users`.
-- **No first decision on a contradictory *claim*.** The Decisions tab can only revise claims that already have a review.
-  A "decide this contradiction" control on the Overview's contradiction list is the natural next step.
-- **No server-side search, paging or filtering.** The cases list, evidence list and review queue load the full authorized list
-  and filter it in the browser. That is honest for the demo's sizes; it won't scale beyond a few thousand rows.
-  The UI says "Search your N cases" so it never appears to search more than it has.
-- **Names outside the case.** Actors outside the case (for example an auditor or admin in the audit log) still show as user IDs.
-  Only case members are resolved, via the additive `people` field.
-- **Graph accessibility.** The canvas can't be used with a keyboard or screen reader, and there is no tabular graph view.
-
-## Evaluation limits
-- The usability comparison is a scripted engineering measurement. No officers took part.
-- The accessibility result (0 axe violations on 14 pages) is automated only. No screen-reader or zoom audit was done.
-  It is not a WCAG conformance claim.
-- Only headless Chromium was tested.
+## Deployment
+- The **live demo (port 80) still serves the previous build**.
+- The redesign runs as the **test site on port 8181**, on a copy of the live data, until you say stop.
+- Deploying to the live demo is your decision.

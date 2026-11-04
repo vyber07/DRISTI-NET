@@ -63,3 +63,20 @@ The only 403 left after is the unassigned user's case request. That denial is ex
 - Real screen readers: the automated axe scan is not a substitute.
 - Human officers: see `FRONTEND_USABILITY_COMPARISON.md`.
 - The full Compose stack through nginx with the new build. The redesign changes no API contract apart from the additive `people` field.
+
+## 5. Cross-browser run (added 2026-11-04, commit `fa3e0bc`)
+`DRISHTI_E2E_BROWSER=chromium|firefox|webkit`, against an isolated build made with `make build-web-e2e`:
+
+| Browser (Playwright build) | Result |
+|---|---|
+| Chromium | 15 / 15 passed |
+| Firefox | 15 / 15 passed |
+| WebKit (Safari's engine) | 15 / 15 passed |
+
+The four new tests cover: create a case and assign a person; server-side search and paging (admin, more than one page); the graph list view by keyboard only; and the audit → evidence deep link.
+
+**Found by this run and fixed:**
+- **Firefox (headless, no WebGL):** opening the graph crashed the whole app into React Router's raw error screen, *with a JavaScript stack trace*. Now the graph tab detects missing WebGL and shows the list view with a notice. An error boundary contains other renderer failures, and an app-wide error page shows no technical details. On Firefox the E2E asserts the fallback and still traces an edge to its exact PDF line.
+- **WebKit:** three failures came from the test's sign-in helper, which cleared browser storage while the app was starting. That raced the app's own session check, which then correctly redirected to sign-in. The helper now clears storage from the login page. This was a harness defect, not an app defect.
+
+**Not covered:** real Safari on macOS or iOS (WebKit on Linux is the engine, not Safari itself), Edge (Chromium-based), and a GPU-backed Firefox on which the canvas itself is drawn.

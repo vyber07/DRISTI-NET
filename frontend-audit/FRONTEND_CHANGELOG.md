@@ -1,5 +1,28 @@
 # Frontend changelog
 
+## 2026-11-04 (second pass): closing the remaining items (commits `d98df5c`, `e61188e`, `fa3e0bc`)
+- **Server-side search and paging:** Cases, Evidence and the Review queue; summary endpoints for filter counts; candidate search never matches masked phone or account labels.
+- **Case creation and assignment:** "New case" dialog; "Add person" on the Overview; the backend now dates new cases today and rejects blank fields.
+- **Graph accessibility:** a List view (entities and relationships as tables) using the same detail panel and sources; used automatically when the browser has no WebGL.
+- **All 13 open audit defects resolved:**
+  - demo password removed from the login page;
+  - graph state no longer leaks between cases;
+  - audit links now open their targets;
+  - "Links" rows work;
+  - dead filter removed;
+  - hard-coded masking names removed;
+  - filter counts and "None" fixed;
+  - test hooks only in E2E builds;
+  - one time base for the slider;
+  - `strict` confirmed on.
+- **Cross-browser:** the graph no longer crashes the app without WebGL; the app-wide error page shows no stack traces; date-input focus is visible; the "See all" link is underlined.
+- **Tests:**
+  - backend 200 passed;
+  - E2E 15/15 on Chromium, Firefox and WebKit;
+  - keyboard audit 0 issues;
+  - axe 0 violations.
+
+
 ## 2026-11-04: officer-centred redesign (commit `e3abc24`)
 
 ### Navigation
