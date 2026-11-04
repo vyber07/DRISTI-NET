@@ -384,3 +384,19 @@ def test_raw_download_requires_unmask_role_and_an_audited_reason(client, ingeste
     assert rows and rows[0]["detail"].get("reason") == "compare with registry extract", rows[:1]
     denials = client.get("/api/v1/audit?action=ACCESS_DENIED&limit=1000", headers=auditor).json()
     assert any(f"/evidence/{ev}/download" in (a.get("target_id") or "") for a in denials)
+
+
+def test_seed_cli_refuses_the_public_default_key(tmp_path):
+    """DEF-102: the live demo's first 33 audit events were signed with the built-in default key (published in
+    config.py) because `seed --ingest` ran without .env loaded -- those signatures prove nothing. The CLI now refuses
+    the default key unless explicitly allowed."""
+    import os, subprocess, sys
+    from pathlib import Path
+    repo = Path(__file__).resolve().parents[4]
+    base = {"PATH": os.environ.get("PATH", "/usr/bin:/bin"), "HOME": str(tmp_path), "DRISHTI_STORAGE_ROOT": str(tmp_path),
+            "DRISHTI_DATABASE_URL": f"sqlite:///{tmp_path}/seed.db", "DRISHTI_SCANNER_MODE": "testgate"}
+    run = lambda extra: subprocess.run([sys.executable, "-m", "apps.api.app.seed"], cwd=repo, env={**base, **extra},
+                                       capture_output=True, text=True, timeout=300)
+    r = run({})
+    assert r.returncode == 2 and "default" in (r.stderr + r.stdout).lower(), (r.returncode, r.stderr[-300:])
+    assert run({"DRISHTI_SECRET_KEY": "s" * 64}).returncode == 0  # success path: a real key
