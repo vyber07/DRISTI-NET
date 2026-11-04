@@ -143,3 +143,10 @@ body,
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-muted);
 }
+
+/* Chromium's date input has a focusable calendar-picker button inside its shadow tree; while it has focus the input
+   itself matched no :focus style, so keyboard users lost the focus indicator (keyboard audit, 2026-11-04). */
+input[type="date"]:focus-within {
+  outline: 2px solid var(--electric-blue-soft);
+  outline-offset: 2px;
+}
