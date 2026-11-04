@@ -1,5 +1,11 @@
 services:
   nginx:
+    # Behind a profile: its upstream resolver (127.0.0.11, Docker's embedded DNS) only works for
+    # clients inside this compose network, and its 80:80 binding collides with a host nginx already
+    # acting as the public entry point. Still available on hosts with no existing reverse proxy via
+    # `docker compose --profile bundled-nginx up -d`.
+    profiles:
+    - bundled-nginx
     image: nginx:1.27-alpine@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10
     restart: unless-stopped
     ports:
@@ -38,6 +44,11 @@ services:
       DRISHTI_KAFKA_BOOTSTRAP_SERVERS: kafka:9092  # DEF-053: name the code reads
       DRISHTI_BESU_ENDPOINT: http://besu:8545
       DRISHTI_REDIS_URL: redis://redis:6379/0
+      # Without these, config.py defaults to a single key derived from DRISHTI_SECRET_KEY, which
+      # cannot verify any audit event signed before this key registry existed. Must be the SAME
+      # values (not regenerated) as whatever deployment this one is migrated from, if any.
+      DRISHTI_AUDIT_KEYS: ${DRISHTI_AUDIT_KEYS:?Set DRISHTI_AUDIT_KEYS in .env.compose (carry over unchanged from the prior deployment's .env, if migrating existing data)}
+      DRISHTI_CURRENT_AUDIT_KEY_ID: ${DRISHTI_CURRENT_AUDIT_KEY_ID:?Set DRISHTI_CURRENT_AUDIT_KEY_ID in .env.compose (carry over unchanged)}
     volumes:
     - drishti-data:/data
     healthcheck:  # DEF-075: api had none; probe real readiness (DB + Neo4j), not just the port
@@ -161,6 +172,10 @@ services:
       DRISHTI_STORAGE_ROOT: /data
       DRISHTI_KAFKA_BOOTSTRAP_SERVERS: kafka:9092  # DEF-053: name the code reads
       DRISHTI_BESU_ENDPOINT: http://besu:8545
+      # Must match the api service's keys exactly (see its environment block) -- the worker signs
+      # audit events for scan results and must sign under the same key registry the api verifies.
+      DRISHTI_AUDIT_KEYS: ${DRISHTI_AUDIT_KEYS:?Set DRISHTI_AUDIT_KEYS in .env.compose (carry over unchanged from the prior deployment's .env, if migrating existing data)}
+      DRISHTI_CURRENT_AUDIT_KEY_ID: ${DRISHTI_CURRENT_AUDIT_KEY_ID:?Set DRISHTI_CURRENT_AUDIT_KEY_ID in .env.compose (carry over unchanged)}
     volumes:
     - drishti-data:/data
     depends_on:
