@@ -40,6 +40,10 @@ DRISHTI_UI=http://127.0.0.1:8002 python -m pytest tests/e2e -q
 7. Moderated usability sessions with officers (method in `FRONTEND_USABILITY_COMPARISON.md`).
 
 ## Test deployment (running since 2026-11-04 — stop when the owner says so)
+**Redeployed 2026-11-04 with code `3a89fd4`** (server-side search, case creation and assignment, graph list view, all audit
+defects closed, cross-browser fixes). Backup taken first, of both the live demo and the test site's own data: `/home/ubuntu/drishti-backups/pre-frontend-redeploy-20261104T132154Z`. The test
+site kept its data copy (10 audit events from testing preserved). The build has no E2E hooks; the test service was restarted.
+
 - **URL:** `http://<server public address>:8181/` (nginx site `dristinet-frontend-test` → app on 127.0.0.1:8100). Port 8181 may
   need to be allowed in the cloud firewall / security group.
 - **App:** transient systemd unit `dristinet-frontend-test` (code from this repo at `b005108`).
