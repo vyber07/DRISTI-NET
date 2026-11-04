@@ -278,3 +278,38 @@ Deleted: `apps/web/src/components/evidence/PdfDocumentViewer.tsx` (the fabricate
 
 **ENGINEERING PREVIEW.** Staging needs a working Compose stack, a PostgreSQL/S3 restore drill and TLS. Production and
 any government deployment need independent and organisational approval. None of these has been claimed.
+
+---
+
+## 10. Addendum: owner decisions carried out (2026-11-04)
+
+You answered four questions; here is what was done for each.
+
+| Your decision | What was done | Evidence |
+|---|---|---|
+| Restart the live demo **and rotate the key** | Backups to `/home/ubuntu/drishti-backups/pre-restart-20261104T005254Z` (DB integrity ok, counts identical; `.env`; unit files). New 64-hex key; old key kept as audit key `k1-2026`, new key current as `k2-2026`. Repo service file installed (binds 127.0.0.1), duplicate `dristinet-native` disabled, service restarted on the fixed code. | Traversal probe now returns the app page; old-key token → 401; new audit events `k2-2026:hmac-sha256-json` verify; 14-route browser sweep 0 errors |
+| Merge into `main` locally | Fast-forward; nothing pushed (main is ahead of GitHub) | `git status` |
+| Restrict raw downloads and require a reason | `POST /evidence/{id}/download`, investigator/reviewer/admin only, reason recorded in the audit log (DEF-101, DEC-015); UI disables it for other roles | test fails on the old code; E2E 6/6 |
+| Work on NER accuracy, Docker Compose, dependency split | All three done (below) | below |
+
+**Found while doing it:**
+- **DEF-102.** Before rotating, the baseline check showed 33 of the live demo's 124 audit events verify only with the **public built-in key**. These are the 2026-11-01 ingest, run without `.env`. They are recorded as unverifiable, not re-signed. The seed CLI now refuses the default key.
+- **DEF-103 – DEF-106.** The first real `docker compose up` exposed:
+  - two health checks that could never pass;
+  - a Kafka publish bug that meant asynchronous processing had never worked;
+  - nginx keeping a dead API address after a redeploy;
+  - version drift, including web3 breaking on a new `eth-typing`.
+
+  All fixed and verified on the running stack.
+
+**Results:**
+- **Compose stack:** all 11 services healthy in an isolated project. Live test suite inside the stack: 191 passed / 1 skipped. Browser E2E through the stack's nginx: 6/6. Kafka → worker processing works.
+- **Dependencies:** the core install is 302 MB against 3.0 GB (`requirements.txt` plus `-ml`, `-kafka`, `-ledger`, `-dev`). `constraints.txt` is the tested lock.
+- **NER:** 200-entity synthetic set, pinned model 0.960 micro-F1. All 16 errors come from one template ("<city> police station" labelled as an organisation). This is synthetic, so it is not a real-world accuracy figure.
+
+**Still open:**
+- push to GitHub (your call);
+- PostgreSQL + S3 backup/restore drill on the Compose stack;
+- TLS;
+- the two remaining policy questions (labels on identifiers shared across cases, the six-tier model);
+- a human independent review.

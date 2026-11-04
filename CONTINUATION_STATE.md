@@ -1,8 +1,8 @@
 # DRISTI-NET — Continuation State & Handoff Record
 
-**Updated:** 2026-11-04 (session 4, fourth pass complete)
+**Updated:** 2026-11-04 (session 4, fifth pass: owner decisions carried out)
 **Release status:** ENGINEERING PREVIEW (`audit/RELEASE_READINESS_REPORT.md`)
-**Branch:** `audit/session-4-security-fixes` (local, not pushed) on top of `main` @ `135edeb`.
+**Branch:** work merged into local `main` (fast-forward, 2026-11-04) — not pushed. Later commits are on `main` directly.
 
 ## Where things stand
 - Defects found and fixed this session: DEF-028 … DEF-097, each with a regression test that fails on the old code
@@ -42,3 +42,9 @@ DEF-098 job leases, DEF-099 candidate refresh, DEF-100 pinned/offline NER (real-
    Consider setting `DRISHTI_NER_OFFLINE=1` in the demo's `.env` (the pinned model is already in this host's cache).
 2. NER: a ≥100-entity synthetic evaluation set; recall gaps observed (DEF-018).
 3. Split runtime vs optional Python dependencies (S4-07).
+
+## Fifth pass (2026-11-04) — see audit/SESSION_4_COMPLETE_WORK_LOG.md §10
+- Live demo restarted on `main` with key rotation (k1 kept for audit), bound to 127.0.0.1, `dristinet-native` disabled.
+- DEF-101 raw-download policy; DEF-102 default-key audit events; DEF-103..106 found by the first real Compose run; S4-07
+  dependency split + `constraints.txt`; NER evaluation (200 entities, 0.960 micro-F1, synthetic).
+- Remaining: push (owner), PostgreSQL+S3 restore drill on Compose, TLS, entity-label and tier-model decisions, human review.
