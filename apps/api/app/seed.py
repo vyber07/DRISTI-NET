@@ -77,6 +77,14 @@ def ingest() -> None:
 
 
 if __name__ == "__main__":
+    import os
+    from . import config as _config
+    # DEF-102: run without .env, this CLI silently used the built-in development key (published in config.py), so the
+    # audit events it wrote carry signatures anyone can forge. Refuse unless explicitly allowed for a throwaway store.
+    if _config.SECRET_KEY.startswith("change-me-demo-only") and os.environ.get("DRISHTI_ALLOW_DEFAULT_KEY") != "1":
+        print("refusing to seed with the built-in default DRISHTI_SECRET_KEY: audit signatures would be forgeable. "
+              "Load the deployment's .env first, or set DRISHTI_ALLOW_DEFAULT_KEY=1 for a throwaway store.", file=sys.stderr)
+        sys.exit(2)
     seed()
     if "--ingest" in sys.argv:
         ingest()

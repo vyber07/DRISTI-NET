@@ -82,6 +82,7 @@ Requirements: Python 3.11+, Node 20.19+ (or 22+) for the web build. No Docker or
 git clone <repo> DRISHTI-NET && cd DRISHTI-NET
 python3 -m pip install -r apps/api/requirements.txt
 python3 data/synthetic/generate.py            # deterministic synthetic dataset
+export DRISHTI_SECRET_KEY=$(python3 -c "import secrets;print(secrets.token_hex(32))")  # or load your .env; seed refuses the built-in key
 python3 -m apps.api.app.seed --ingest         # demo users + 2 cases, then pushes the files through the real pipeline
 (cd apps/web && npm install && npm run build) # React UI → apps/web/dist (served by the API)
 python3 -m uvicorn apps.api.app.main:app --port 8000
