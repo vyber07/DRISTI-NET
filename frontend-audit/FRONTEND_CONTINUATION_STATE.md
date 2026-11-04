@@ -38,3 +38,20 @@ DRISHTI_UI=http://127.0.0.1:8002 python -m pytest tests/e2e -q
 5. Graph: an accessible tabular view of the selected neighbourhood; the remaining filter defects (FE-045 – FE-048).
 6. Server-side search and paging if datasets grow beyond a few thousand rows.
 7. Moderated usability sessions with officers (method in `FRONTEND_USABILITY_COMPARISON.md`).
+
+## Test deployment (running since 2026-11-04 — stop when the owner says so)
+- **URL:** `http://<server public address>:8181/` (nginx site `dristinet-frontend-test` → app on 127.0.0.1:8100). Port 8181 may
+  need to be allowed in the cloud firewall / security group.
+- **App:** transient systemd unit `dristinet-frontend-test` (code from this repo at `b005108`).
+- **Data:** a *copy* of the live demo's database and evidence files in `/home/ubuntu/drishti-test/frontend/`; changes made
+  while testing never reach the live demo. It uses a separate token key: test-site logins are refused by the live site (verified, 401).
+- **Live demo:** unchanged (port 80, previous build).
+- **Backup taken first:** `/home/ubuntu/drishti-backups/pre-frontend-test-20261104T070721Z` (live web build, database online backup with integrity ok, evidence files, nginx site, env).
+
+**Stop and remove** (restores the server to how it was before the test):
+```bash
+sudo systemctl stop dristinet-frontend-test
+sudo rm /etc/nginx/sites-enabled/dristinet-frontend-test /etc/nginx/sites-available/dristinet-frontend-test
+sudo nginx -t && sudo systemctl reload nginx
+# optional: rm -r /home/ubuntu/drishti-test/frontend   (the test data copy)
+```
