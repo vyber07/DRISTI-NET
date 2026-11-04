@@ -1,0 +1,14 @@
+# Host-specific: publish only to loopback. Never reachable off-host (this host's ufw and the AWS
+# security group only allow 22/80/443 in from outside). 8001, not 8000 -- the bare-metal
+# dristinet-api systemd unit still owns 127.0.0.1:8000 until cutover. Auto-merged by `docker compose`
+# with no extra flag; not meant to be portable to other hosts (hence not part of docker-compose.yml).
+services:
+  api:
+    ports:
+      - "127.0.0.1:8001:8000"
+  postgres:
+    ports:
+      - "127.0.0.1:5432:5432"
+  minio:
+    ports:
+      - "127.0.0.1:9000:9000"
