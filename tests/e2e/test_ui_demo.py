@@ -438,3 +438,17 @@ def test_audit_link_opens_the_evidence_details(page):
     page.goto(f"{BASE}/cases/CASE-0001/evidence?evidence={ev['evidence_id']}")
     page.locator("[data-testid=evidence-drawer]").wait_for()
     assert "calls.csv" in page.locator("[data-testid=evidence-drawer]").inner_text()
+
+
+def test_navigating_away_mid_load_keeps_the_session(page):
+    """Leaving a page while its session check is still in flight must not sign the officer out (it did in WebKit:
+    the aborted /auth/me was treated as an expired session and the navigation was hijacked to /login)."""
+    login(page, "investigator")
+    for _ in range(3):
+        page.goto(f"{BASE}/cases")  # loaded: the app's session check is now in flight
+        try:
+            page.goto(f"{BASE}/cases/CASE-0001")  # leave at once, cutting that check off
+        except Exception as e:  # the old code hijacked this navigation to /login?expired=1
+            raise AssertionError(f"navigation was hijacked: {e}") from None
+        page.wait_for_selector("[data-testid=case-title]", timeout=15000)
+        assert "/login" not in page.url, page.url
