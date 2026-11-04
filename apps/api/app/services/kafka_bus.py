@@ -80,7 +80,7 @@ def publish(
         }
         future = producer.send(TOPIC, key=evidence_id, value=payload)
         producer.flush(timeout=5)
-        future.result(timeout=5)
+        future.get(timeout=5)  # DEF-104: kafka-python futures expose get(); .result() raised on every publish
         logger.debug("Published job for %s to %s", evidence_id, TOPIC)
         return True
     except Exception as exc:

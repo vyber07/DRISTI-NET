@@ -125,7 +125,11 @@ def test_missing_stored_object_is_a_controlled_integrity_failure(client, admin, 
     db = SessionLocal()
     rel = db.get(Evidence, ev["evidence_id"]).storage_path
     db.close()
-    storage._abs(rel).unlink()
+    if storage._using_s3():  # backend-agnostic: in the Compose stack the object lives in S3/MinIO
+        from .. import config
+        storage._client().delete_object(Bucket=config.S3_BUCKET, Key=rel)
+    else:
+        storage._abs(rel).unlink()
     r = dl()
     assert r.status_code == 409, r.text
     assert client.get(f"/api/v1/evidence/{ev['evidence_id']}/context", headers=officer).status_code == 409

@@ -1,6 +1,6 @@
 services:
   nginx:
-    image: nginx:1.27-alpine
+    image: nginx:1.27-alpine@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10
     restart: unless-stopped
     ports:
     - 80:80
@@ -11,7 +11,8 @@ services:
     healthcheck:
       test:
       - CMD-SHELL
-      - wget -q -O /dev/null http://localhost/ || exit 1
+      # DEF-103: 'localhost' resolves to ::1 in alpine while nginx listens on IPv4 only -> check never passed
+      - wget -q -O /dev/null http://127.0.0.1/ || exit 1
       interval: 15s
       timeout: 5s
       retries: 6
@@ -66,7 +67,7 @@ services:
       besu:
         condition: service_healthy
   postgres:
-    image: postgres:16
+    image: postgres:16@sha256:5db6dac2ef5dcff512f4f00a009c3c332b9f2f28f24277175bf3e4a3d02ef83a
     restart: unless-stopped
     environment:
       POSTGRES_USER: drishti
@@ -82,7 +83,7 @@ services:
       timeout: 5s
       retries: 10
   neo4j:
-    image: neo4j:5-community
+    image: neo4j:5-community@sha256:249a1ec6e3c52d82101a5ed33d6ed2b5ed5b0017b21a28c0bfebc335e87fb177
     restart: unless-stopped
     environment:
       NEO4J_AUTH: neo4j/${NEO4J_PASSWORD:?Set NEO4J_PASSWORD in .env}
@@ -96,20 +97,21 @@ services:
       timeout: 5s
       retries: 20
   minio:
-    image: quay.io/minio/minio@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
+    # BLK-04: the pinned quay.io/minio digest (and :latest) no longer resolve; MinIO stopped publishing community images.
+    # bitnamilegacy/minio is an obtainable S3-compatible build (own entrypoint, data in /bitnami/minio/data).
+    image: bitnamilegacy/minio@sha256:451fe6858cb770cc9d0e77ba811ce287420f781c7c1b806a386f6896471a349c
     restart: unless-stopped
-    command: server /data --console-address ":9001"
     environment:
       MINIO_ROOT_USER: drishti
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set MINIO_ROOT_PASSWORD in .env}
     volumes:
-    - drishti-miniodata:/data
+    - drishti-miniodata:/bitnami/minio/data
     healthcheck:
       test:
       - CMD
-      - mc
-      - ready
-      - local
+      - curl
+      - -fsS
+      - http://localhost:9000/minio/health/ready
       interval: 5s
       timeout: 5s
       retries: 10
@@ -177,7 +179,7 @@ services:
       besu:
         condition: service_healthy
   redis:
-    image: redis:7-alpine
+    image: redis:7-alpine@sha256:8da19c7399dca900c6822a1cf30f9d2285585e2c4b457ff4095b0f4500054d3f
     restart: unless-stopped
     healthcheck:
       test:
@@ -188,7 +190,8 @@ services:
       timeout: 3s
       retries: 10
   kafka:
-    image: bitnami/kafka:3.5
+    # BLK-04: bitnami/kafka:3.5 is no longer published; bitnamilegacy carries the same image (same KAFKA_CFG_* settings).
+    image: bitnamilegacy/kafka:3.5@sha256:a88197701b03bcf512bd8388dfd908dc705e76887d5d411583fd1cad51c49044
     restart: unless-stopped
     environment:
       KAFKA_ENABLE_KRAFT: 'yes'
@@ -209,7 +212,7 @@ services:
       timeout: 5s
       retries: 10
   besu:
-    image: hyperledger/besu:24.1
+    image: hyperledger/besu:24.1@sha256:f72c0ffbc66dacf04eace7f3d7e7edc550a074b97f8c9a4e3826465ed2d430b6
     restart: unless-stopped
     command:
     - --network=dev
@@ -223,8 +226,12 @@ services:
     - drishti-besudata:/opt/besu/data
     healthcheck:
       test:
-      - CMD-SHELL
-      - wget -q -O - http://localhost:8545 || exit 1
+      # DEF-103: the besu image has no wget/curl/nc, so the old check could never pass (found by running the stack).
+      # /dev/tcp needs bash (CMD-SHELL is /bin/sh = dash); probe Besu's /liveness endpoint, healthy only on HTTP 200.
+      - CMD
+      - bash
+      - -c
+      - "exec 3<>/dev/tcp/127.0.0.1/8545 && printf 'GET /liveness HTTP/1.0\\r\\nHost: localhost\\r\\n\\r\\n' >&3 && head -1 <&3 | grep -q ' 200 '"
       interval: 10s
       timeout: 5s
       retries: 10

@@ -1,2 +1,6 @@
 # Optional: Besu/EVM anchoring of Merkle roots (DRISHTI_BESU_ENDPOINT + DRISHTI_BESU_SIGNING_KEY).
 web3==6.15.1
+# web3 6.x is not compatible with eth-typing>=5 / eth-utils>=5 (resolved unpinned, its bundled pytest plugin fails to
+# import `ContractName`); keep the eth-* family on the 4.x line it was released against (found 2026-11-04).
+eth-typing>=3,<5
+eth-utils>=2,<5

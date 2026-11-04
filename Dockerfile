@@ -11,9 +11,11 @@ WORKDIR /app
 # S4-07: core runtime plus selected optional feature sets. Default keeps every feature (same behaviour as before the
 # split); for a smaller image without NER/OCR: --build-arg EXTRAS="kafka ledger".
 ARG EXTRAS="ml kafka ledger"
-COPY apps/api/requirements*.txt apps/api/
-RUN pip install --no-cache-dir -r apps/api/requirements.txt \
- && for e in $EXTRAS; do pip install --no-cache-dir -r "apps/api/requirements-$e.txt"; done
+COPY apps/api/requirements*.txt apps/api/constraints.txt apps/api/
+# constraints.txt pins the versions the test suite passed with (unpinned ranges drifted: fastapi/starlette differed
+# between environments, and web3 broke against eth-typing 6).
+RUN pip install --no-cache-dir -c apps/api/constraints.txt -r apps/api/requirements.txt \
+ && for e in $EXTRAS; do pip install --no-cache-dir -c apps/api/constraints.txt -r "apps/api/requirements-$e.txt"; done
 COPY . .
 COPY --from=web /web/dist apps/web/dist
 RUN python3 data/synthetic/generate.py

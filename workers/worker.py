@@ -73,6 +73,12 @@ def _process_message(msg_value: dict) -> bool:
     except sqlalchemy.exc.OperationalError as exc:
         logger.warning("Worker transient DB error for %s: %s", evidence_id, exc)
         return False
+    except sqlalchemy.exc.IntegrityError as exc:
+        # DEF-104: another process created the same stage job first (e.g. the API fell back to direct processing
+        # after an unconfirmed publish). The unique job key did its job; the owner finishes the work.
+        db.rollback()
+        logger.warning("Worker skipped %s: a concurrent process owns this job (%s)", evidence_id, type(exc).__name__)
+        return True
     except ValueError as exc:
         if "already running" in str(exc):
             logger.warning("Worker concurrent execution skipped for %s: %s", evidence_id, exc)

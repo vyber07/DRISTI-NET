@@ -2,7 +2,7 @@
 PY ?= $(shell if [ -f .venv311/bin/python ]; then echo .venv311/bin/python; else echo python3; fi)
 # `source scripts/env.sh` first on hosts that need the user-space Node/ClamAV/Chromium libs.
 setup:
-	$(PY) -m pip install -q -r apps/api/requirements-dev.txt -r apps/api/requirements-ml.txt -r apps/api/requirements-kafka.txt -r apps/api/requirements-ledger.txt
+	$(PY) -m pip install -q -c apps/api/constraints.txt -r apps/api/requirements-dev.txt -r apps/api/requirements-ml.txt -r apps/api/requirements-kafka.txt -r apps/api/requirements-ledger.txt
 	cd apps/web && npm install --no-audit --no-fund
 data:
 	$(PY) data/synthetic/generate.py
@@ -48,14 +48,17 @@ test-infra-local:
 test-stack-infra:
 	docker compose exec -T api bash -c "python3 tests/infrastructure/test_infrastructure.py"
 
-test-stack:  ## DEF-055/075: runs destructive test fixtures inside the deployed api container
-	@test "$(STACK_IS_DISPOSABLE)" = 1 || { echo 'refusing: test-stack resets the deployment database and Neo4j; only for a disposable stack (STACK_IS_DISPOSABLE=1)'; exit 2; }
-	set -e; trap 'docker compose down' EXIT; \
-	docker compose down; \
-	docker compose build --no-cache; \
-	docker compose up -d --wait; \
-	docker compose exec -T api bash -c "python3 tests/infrastructure/test_infrastructure.py"; \
-	docker compose exec -T api bash -c "REQUIRE_LIVE_TESTS=1 python3 -m pytest apps/api/app/tests -q"
+test-stack:  ## Full Compose stack + live test suite in a SEPARATE project (default dristi-ctest). Needs ENV_FILE with test secrets.
+	@test "$(STACK_IS_DISPOSABLE)" = 1 || { echo 'refusing: only for a disposable stack (STACK_IS_DISPOSABLE=1 ENV_FILE=path)'; exit 2; }
+	@test -n "$(ENV_FILE)" || { echo 'set ENV_FILE to a test env file (POSTGRES_PASSWORD, NEO4J_PASSWORD, MINIO_ROOT_PASSWORD, DRISHTI_SECRET_KEY); never the deployment .env'; exit 2; }
+	set -e; C="docker compose -p $${STACK_PROJECT:-dristi-ctest} --env-file $(ENV_FILE)"; \
+	$$C up -d --build --wait --wait-timeout 900; \
+	$$C exec -T postgres sh -c 'createdb -U drishti drishti_test 2>/dev/null || true'; \
+	$$C run --rm --no-deps -T -e REQUIRE_LIVE_TESTS=1 -e DRISHTI_ALLOW_NEO4J_WIPE=1 -e DRISHTI_KAFKA_BOOTSTRAP_SERVERS= \
+	  -e DRISHTI_S3_BUCKET=drishti-test -e DRISHTI_TEST_MINIO_ENDPOINT=http://minio:9000 -e DRISHTI_TEST_NEO4J_URI=bolt://neo4j:7687 \
+	  -e DRISHTI_TEST_REDIS_URL=redis://redis:6379/0 -e DRISHTI_SCANNER_MODE=clamav api sh -c \
+	  'export DRISHTI_DATABASE_URL="$${DRISHTI_DATABASE_URL%/drishti}/drishti_test"; pip install -q -c apps/api/constraints.txt -r apps/api/requirements-dev.txt && python3 -m pytest apps/api/app/tests -q'
+	@echo "stack left running for inspection; stop with: docker compose -p $${STACK_PROJECT:-dristi-ctest} down"
 
 # --- Production deployment (port 80, no port suffix in URL) ---
 # Requires a .env file (see .env.example). Served by nginx → uvicorn.
