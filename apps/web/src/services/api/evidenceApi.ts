@@ -1,4 +1,4 @@
-import { get, post, postForm, ApiError, TOKEN_KEY, type ApiResponse } from "./real_client";
+import { get, getPaged, post, postForm, ApiError, TOKEN_KEY, type ApiResponse, type Paged } from "./real_client";
 import type { EvidenceItem, EvidenceFilter } from "@/types/evidence";
 
 export async function listEvidence(caseId: string, _filter?: EvidenceFilter): Promise<ApiResponse<EvidenceItem[]>> {
@@ -86,4 +86,13 @@ export async function downloadEvidence(evidenceId: string, fallbackName: string,
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+/** Server-side search (file name, evidence id, start of SHA-256), status filter and paging. */
+export function searchEvidence(caseId: string, opts: { q?: string; status?: string; limit?: number; offset?: number }): Promise<Paged<EvidenceItem>> {
+  return getPaged<EvidenceItem>(`/cases/${encodeURIComponent(caseId)}/evidence`, opts);
+}
+
+export function getEvidenceSummary(caseId: string): Promise<{ case_id: string; total: number; by_status: Record<string, number> }> {
+  return get(`/cases/${encodeURIComponent(caseId)}/evidence/summary`);
 }

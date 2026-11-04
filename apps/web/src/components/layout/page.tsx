@@ -169,3 +169,21 @@ export function CaseTabBody({ title, description, actions, children, wide }: {
     </div>
   );
 }
+
+/** Previous/next paging for server-paged lists. Shows the range and the server's total. */
+export function Pager({ offset, limit, total, onChange, label = "items" }: {
+  offset: number; limit: number; total: number; onChange: (offset: number) => void; label?: string;
+}) {
+  if (total <= limit && offset === 0) return null;
+  const from = total === 0 ? 0 : offset + 1;
+  const to = Math.min(offset + limit, total);
+  return (
+    <nav aria-label="Pages" className="flex flex-wrap items-center justify-between gap-2 text-sm" data-testid="pager">
+      <span className="text-text-secondary" aria-live="polite">{from}–{to} of {total} {label}</span>
+      <span className="flex gap-2">
+        <Button variant="secondary" size="sm" disabled={offset === 0} onClick={() => onChange(Math.max(0, offset - limit))}>Previous</Button>
+        <Button variant="secondary" size="sm" disabled={offset + limit >= total} onClick={() => onChange(offset + limit)}>Next</Button>
+      </span>
+    </nav>
+  );
+}

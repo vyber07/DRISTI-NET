@@ -1,17 +1,18 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Anchor, ArrowRight, FileText } from "lucide-react";
+import { Anchor, ArrowRight, FileText, UserPlus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { StatusBadge, evidenceStatusInfo } from "@/components/ui/status-badge";
 import { CaseTabBody, FactList, Section } from "@/components/layout/page";
 import { getCaseContradictions, getCaseReviews, getCaseStats } from "@/services/api/casesApi";
-import { listEvidence } from "@/services/api/evidenceApi";
+import { getEvidenceSummary } from "@/services/api/evidenceApi";
 import { createIntegrityAnchor, listIntegrityAnchors } from "@/services/api/integrityApi";
 import { useProvenanceStore } from "@/stores/provenanceStore";
 import { useAuthStore } from "@/stores/authStore";
 import { can, roleLabel } from "@/lib/permissions";
 import { useCase } from "../case-context";
+import { AssignPersonDialog } from "./assign-person-dialog";
 import { formatDate } from "../case-table";
 
 /** Optional section data: each loads on its own and says when it is unavailable instead of failing silently. */
@@ -26,10 +27,11 @@ const wrap = <T,>(p: Promise<{ data: T }>, set: (v: Part<T>) => void) =>
  * (which repeated the same fields on every tab) and the "Investigation Modules" buttons (duplicates of the tabs).
  */
 export function CaseOverviewView() {
-  const { caseId, caseData: c, personName } = useCase();
+  const { caseId, caseData: c, personName, reload: reloadCase } = useCase();
+  const [assigning, setAssigning] = useState(false);
   const { user } = useAuthStore();
   const openSource = useProvenanceStore((s) => s.openProvenanceForRecord);
-  const [evidence, setEvidence] = useState<Part<any[]>>(empty);
+  const [evidence, setEvidence] = useState<Part<{ total: number; by_status: Record<string, number> }>>(empty);
   const [stats, setStats] = useState<Part<any>>(empty);
   const [contradictions, setContradictions] = useState<Part<any[]>>(empty);
   const [reviews, setReviews] = useState<Part<any[]>>(empty);
@@ -42,7 +44,7 @@ export function CaseOverviewView() {
   }, [caseId, user?.role]);
 
   useEffect(() => {
-    wrap(listEvidence(caseId), setEvidence);
+    wrap(getEvidenceSummary(caseId).then((data) => ({ data })), setEvidence);
     // Statistics are limited to roles that may decide (GET /stats); others use the case's pending count — no 403.
     if (can(user?.role, "decide")) wrap(getCaseStats(caseId), setStats);
     wrap(getCaseContradictions(caseId), setContradictions);
@@ -50,7 +52,7 @@ export function CaseOverviewView() {
     loadAnchors();
   }, [caseId, user?.role, loadAnchors]);
 
-  const byStatus = (evidence.data ?? []).reduce<Record<string, number>>((m, e) => ({ ...m, [e.status]: (m[e.status] || 0) + 1 }), {});
+  const byStatus = evidence.data?.by_status ?? {};
   const base = `/cases/${encodeURIComponent(caseId)}`;
 
   const createAnchor = async () => {
@@ -88,7 +90,10 @@ export function CaseOverviewView() {
             { label: "Case number", value: <span className="font-mono">{c.id}</span> },
           ]} />
         </Section>
-        <Section title={`People on this case (${c.people.length || c.assigned.length})`}>
+        <Section title={`People on this case (${c.people.length || c.assigned.length})`}
+          actions={(user?.role === "ADMIN" || user?.user_id === c.owner_id) ? (
+            <Button variant="secondary" size="sm" className="gap-1.5" onClick={() => setAssigning(true)}><UserPlus className="h-3.5 w-3.5" aria-hidden="true" /> Add person</Button>
+          ) : undefined}>
           {c.people.length ? (
             <ul className="space-y-2">
               {c.people.map((p) => (
@@ -106,7 +111,7 @@ export function CaseOverviewView() {
         <Section title="Evidence" actions={<Link to={`${base}/evidence`} className="text-sm text-electric-blue hover:underline">Open evidence</Link>}>
           {evidence.error ? <p className="text-sm text-text-secondary">Evidence list unavailable: {evidence.error}</p>
             : evidence.data === null ? <p className="text-sm text-text-secondary">Loading…</p>
-            : evidence.data.length === 0 ? <p className="text-sm text-text-secondary">No evidence uploaded yet.</p>
+            : evidence.data.total === 0 ? <p className="text-sm text-text-secondary">No evidence uploaded yet.</p>
             : (
               <ul className="space-y-2" aria-label="Evidence by status">
                 {Object.entries(byStatus).sort((a, b) => b[1] - a[1]).map(([status, n]) => (
@@ -201,6 +206,7 @@ export function CaseOverviewView() {
             )}
         </Section>
       )}
+      <AssignPersonDialog caseData={c} open={assigning} onOpenChange={setAssigning} onAssigned={reloadCase} />
     </CaseTabBody>
   );
 }

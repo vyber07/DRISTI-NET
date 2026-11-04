@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request, Response
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..auth import authorize_case, current_user, require_roles
@@ -6,6 +7,7 @@ from ..db import get_db
 from ..models import Case, CaseAssignment, Evidence, MatchCandidate, User
 from ..schemas import AssignIn, CaseIn
 from ..services.audit import record_audit
+from .listing import MAX_LIMIT, page, text_filter
 
 router = APIRouter(tags=["cases"])
 
@@ -25,14 +27,19 @@ def case_out(c: Case, db: Session) -> dict:
 
 
 @router.get("/cases")
-def list_cases(user: User = Depends(current_user), db: Session = Depends(get_db)):
-    """Only cases the user is assigned to (ADMIN/AUDITOR see all)."""
-    q = db.query(Case)
+def list_cases(response: Response, q: str | None = Query(None, max_length=200), awaiting_review: bool = False,
+               limit: int | None = Query(None, ge=1, le=MAX_LIMIT), offset: int = Query(0, ge=0),
+               user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """Only cases the user is assigned to (ADMIN/AUDITOR see all). Optional search/paging; X-Total-Count = matches."""
+    query = db.query(Case)
     if user.role not in ("ADMIN", "AUDITOR"):
         ids = [a.case_id for a in db.query(CaseAssignment).filter_by(user_id=user.user_id).all()]
-        q = q.filter((Case.case_id.in_(ids)) | (Case.owner_id == user.user_id))
-        q = q.filter(Case.jurisdiction == user.jurisdiction)  # DEF-048: same rule as authorize_case
-    return [case_out(c, db) for c in q.order_by(Case.case_id).all()]
+        query = query.filter((Case.case_id.in_(ids)) | (Case.owner_id == user.user_id))
+        query = query.filter(Case.jurisdiction == user.jurisdiction)  # DEF-048: same rule as authorize_case
+    query = text_filter(query, q, Case.case_id, Case.title, Case.purpose, Case.jurisdiction, Case.authority_reference)
+    if awaiting_review:
+        query = query.filter(Case.case_id.in_(select(MatchCandidate.case_id).where(MatchCandidate.state == "REVIEW_REQUIRED")))
+    return [case_out(c, db) for c in page(query.order_by(Case.case_id), response, limit, offset)]
 
 
 @router.post("/cases", status_code=201)

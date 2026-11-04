@@ -24,7 +24,8 @@ export class ApiError extends Error {
 
 function token() { try { return localStorage.getItem(TOKEN_KEY) } catch { return null } }
 
-export async function api<T = any>(path: string, init: RequestInit = {}): Promise<T> {
+/** Send a request with the session token; handles 401 (FE-019) and turns non-2xx into ApiError. */
+async function send(path: string, init: RequestInit = {}): Promise<Response> {
   const headers: Record<string, string> = { ...(init.headers as Record<string, string> || {}) }
   const t = token()
   if (t) headers.Authorization = `Bearer ${t}`
@@ -45,11 +46,29 @@ export async function api<T = any>(path: string, init: RequestInit = {}): Promis
     try { const j = await res.json(); detail = typeof j.detail === 'string' ? j.detail : JSON.stringify(j.detail) } catch { /* ignore */ }
     throw new ApiError(res.status, detail, trace)
   }
+  return res
+}
+
+export async function api<T = any>(path: string, init: RequestInit = {}): Promise<T> {
+  const res = await send(path, init)
   const ct = res.headers.get('content-type') || ''
   if (ct.includes('application/pdf') || ct.includes('application/octet-stream')) {
     return res.blob() as unknown as Promise<T>
   }
   return (ct.includes('application/json') ? res.json() : res.text()) as Promise<T>
+}
+
+/** A page of a list endpoint plus the server's X-Total-Count (all matches before paging). */
+export interface Paged<T> { items: T[]; total: number }
+
+export async function getPaged<T = any>(path: string, params: Record<string, string | number | boolean | undefined | null>): Promise<Paged<T>> {
+  const qs = new URLSearchParams()
+  for (const [k, v] of Object.entries(params)) if (v !== undefined && v !== null && v !== '' && v !== false) qs.set(k, String(v))
+  const q = qs.toString()
+  const res = await send(q ? `${path}?${q}` : path)
+  const items = (await res.json()) as T[]
+  const total = Number(res.headers.get('X-Total-Count'))
+  return { items: Array.isArray(items) ? items : [], total: Number.isFinite(total) ? total : (Array.isArray(items) ? items.length : 0) }
 }
 
 export const get = <T = any>(p: string) => api<T>(p)

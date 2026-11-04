@@ -8,15 +8,23 @@ class LoginIn(BaseModel):
     password: str
 
 
+def _today() -> str:
+    from datetime import datetime, timezone
+    return datetime.now(timezone.utc).date().isoformat()
+
+
 class CaseIn(BaseModel):
     case_id: str = Field(pattern=r"^[A-Z0-9-]{4,32}$")
-    title: str
-    jurisdiction: str
-    purpose: str
-    authority_reference: str
+    # Required text must say something: a case without an authority reference or purpose is not an authorized case
+    # (docs/context.md §6 "Authorized case created"). Previously blank strings were accepted.
+    title: str = Field(min_length=3, max_length=200, pattern=r"\S")
+    jurisdiction: str = Field(min_length=2, max_length=120, pattern=r"\S")
+    purpose: str = Field(min_length=3, max_length=500, pattern=r"\S")
+    authority_reference: str = Field(min_length=3, max_length=120, pattern=r"\S")
     classification: str = "SYNTHETIC_DEMO"
     sensitivity: str = "RESTRICTED"
-    opened_at: str = "2025-01-01"
+    # was a fixed "2025-01-01", so every new case claimed to have been opened on that date
+    opened_at: str = Field(default_factory=_today, pattern=r"^\d{4}-\d{2}-\d{2}$")
 
 
 class AssignIn(BaseModel):
