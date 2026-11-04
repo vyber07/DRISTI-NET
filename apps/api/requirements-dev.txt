@@ -1,0 +1,5 @@
+# Tests and local development. `make setup` installs this plus requirements-ml.txt.
+-r requirements.txt
+pytest>=8.0
+moto[s3]
+httpx>=0.27

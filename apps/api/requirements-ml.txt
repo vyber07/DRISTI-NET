@@ -1,0 +1,7 @@
+# Optional: model-backed NER (pinned model revision, see services/nlp_adapter.py) and PaddleOCR for scanned PDFs.
+# Large (torch). paddlepaddle 2.6.2 has open advisories (fix only in 3.0 beta) -- see audit/BUG_AND_DEFECT_REGISTER.md.
+transformers
+torch
+paddlepaddle==2.6.2
+paddleocr==2.10.0
+pymupdf

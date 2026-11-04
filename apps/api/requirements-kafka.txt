@@ -1,0 +1,2 @@
+# Optional: Kafka event bus (DRISHTI_KAFKA_BOOTSTRAP_SERVERS) and workers/worker.py.
+kafka-python==2.3.2

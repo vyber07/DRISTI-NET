@@ -1,0 +1,2 @@
+# Optional: Besu/EVM anchoring of Merkle roots (DRISHTI_BESU_ENDPOINT + DRISHTI_BESU_SIGNING_KEY).
+web3==6.15.1

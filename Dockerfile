@@ -8,8 +8,12 @@ RUN npm run build
 
 FROM python:3.11-slim
 WORKDIR /app
-COPY apps/api/requirements.txt apps/api/requirements.txt
-RUN pip install --no-cache-dir -r apps/api/requirements.txt
+# S4-07: core runtime plus selected optional feature sets. Default keeps every feature (same behaviour as before the
+# split); for a smaller image without NER/OCR: --build-arg EXTRAS="kafka ledger".
+ARG EXTRAS="ml kafka ledger"
+COPY apps/api/requirements*.txt apps/api/
+RUN pip install --no-cache-dir -r apps/api/requirements.txt \
+ && for e in $EXTRAS; do pip install --no-cache-dir -r "apps/api/requirements-$e.txt"; done
 COPY . .
 COPY --from=web /web/dist apps/web/dist
 RUN python3 data/synthetic/generate.py
