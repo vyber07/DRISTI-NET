@@ -706,12 +706,13 @@
       }
     },
     "/api/v1/evidence/{evidence_id}/download": {
-      "get": {
+      "post": {
         "tags": [
           "evidence"
         ],
         "summary": "Download",
-        "operationId": "download_api_v1_evidence__evidence_id__download_get",
+        "description": "Raw (unmasked) original bytes. DEF-101, owner decision 2026-11-04: only roles that may reveal masked values,\nand only with a reason that is written to the audit log. POST so the reason never appears in URLs or access logs.",
+        "operationId": "download_api_v1_evidence__evidence_id__download_post",
         "security": [
           {
             "HTTPBearer": []
@@ -728,6 +729,16 @@
             }
           }
         ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DownloadIn"
+              }
+            }
+          }
+        },
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -2426,6 +2437,22 @@
           "reason"
         ],
         "title": "DecisionIn"
+      },
+      "DownloadIn": {
+        "properties": {
+          "reason": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 5,
+            "title": "Reason"
+          }
+        },
+        "type": "object",
+        "required": [
+          "reason"
+        ],
+        "title": "DownloadIn",
+        "description": "Reason for downloading unmasked raw evidence; recorded in the audit log (DEF-101)."
       },
       "HTTPValidationError": {
         "properties": {

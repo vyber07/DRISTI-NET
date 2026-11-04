@@ -364,3 +364,23 @@ def test_short_secret_key_rejected_even_on_sqlite(monkeypatch):
         config.validate_production_secrets()
     monkeypatch.setattr(config, "SECRET_KEY", "k" * 64)
     config.validate_production_secrets()  # success path: a strong key is accepted
+
+
+def test_raw_download_requires_unmask_role_and_an_audited_reason(client, ingested, officer, investigator, auditor):
+    """DEF-101 (owner decision 2026-11-04): raw evidence bytes are unmasked, so only roles allowed to reveal masked
+    values may download them (investigator, reviewer, admin), and only with a reason recorded in the audit log.
+    Previously EVIDENCE_OFFICER and AUDITOR could download raw files they were not allowed to unmask, with no reason."""
+    ev = ingested["vehicles.csv"]["evidence_id"]
+    url = f"/api/v1/evidence/{ev}/download"
+    g = client.get(url, headers=investigator)  # the reason must travel in a POST body, never a URL
+    assert g.status_code in (404, 405) and b"vehicle_id" not in g.content, g.status_code  # 404: the SPA catch-all owns GET
+    assert client.post(url, headers=officer, json={"reason": "need the original file"}).status_code == 403
+    assert client.post(url, headers=auditor, json={"reason": "need the original file"}).status_code == 403
+    assert client.post(url, headers=investigator, json={}).status_code == 422
+    assert client.post(url, headers=investigator, json={"reason": "x"}).status_code == 422
+    r = client.post(url, headers=investigator, json={"reason": "compare with registry extract"})
+    assert r.status_code == 200 and r.content.startswith(b"vehicle_id")  # success path: the exact original bytes
+    rows = [a for a in client.get("/api/v1/audit?action=EVIDENCE_DOWNLOAD&limit=500", headers=auditor).json() if a["target_id"] == ev]
+    assert rows and rows[0]["detail"].get("reason") == "compare with registry extract", rows[:1]
+    denials = client.get("/api/v1/audit?action=ACCESS_DENIED&limit=1000", headers=auditor).json()
+    assert any(f"/evidence/{ev}/download" in (a.get("target_id") or "") for a in denials)

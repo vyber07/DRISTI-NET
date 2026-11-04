@@ -168,7 +168,7 @@ def context(evidence_id: str, request: Request, row: int | None = None, page: in
     return {"evidence_id": evidence_id, "filename": ev.filename, "hash_match": ok, "locator": {"row": row, "page": page, "line": line}, "lines": out}
 
 
-from ..schemas import ContextRevealIn
+from ..schemas import ContextRevealIn, DownloadIn
 @router.post("/evidence/{evidence_id}/context/reveal")
 def context_reveal(evidence_id: str, body: ContextRevealIn, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db)):
     """Authorized unmasking of evidence context. Requires a reason, is role-gated, and writes an UNMASK audit event."""
@@ -215,13 +215,17 @@ def context_reveal(evidence_id: str, body: ContextRevealIn, request: Request, us
     return {"evidence_id": evidence_id, "filename": ev.filename, "hash_match": ok, "locator": {"row": row, "page": page, "line": line}, "lines": out}
 
 
-@router.get("/evidence/{evidence_id}/download")
-def download(evidence_id: str, request: Request, user: User = Depends(require_roles("EVIDENCE_OFFICER", "INVESTIGATOR", "ADMIN", "AUDITOR")), db: Session = Depends(get_db)):
+@router.post("/evidence/{evidence_id}/download")
+def download(evidence_id: str, body: DownloadIn, request: Request, user: User = Depends(require_roles("INVESTIGATOR", "REVIEWER", "ADMIN")),
+             db: Session = Depends(get_db)):
+    """Raw (unmasked) original bytes. DEF-101, owner decision 2026-11-04: only roles that may reveal masked values,
+    and only with a reason that is written to the audit log. POST so the reason never appears in URLs or access logs."""
     ev = _authorize_evidence_read(db, user, evidence_id, request, action="EVIDENCE_DOWNLOAD", require_clean=False)
     if ev.status in ("QUARANTINED", "MALWARE_SCANNING", "INFECTED", "SCAN_FAILED", "SCAN_TIMEOUT", "SCANNER_UNAVAILABLE", "INTEGRITY_MISMATCH") and user.role != "ADMIN":
         raise HTTPException(409, "file is still in quarantine")
     data = storage.read_bytes(ev.storage_path)
-    record_audit(db, request.state.trace_id, user.user_id, "EVIDENCE_DOWNLOAD", "EVIDENCE", evidence_id, ev.case_id)
+    record_audit(db, request.state.trace_id, user.user_id, "EVIDENCE_DOWNLOAD", "EVIDENCE", evidence_id, ev.case_id,
+                 detail={"reason": body.reason, "unmasked": True, "sha256": ev.sha256})
     db.commit()
     return Response(content=data, media_type=ev.detected_type, headers={"Content-Disposition": f'attachment; filename="{ev.filename}"', "X-Evidence-SHA256": ev.sha256})
 

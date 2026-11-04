@@ -107,16 +107,18 @@ def test_graph_degrades_to_authoritative_projection_when_neo4j_fails(client, ing
     assert len(body["edges"]) == len(baseline["edges"])
 
 
-def test_missing_stored_object_is_a_controlled_integrity_failure(client, admin, officer, monkeypatch):
+def test_missing_stored_object_is_a_controlled_integrity_failure(client, admin, officer, investigator, monkeypatch):
     """DEF-042: with the stored object gone, /download and /context raised inside verify_hash (HTTP 500) and
     /verify reported match=false without changing state. Now: 409 + INTEGRITY_MISMATCH + audit, record kept."""
     from ..services import storage
     case_id = "CASE-SEC3"
     assert client.post("/api/v1/cases", headers=admin, json={"case_id": case_id, "title": "Missing object probe", "jurisdiction": "Demo District A",
                        "purpose": "RETROSPECTIVE_REVIEW", "authority_reference": "TEST-SEC-3"}).status_code == 201
-    client.post(f"/api/v1/cases/{case_id}/assign", headers=admin, json={"username": "officer"})
+    for u in ("officer", "investigator"):
+        client.post(f"/api/v1/cases/{case_id}/assign", headers=admin, json={"username": u})
     ev = upload(client, officer, case_id, "vehicles.csv").json()
-    assert client.get(f"/api/v1/evidence/{ev['evidence_id']}/download", headers=officer).status_code == 200  # success path first
+    dl = lambda: client.post(f"/api/v1/evidence/{ev['evidence_id']}/download", headers=investigator, json={"reason": "integrity check"})
+    assert dl().status_code == 200  # success path first (raw download: unmask-capable role + reason, DEF-101)
     path = client.get(f"/api/v1/evidence/{ev['evidence_id']}", headers=officer).json()
     from ..db import SessionLocal
     from ..models import Evidence
@@ -124,7 +126,7 @@ def test_missing_stored_object_is_a_controlled_integrity_failure(client, admin, 
     rel = db.get(Evidence, ev["evidence_id"]).storage_path
     db.close()
     storage._abs(rel).unlink()
-    r = client.get(f"/api/v1/evidence/{ev['evidence_id']}/download", headers=officer)
+    r = dl()
     assert r.status_code == 409, r.text
     assert client.get(f"/api/v1/evidence/{ev['evidence_id']}/context", headers=officer).status_code == 409
     v = client.get(f"/api/v1/evidence/{ev['evidence_id']}/verify", headers=officer).json()

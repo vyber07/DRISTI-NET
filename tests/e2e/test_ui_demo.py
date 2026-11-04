@@ -75,11 +75,20 @@ def test_evidence_download_saves_exact_bytes(page):
     """DEF-029: the Download button used an escaped template literal and window.open() (no Bearer token).
     A real click must save the original bytes, and their SHA-256 must equal the server's integrity reference."""
     import hashlib
+    # DEF-101: an evidence officer may not download unmasked originals -- the control is disabled (server: 403)
     login(page, "officer")
+    page.goto(f"{BASE}/cases/CASE-0001/evidence")
+    page.wait_for_selector("text=Evidence Repository")
+    officer_button = page.locator("[aria-label='Download original evidence file']").first
+    officer_button.wait_for(state="attached")
+    assert officer_button.is_disabled()
+    # an investigator may, after giving a reason (recorded in the audit log)
+    login(page, "investigator")
     page.goto(f"{BASE}/cases/CASE-0001/evidence")
     page.wait_for_selector("text=Evidence Repository")
     button = page.locator("[aria-label='Download original evidence file']").first
     button.wait_for(state="attached")
+    page.once("dialog", lambda d: d.accept("e2e integrity comparison"))
     with page.expect_download() as info:
         button.click(force=True)
     dl = info.value

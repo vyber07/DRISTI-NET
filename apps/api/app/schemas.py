@@ -45,6 +45,10 @@ class ContextRevealIn(BaseModel):
     json_path: str | None = None
     window: int = Field(default=2, ge=0, le=10)  # DEF-046: unbounded window unmasked a whole file in one call
 
+class DownloadIn(BaseModel):
+    """Reason for downloading unmasked raw evidence; recorded in the audit log (DEF-101)."""
+    reason: str = Field(min_length=5, max_length=500)
+
 class ReportIn(BaseModel):
     analyst_comments: str = ""
     format: str = Field(default="json", pattern=r"^(json|html)$")

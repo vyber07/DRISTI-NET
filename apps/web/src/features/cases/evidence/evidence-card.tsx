@@ -6,7 +6,8 @@ import { cn } from "@/lib/utils";
 import type { EvidenceItem } from "@/types/evidence";
 import { useState } from "react";
 import { useProvenanceStore } from "@/stores/provenanceStore";
-import { downloadEvidence } from "@/services/api/evidenceApi";
+import { downloadEvidence, RAW_DOWNLOAD_ROLES } from "@/services/api/evidenceApi";
+import { currentUser } from "@/services/api/real_client";
 
 interface EvidenceCardProps {
   item: EvidenceItem;
@@ -27,12 +28,20 @@ export function EvidenceCard({ item, caseId, onScopeEntity, currentEntityScope }
   const [copiedHash, setCopiedHash] = useState(false);
   const [downloadError, setDownloadError] = useState<string | null>(null);
 
+  const canDownload = RAW_DOWNLOAD_ROLES.includes(currentUser()?.role || "");
   const handleDownload = async () => {
     setDownloadError(null);
+    // DEF-101: raw files are unmasked; a reason is required and recorded in the audit log.
+    const reason = (window.prompt("Reason for downloading the original (unmasked) file — recorded in the audit log:") || "").trim();
+    if (reason.length < 5) {
+      setDownloadError("Download cancelled: a reason of at least 5 characters is required");
+      return;
+    }
     try {
-      await downloadEvidence(item.evidence_id, item.filename);
+      await downloadEvidence(item.evidence_id, item.filename, reason);
     } catch (e: any) {
-      setDownloadError(e?.status === 409 ? "Download blocked: item has not passed the scan gate" : `Download failed: ${e?.message || "unknown error"}`);
+      setDownloadError(e?.status === 409 ? "Download blocked: item has not passed the scan gate"
+        : e?.status === 403 ? "Your role may not download unmasked originals" : `Download failed: ${e?.message || "unknown error"}`);
     }
   };
 
@@ -101,7 +110,7 @@ export function EvidenceCard({ item, caseId, onScopeEntity, currentEntityScope }
           <FileText className="h-3.5 w-3.5 shrink-0" />
           <span>Inspect Document</span>
         </Button>
-        <Button variant="secondary" size="sm" onClick={handleDownload} aria-label="Download original evidence file" className="text-xs gap-1 text-text-secondary hover:text-text-primary shrink-0 whitespace-nowrap">
+        <Button variant="secondary" size="sm" onClick={handleDownload} disabled={!canDownload} aria-label="Download original evidence file" title={canDownload ? "Download the original (unmasked) file; a reason is recorded" : "Only investigators, reviewers and admins may download unmasked originals"} className="text-xs gap-1 text-text-secondary hover:text-text-primary shrink-0 whitespace-nowrap">
           <Download className="h-3.5 w-3.5 shrink-0" />
           <span>Download</span>
         </Button>
