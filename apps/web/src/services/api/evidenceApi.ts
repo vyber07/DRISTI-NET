@@ -60,14 +60,18 @@ export async function revealEvidenceContext(evidenceId: string, reason: string, 
  * escaped template literal, so the request went to the literal path `/evidence/${item.evidence_id}/download`.
  * The server returns 409 while the item is quarantined; that error surfaces to the caller as an ApiError.
  */
-export async function downloadEvidence(evidenceId: string, fallbackName: string): Promise<void> {
-  const headers: Record<string, string> = {};
+/** DEF-101: roles that may download raw (unmasked) evidence -- the same roles that may reveal masked values. */
+export const RAW_DOWNLOAD_ROLES = ["INVESTIGATOR", "REVIEWER", "ADMIN"];
+
+export async function downloadEvidence(evidenceId: string, fallbackName: string, reason: string): Promise<void> {
+  const headers: Record<string, string> = { "Content-Type": "application/json" };
   try {
     const t = localStorage.getItem(TOKEN_KEY);
     if (t) headers.Authorization = `Bearer ${t}`;
   } catch { /* storage unavailable: request goes unauthenticated and the server answers 401 */ }
   const base = import.meta.env.VITE_API_BASE_URL || "/api/v1";
-  const res = await fetch(`${base}/evidence/${encodeURIComponent(evidenceId)}/download`, { headers });
+  // POST so the audited reason travels in the body, never in a URL or access log (DEF-101)
+  const res = await fetch(`${base}/evidence/${encodeURIComponent(evidenceId)}/download`, { method: "POST", headers, body: JSON.stringify({ reason }) });
   if (!res.ok) {
     let detail = res.statusText;
     try { const j = await res.json(); if (typeof j.detail === "string") detail = j.detail; } catch { /* non-JSON error body */ }
