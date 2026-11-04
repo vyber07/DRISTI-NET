@@ -38,11 +38,11 @@ Raw results: `a11y-before.json`, `a11y-after.json`.
 - Async results are announced (`role=status` / `role=alert`, `aria-live`).
 - `prefers-reduced-motion` turns motion tokens off. Loading skeletons use `motion-safe:`.
 
-## 3. Known gaps (not fixed)
-- The graph canvas (Sigma/WebGL) can't be operated with a keyboard or screen reader. The same relationships are available as text through the Timeline, Patterns and the evidence claims, but there is no accessible table view of the graph itself.
-- Audit event cards are clickable `<div>`s with a button inside. The button works with the keyboard, but the card-level click target is mouse-only.
-- Zoom to 400% and reflow were not tested. The 390 px phone captures show no horizontal page scroll (`FRONTEND_RESPONSIVE_REPORT.md`).
-- No screen-reader session (NVDA, VoiceOver) was run.
+## 3. Known gaps (updated after section 4)
+- **Graph canvas:** mouse and touch only. *Addressed:* the List view (`?view=list`) is the keyboard and screen-reader equivalent, and is used automatically without WebGL.
+- **Audit event cards:** clickable `<div>`s with a keyboard-reachable button inside. The card-level click target is mouse-only, but the same action is available from the keyboard.
+- **Reflow:** *Tested* in section 4 (320 CSS px, no horizontal scroll on 13 pages).
+- **Screen readers:** no session with a person using NVDA, JAWS or VoiceOver yet.
 
 ## 4. Keyboard and structure audit (added 2026-11-04, `tests/ui-evaluation/keyboard_audit.py`)
 Investigator role, 1280×900, Chromium. Raw results are in `keyboard-audit.json`.
