@@ -109,9 +109,23 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       } else {
         get().logout({ expired: true });
       }
-    } catch (e) {
+    } catch (e: any) {
       console.warn("Session restore failed", e);
-      get().logout({ expired: true });
+      // Only the server saying "not authenticated" ends the session. A request that merely did not complete (the
+      // page navigated away mid-load, or a network blip) used to sign the officer out and hijack the navigation to
+      // /login — seen in WebKit when a link was clicked while a page was still loading.
+      if (e?.status === 401 || e?.status === 403) {
+        get().logout({ expired: true });
+        return;
+      }
+      const { currentUser } = await import("../services/api/real_client");
+      const cached = currentUser() as UserProfile | null;
+      if (cached?.user_id) {
+        // Keep the stored session; any later request still gets a 401 if it really is invalid (handled in real_client).
+        set({ user: cached, token, isAuthenticated: true });
+      } else {
+        get().logout({ expired: true });
+      }
     }
   },
 
