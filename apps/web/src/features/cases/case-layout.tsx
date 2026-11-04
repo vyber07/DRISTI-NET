@@ -3,6 +3,7 @@ import { Breadcrumbs, DeniedState, ErrorState, LoadingState } from "@/components
 import { ProvenanceViewer } from "@/components/evidence/ProvenanceViewer";
 import { CaseProvider, useCaseLoader } from "./case-context";
 import { cn } from "@/lib/utils";
+import { Briefcase, FileStack, Hourglass, MapPin } from "lucide-react";
 
 /** Case tabs. Order follows the officer workflow: understand → evidence → review → explore → report → audit. */
 export const CASE_TABS = [
@@ -40,18 +41,26 @@ export function CaseLayout() {
   const base = `/cases/${encodeURIComponent(caseId)}`;
   return (
     <CaseProvider caseId={caseId} caseData={c} reload={reload}>
-      <div className="flex h-full min-h-0 flex-col">
-        <header className="shrink-0 border-b border-border-subtle bg-surface-1 px-4 sm:px-6 pt-3">
+      <div className="flex flex-1 min-h-0 flex-col">
+        <header className="relative shrink-0 border-b border-border-subtle bg-surface-1 px-4 sm:px-6 pt-3">
+          <div className="absolute inset-x-0 top-0 h-1 bg-[#2b8f8b] bg-gradient-to-r from-[#1b5e5c] via-[#2b8f8b] to-[#5fc4bd]" aria-hidden="true" />
           <Breadcrumbs items={[{ label: "Cases", to: "/cases" }, { label: c.id }]} />
-          <div className="mt-1 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-            <h1 className="text-xl font-semibold text-text-primary tracking-tight min-w-0" data-testid="case-title">
-              {c.title} <span className="font-mono text-sm font-medium text-text-secondary whitespace-nowrap">{c.id}</span>
-            </h1>
-            <p className="text-xs text-text-secondary flex flex-wrap gap-x-3">
-              <span>{c.jurisdiction}</span>
-              <span>{c.evidence_count} evidence item{c.evidence_count === 1 ? "" : "s"}</span>
-              <span>{c.pending_reviews} awaiting review</span>
-            </p>
+          <div className="mt-1.5 flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#21706e] bg-gradient-to-br from-[#2b8f8b] to-[#1b5e5c] text-white shadow-[0_2px_8px_rgba(27,94,92,0.35)]" aria-hidden="true">
+                <Briefcase className="h-5 w-5" />
+              </div>
+              <h1 className="text-[22px] font-semibold text-text-primary tracking-tight min-w-0" data-testid="case-title">
+                {c.title} <span className="font-mono text-sm font-medium text-text-secondary whitespace-nowrap">{c.id}</span>
+              </h1>
+            </div>
+            <ul className="flex flex-wrap gap-2 text-xs" aria-label="Case facts">
+              <li className="inline-flex items-center gap-1.5 rounded-full bg-surface-2 px-2.5 py-1 text-text-secondary"><MapPin className="h-3.5 w-3.5" aria-hidden="true" />{c.jurisdiction}</li>
+              <li className="inline-flex items-center gap-1.5 rounded-full bg-[#3b82c4]/12 px-2.5 py-1 text-[#245f96]"><FileStack className="h-3.5 w-3.5" aria-hidden="true" />{c.evidence_count} evidence item{c.evidence_count === 1 ? "" : "s"}</li>
+              <li className={cn("inline-flex items-center gap-1.5 rounded-full px-2.5 py-1", c.pending_reviews ? "bg-amber/15 text-amber-dim" : "bg-surface-2 text-text-secondary")}>
+                <Hourglass className="h-3.5 w-3.5" aria-hidden="true" />{c.pending_reviews} awaiting review
+              </li>
+            </ul>
           </div>
           <nav aria-label="Case sections" className="mt-2 -mb-px overflow-x-auto">
             <ul className="flex min-w-max gap-1">

@@ -53,7 +53,7 @@ export function InvestigationMapView() {
   const toSvgY = (lat: number) => (1 - (lat - minLat) / (maxLat - minLat || 1)) * 360 + 20;
 
   return (
-    <div className="flex flex-col h-full bg-background overflow-y-auto">
+    <div className="flex flex-col flex-1 min-h-0 bg-background overflow-y-auto">
       <div className="shrink-0 border-b border-border-subtle bg-surface-1 px-4 sm:px-6 py-3 flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h2 className="text-lg font-semibold text-text-primary">Locations{total > 0 && <span className="ml-2 text-sm font-normal text-text-secondary">({total})</span>}</h2>

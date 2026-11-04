@@ -27,16 +27,19 @@ export function Breadcrumbs({ items }: { items: Crumb[] }) {
   );
 }
 
-export function PageHeader({ title, description, crumbs, actions, className }: {
-  title: ReactNode; description?: ReactNode; crumbs?: Crumb[]; actions?: ReactNode; className?: string;
+export function PageHeader({ title, description, crumbs, actions, className, icon }: {
+  title: ReactNode; description?: ReactNode; crumbs?: Crumb[]; actions?: ReactNode; className?: string; icon?: ReactNode;
 }) {
   return (
-    <header className={cn("border-b border-border-subtle bg-surface-1 px-4 sm:px-6 py-4", className)}>
+    <header className={cn("border-b border-border-subtle bg-surface-1 px-4 sm:px-6 py-5", className)}>
       <div className="mx-auto w-full max-w-6xl flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 space-y-1">
-          {crumbs && <Breadcrumbs items={crumbs} />}
-          <h1 className="text-xl font-semibold text-text-primary tracking-tight">{title}</h1>
-          {description && <p className="text-sm text-text-secondary max-w-3xl">{description}</p>}
+        <div className="flex min-w-0 items-start gap-3.5">
+          {icon && <div className="mt-0.5 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-[#21706e] bg-gradient-to-br from-[#2b8f8b] to-[#1b5e5c] text-white shadow-[0_2px_8px_rgba(27,94,92,0.35)]" aria-hidden="true">{icon}</div>}
+          <div className="min-w-0 space-y-1">
+            {crumbs && <Breadcrumbs items={crumbs} />}
+            <h1 className="text-[22px] font-semibold text-text-primary tracking-tight">{title}</h1>
+            {description && <p className="text-sm text-text-secondary max-w-3xl">{description}</p>}
+          </div>
         </div>
         {actions && <div className="flex flex-wrap items-center gap-2 shrink-0">{actions}</div>}
       </div>
@@ -53,16 +56,20 @@ export function PageBody({ children, className, wide }: { children: ReactNode; c
   );
 }
 
-export function Section({ title, description, actions, children, className, id }: {
-  title?: ReactNode; description?: ReactNode; actions?: ReactNode; children: ReactNode; className?: string; id?: string;
+export function Section({ title, description, actions, children, className, id, icon }: {
+  title?: ReactNode; description?: ReactNode; actions?: ReactNode; children: ReactNode; className?: string; id?: string; icon?: ReactNode;
 }) {
   return (
-    <section id={id} aria-labelledby={id && title ? `${id}-title` : undefined} className={cn("rounded-lg border border-border-subtle bg-surface-1", className)}>
+    <section id={id} aria-labelledby={id && title ? `${id}-title` : undefined}
+      className={cn("rounded-xl border border-border-subtle bg-surface-1 shadow-[0_1px_2px_rgba(16,42,61,0.06),0_4px_14px_rgba(16,42,61,0.04)]", className)}>
       {(title || actions) && (
         <div className="flex flex-wrap items-start justify-between gap-2 border-b border-border-subtle px-4 py-3">
-          <div className="min-w-0">
-            {title && <h2 id={id ? `${id}-title` : undefined} className="text-[15px] font-semibold text-text-primary">{title}</h2>}
-            {description && <p className="text-xs text-text-secondary mt-0.5">{description}</p>}
+          <div className="flex min-w-0 items-start gap-2.5">
+            {icon && <span className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-electric-blue/10 text-electric-blue" aria-hidden="true">{icon}</span>}
+            <div className="min-w-0">
+              {title && <h2 id={id ? `${id}-title` : undefined} className="text-[15px] font-semibold text-text-primary">{title}</h2>}
+              {description && <p className="text-xs text-text-secondary mt-0.5">{description}</p>}
+            </div>
           </div>
           {actions && <div className="flex items-center gap-2 shrink-0">{actions}</div>}
         </div>

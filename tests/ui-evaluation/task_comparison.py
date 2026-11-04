@@ -38,7 +38,7 @@ def run(base, ui):
                 click("text=Review Queue"); click("text=Pooja Menon")
                 pg.wait_for_selector("text=Why this is a candidate", timeout=8000)
             else:
-                click("[data-testid=waiting-for-review] >> text=to review"); click("[data-testid=review-queue] >> text=Pooja Menon")
+                click("[data-testid=waiting-for-review] a:has-text('Review') >> nth=0"); click("[data-testid=review-queue] >> text=Pooja Menon")
                 pg.wait_for_selector("text=Why this is a candidate", timeout=8000)
             return True, ""
         task("T2 open a pending candidate from Home", t_open_candidate)

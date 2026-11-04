@@ -11,7 +11,7 @@
 @import "@fontsource/jetbrains-mono/500.css";
 @import "tailwindcss";
 @import "./styles/tokens.css";
-@import "./styles/typography.css";
+@import "./styles/typography.css" layer(base); /* in the base layer so colour utilities on headings win */
 
 /* ==========================================================================
    Tailwind v4 theme mapping.
@@ -102,8 +102,11 @@
   --shadow-drawer: var(--shadow-drawer);
 }
 
-* {
-  border-color: var(--border-subtle);
+/* In the base layer: unlayered, this rule beat every border-colour utility (e.g. border-amber/40 rendered grey). */
+@layer base {
+  * {
+    border-color: var(--border-subtle);
+  }
 }
 
 html,

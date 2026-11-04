@@ -68,7 +68,7 @@ function GlobalAuditContent() {
   }
 
   return (
-    <div className="flex flex-col h-full bg-bg-base overflow-hidden">
+    <div className="flex flex-col flex-1 min-h-0 bg-background overflow-hidden">
       {/* Header */}
       <div className="shrink-0 border-b border-border-subtle bg-surface-1 px-5 py-3.5 flex items-center justify-between">
         <div className="flex items-center gap-2">

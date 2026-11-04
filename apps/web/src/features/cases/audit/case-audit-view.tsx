@@ -54,7 +54,7 @@ export function CaseAuditView({ caseId }: CaseAuditViewProps) {
   }, [logs]);
 
   return (
-    <div className="flex flex-col h-full w-full max-w-full min-w-0 overflow-y-auto overflow-x-hidden bg-background p-4 sm:p-5 space-y-5 font-sans">
+    <div className="flex flex-col flex-1 min-h-0 w-full max-w-full min-w-0 overflow-y-auto overflow-x-hidden bg-background p-4 sm:p-5 space-y-5 font-sans">
       {/* Integrity Header & Metrics */}
       <AuditIntegrityHeader caseId={caseId} />
 

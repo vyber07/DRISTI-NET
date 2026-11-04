@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Check, LogOut, Minus } from "lucide-react";
+import { Check, LogOut, Minus, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { FactList, PageBody, PageHeader, Section } from "@/components/layout/page";
 import { useAuthStore } from "@/stores/authStore";
@@ -24,8 +24,8 @@ export function ProfilePage() {
 
   if (!user) return null;
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <PageHeader title="Account" description="Who you are signed in as and what your role allows." />
+    <div className="flex flex-1 min-h-0 flex-col">
+      <PageHeader icon={<UserRound className="h-5 w-5" />} title="Account" description="Who you are signed in as and what your role allows." />
       <PageBody>
         <Section title="Signed in as">
           <FactList columns={2} items={[
