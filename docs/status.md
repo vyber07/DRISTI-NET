@@ -46,7 +46,7 @@ and `TASK_BOARD.md` for the live-verification methodology behind each item marke
 | Graph projection failure → mark stale, rebuild | Demonstrated (rebuild + stale marker, 2026-11-01 s4) | `test_projection_is_rebuildable`; projection is recomputed per request so there is no persisted stale state |
 | Unauthorized → deny server-side + audit | Demonstrated | `test_unassigned_user_denied_server_side`, `test_jurisdiction_mismatch_denied`; **(2026-11-01 s4)** three object-level gaps found and closed: candidate assign, case stats, entity card cross-case read (DEF-031/033, `test_security.py`) |
 | Hash mismatch → `INTEGRITY_MISMATCH`, blocks acceptance | Demonstrated | `test_hash_manifest_and_tamper_detection`; also against a running instance (2026-11-01 s4, `audit/TEST_RESULTS.md`) |
-| Backup → restore (SQLite + local storage) | **Demonstrated (2026-11-01 s4)** — PostgreSQL/MinIO path: MVP target | `scripts/backup_restore_drill.py`, `operations/RESTORE_TEST_REPORT.md` |
+| Backup → restore (SQLite + local storage) | **Demonstrated (2026-11-01 s4)** — PostgreSQL/MinIO path: the Compose stack itself now runs (2026-11-04, no longer blocked by BLK-04), and a one-time migration to it was verified correct; the backup→restore drill specifically against Postgres/MinIO is still an MVP target | `scripts/backup_restore_drill.py`, `scripts/verify_pg_minio_migration.py`, `operations/RESTORE_TEST_REPORT.md`, `frontend-audit/FRONTEND_CONTINUATION_STATE.md` |
 | Web server serves only the web build | **Demonstrated (2026-11-01 s4)** after DEF-028 (path traversal) | `test_spa_*` in `test_security.py` |
 
 ## §8 Secure ingestion
@@ -135,4 +135,4 @@ Archive upload limits (size/nesting/ratio/decompression-bomb ratio) are now Demo
 | Evidence integrity re-check and claim → exact source from the evidence page | Demonstrated | E2E `test_evidence_details_verify_and_claim_source` |
 | Denied, loading, empty and error states on every data view | Demonstrated on the redesigned pages | `components/layout/page.tsx`; E2E denial test |
 | Automated accessibility (axe-core, WCAG 2.x A/AA rules, 14 pages) | 0 violations; **not** a conformance claim | `frontend-audit/FRONTEND_ACCESSIBILITY_REPORT.md` |
-| Live demo serves the redesign | **Not done — owner decision** | `frontend-audit/FRONTEND_CONTINUATION_STATE.md` |
+| Live demo serves the redesign | Demonstrated — live at `http://65.0.102.181/` since 2026-11-04 15:09 UTC | `frontend-audit/FRONTEND_CONTINUATION_STATE.md` |
