@@ -1,0 +1,174 @@
+{
+ "/login": [
+  {
+   "id": "color-contrast",
+   "impact": "serious",
+   "nodes": 2,
+   "help": "Elements must meet minimum color contrast ratio thresholds"
+  }
+ ],
+ "/command-center": [
+  {
+   "id": "color-contrast",
+   "impact": "serious",
+   "nodes": 19,
+   "help": "Elements must meet minimum color contrast ratio thresholds"
+  }
+ ],
+ "/cases": [
+  {
+   "id": "color-contrast",
+   "impact": "serious",
+   "nodes": 21,
+   "help": "Elements must meet minimum color contrast ratio thresholds"
+  }
+ ],
+ "/cases/CASE-0001": [
+  {
+   "id": "button-name",
+   "impact": "critical",
+   "nodes": 1,
+   "help": "Buttons must have discernible text"
+  },
+  {
+   "id": "color-contrast",
+   "impact": "serious",
+   "nodes": 33,
+   "help": "Elements must meet minimum color contrast ratio thresholds"
+  }
+ ],
+ "/cases/CASE-0001/evidence": [
+  {
+   "id": "button-name",
+   "impact": "critical",
+   "nodes": 10,
+   "help": "Buttons must have discernible text"
+  },
+  {
+   "id": "color-contrast",
+   "impact": "serious",
+   "nodes": 34,
+   "help": "Elements must meet minimum color contrast ratio thresholds"
+  },
+  {
+   "id": "label",
+   "impact": "critical",
+   "nodes": 1,
+   "help": "Form elements must have labels"
+  }
+ ],
+ "/cases/CASE-0001/hitl": [
+  {
+   "id": "color-contrast",
+   "impact": "serious",
+   "nodes": 55,
+   "help": "Elements must meet minimum color contrast ratio thresholds"
+  },
+  {
+   "id": "select-name",
+   "impact": "critical",
+   "nodes": 1,
+   "help": "Select element must have an accessible name"
+  }
+ ],
+ "/cases/CASE-0001/graph": [
+  {
+   "id": "color-contrast",
+   "impact": "serious",
+   "nodes": 14,
+   "help": "Elements must meet minimum color contrast ratio thresholds"
+  }
+ ],
+ "/cases/CASE-0001/timeline": [
+  {
+   "id": "button-name",
+   "impact": "critical",
+   "nodes": 1,
+   "help": "Buttons must have discernible text"
+  },
+  {
+   "id": "color-contrast",
+   "impact": "serious",
+   "nodes": 35,
+   "help": "Elements must meet minimum color contrast ratio thresholds"
+  }
+ ],
+ "/cases/CASE-0001/map": [
+  {
+   "id": "button-name",
+   "impact": "critical",
+   "nodes": 1,
+   "help": "Buttons must have discernible text"
+  },
+  {
+   "id": "color-contrast",
+   "impact": "serious",
+   "nodes": 26,
+   "help": "Elements must meet minimum color contrast ratio thresholds"
+  }
+ ],
+ "/cases/CASE-0001/analysis": [
+  {
+   "id": "button-name",
+   "impact": "critical",
+   "nodes": 1,
+   "help": "Buttons must have discernible text"
+  },
+  {
+   "id": "color-contrast",
+   "impact": "serious",
+   "nodes": 39,
+   "help": "Elements must meet minimum color contrast ratio thresholds"
+  }
+ ],
+ "/cases/CASE-0001/reviews": [
+  {
+   "id": "button-name",
+   "impact": "critical",
+   "nodes": 1,
+   "help": "Buttons must have discernible text"
+  },
+  {
+   "id": "color-contrast",
+   "impact": "serious",
+   "nodes": 48,
+   "help": "Elements must meet minimum color contrast ratio thresholds"
+  }
+ ],
+ "/cases/CASE-0001/reports": [
+  {
+   "id": "color-contrast",
+   "impact": "serious",
+   "nodes": 8,
+   "help": "Elements must meet minimum color contrast ratio thresholds"
+  }
+ ],
+ "/cases/CASE-0001/audit": [
+  {
+   "id": "button-name",
+   "impact": "critical",
+   "nodes": 166,
+   "help": "Buttons must have discernible text"
+  },
+  {
+   "id": "color-contrast",
+   "impact": "serious",
+   "nodes": 35,
+   "help": "Elements must meet minimum color contrast ratio thresholds"
+  },
+  {
+   "id": "select-name",
+   "impact": "critical",
+   "nodes": 4,
+   "help": "Select element must have an accessible name"
+  }
+ ],
+ "/profile": [
+  {
+   "id": "color-contrast",
+   "impact": "serious",
+   "nodes": 16,
+   "help": "Elements must meet minimum color contrast ratio thresholds"
+  }
+ ]
+}

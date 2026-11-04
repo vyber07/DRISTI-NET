@@ -1,0 +1,732 @@
+[
+ {
+  "label": "before",
+  "vp": "desktop",
+  "role": "investigator",
+  "route": "/command-center",
+  "final_url": "/command-center",
+  "shot": "desktop_investigator_command-center.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": [
+   "DRISTI-NET Dashboard"
+  ]
+ },
+ {
+  "label": "before",
+  "vp": "desktop",
+  "role": "investigator",
+  "route": "/cases",
+  "final_url": "/cases",
+  "shot": "desktop_investigator_cases.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": []
+ },
+ {
+  "label": "before",
+  "vp": "desktop",
+  "role": "investigator",
+  "route": "/cases/CASE-0001",
+  "final_url": "/cases/CASE-0001",
+  "shot": "desktop_investigator_cases_CASE-0001.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": []
+ },
+ {
+  "label": "before",
+  "vp": "desktop",
+  "role": "investigator",
+  "route": "/cases/CASE-0001/graph",
+  "final_url": "/cases/CASE-0001/graph",
+  "shot": "desktop_investigator_cases_CASE-0001_graph.png",
+  "h_overflow": false,
+  "errors": [
+   [
+    "console",
+    "warning",
+    "[.WebGL-0xc9c02b76c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+   ],
+   [
+    "console",
+    "warning",
+    "[.WebGL-0xc9c02b73000]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+   ],
+   [
+    "console",
+    "warning",
+    "[.WebGL-0xc9c02b76000]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels"
+   ],
+   [
+    "console",
+    "warning",
+    "[.WebGL-0xc9c02b76c00]GL Driver Message (OpenGL, Performance, GL_CLOSE_PATH_NV, High): GPU stall due to ReadPixels (this message will no longer repeat)"
+   ]
+  ],
+  "h1": []
+ },
+ {
+  "label": "before",
+  "vp": "desktop",
+  "role": "investigator",
+  "route": "/cases/CASE-0001/evidence",
+  "final_url": "/cases/CASE-0001/evidence",
+  "shot": "desktop_investigator_cases_CASE-0001_evidence.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": []
+ },
+ {
+  "label": "before",
+  "vp": "desktop",
+  "role": "investigator",
+  "route": "/cases/CASE-0001/timeline",
+  "final_url": "/cases/CASE-0001/timeline",
+  "shot": "desktop_investigator_cases_CASE-0001_timeline.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": []
+ },
+ {
+  "label": "before",
+  "vp": "desktop",
+  "role": "investigator",
+  "route": "/cases/CASE-0001/map",
+  "final_url": "/cases/CASE-0001/map",
+  "shot": "desktop_investigator_cases_CASE-0001_map.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": []
+ },
+ {
+  "label": "before",
+  "vp": "desktop",
+  "role": "investigator",
+  "route": "/cases/CASE-0001/analysis",
+  "final_url": "/cases/CASE-0001/analysis",
+  "shot": "desktop_investigator_cases_CASE-0001_analysis.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": []
+ },
+ {
+  "label": "before",
+  "vp": "desktop",
+  "role": "investigator",
+  "route": "/cases/CASE-0001/hitl",
+  "final_url": "/cases/CASE-0001/hitl",
+  "shot": "desktop_investigator_cases_CASE-0001_hitl.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": [
+   "Human-in-the-Loop (HITL) Review & Evidentiary Arbitration"
+  ]
+ },
+ {
+  "label": "before",
+  "vp": "desktop",
+  "role": "investigator",
+  "route": "/cases/CASE-0001/reviews",
+  "final_url": "/cases/CASE-0001/reviews",
+  "shot": "desktop_investigator_cases_CASE-0001_reviews.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": []
+ },
+ {
+  "label": "before",
+  "vp": "desktop",
+  "role": "investigator",
+  "route": "/cases/CASE-0001/audit",
+  "final_url": "/cases/CASE-0001/audit",
+  "shot": "desktop_investigator_cases_CASE-0001_audit.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": []
+ },
+ {
+  "label": "before",
+  "vp": "desktop",
+  "role": "investigator",
+  "route": "/cases/CASE-0001/reports",
+  "final_url": "/cases/CASE-0001/reports",
+  "shot": "desktop_investigator_cases_CASE-0001_reports.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": [
+   "Case Reports & Exports"
+  ]
+ },
+ {
+  "label": "before",
+  "vp": "desktop",
+  "role": "investigator",
+  "route": "/audit",
+  "final_url": "/audit",
+  "shot": "desktop_investigator_audit.png",
+  "h_overflow": false,
+  "errors": [
+   [
+    "http",
+    403,
+    "/api/v1/audit?limit=500"
+   ],
+   [
+    "console",
+    "error",
+    "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+   ]
+  ],
+  "h1": []
+ },
+ {
+  "label": "before",
+  "vp": "desktop",
+  "role": "investigator",
+  "route": "/profile",
+  "final_url": "/profile",
+  "shot": "desktop_investigator_profile.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": [
+   "Investigator Asha (demo)"
+  ]
+ },
+ {
+  "label": "before",
+  "vp": "desktop",
+  "role": "investigator",
+  "route": "/settings",
+  "final_url": "/settings",
+  "shot": "desktop_investigator_settings.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": [
+   "WORKSTATION SETTINGS & DIAGNOSTICS"
+  ]
+ },
+ {
+  "label": "before",
+  "vp": "desktop",
+  "role": "investigator",
+  "route": "/cases/CASE-0001/notes",
+  "final_url": "/cases/CASE-0001/notes",
+  "shot": "desktop_investigator_cases_CASE-0001_notes.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": []
+ },
+ {
+  "label": "before",
+  "vp": "desktop",
+  "role": "investigator",
+  "route": "/home",
+  "final_url": "/command-center",
+  "shot": "desktop_investigator_home.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": [
+   "DRISTI-NET Dashboard"
+  ]
+ },
+ {
+  "label": "before",
+  "vp": "desktop",
+  "role": "investigator",
+  "route": "/review",
+  "final_url": "/command-center",
+  "shot": "desktop_investigator_review.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": [
+   "DRISTI-NET Dashboard"
+  ]
+ },
+ {
+  "label": "before",
+  "vp": "desktop",
+  "role": "investigator",
+  "route": "/reports",
+  "final_url": "/command-center",
+  "shot": "desktop_investigator_reports.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": [
+   "DRISTI-NET Dashboard"
+  ]
+ },
+ {
+  "label": "before",
+  "vp": "desktop",
+  "role": "investigator",
+  "route": "/evidence",
+  "final_url": "/command-center",
+  "shot": "desktop_investigator_evidence.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": [
+   "DRISTI-NET Dashboard"
+  ]
+ },
+ {
+  "label": "before",
+  "vp": "desktop",
+  "role": "reviewer",
+  "route": "/cases/CASE-0001/hitl",
+  "final_url": "/cases/CASE-0001/hitl",
+  "shot": "desktop_reviewer_cases_CASE-0001_hitl.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": [
+   "Human-in-the-Loop (HITL) Review & Evidentiary Arbitration"
+  ]
+ },
+ {
+  "label": "before",
+  "vp": "desktop",
+  "role": "reviewer",
+  "route": "/command-center",
+  "final_url": "/command-center",
+  "shot": "desktop_reviewer_command-center.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": [
+   "DRISTI-NET Dashboard"
+  ]
+ },
+ {
+  "label": "before",
+  "vp": "desktop",
+  "role": "auditor",
+  "route": "/audit",
+  "final_url": "/audit",
+  "shot": "desktop_auditor_audit.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": []
+ },
+ {
+  "label": "before",
+  "vp": "desktop",
+  "role": "auditor",
+  "route": "/command-center",
+  "final_url": "/command-center",
+  "shot": "desktop_auditor_command-center.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": [
+   "DRISTI-NET Dashboard"
+  ]
+ },
+ {
+  "label": "before",
+  "vp": "desktop",
+  "role": "auditor",
+  "route": "/cases/CASE-0001",
+  "final_url": "/cases/CASE-0001",
+  "shot": "desktop_auditor_cases_CASE-0001.png",
+  "h_overflow": false,
+  "errors": [
+   [
+    "http",
+    403,
+    "/api/v1/cases/CASE-0001/stats"
+   ],
+   [
+    "console",
+    "error",
+    "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+   ]
+  ],
+  "h1": []
+ },
+ {
+  "label": "before",
+  "vp": "desktop",
+  "role": "admin",
+  "route": "/audit",
+  "final_url": "/audit",
+  "shot": "desktop_admin_audit.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": []
+ },
+ {
+  "label": "before",
+  "vp": "desktop",
+  "role": "admin",
+  "route": "/settings",
+  "final_url": "/settings",
+  "shot": "desktop_admin_settings.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": [
+   "WORKSTATION SETTINGS & DIAGNOSTICS"
+  ]
+ },
+ {
+  "label": "before",
+  "vp": "desktop",
+  "role": "admin",
+  "route": "/cases",
+  "final_url": "/cases",
+  "shot": "desktop_admin_cases.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": []
+ },
+ {
+  "label": "before",
+  "vp": "desktop",
+  "role": "unassigned",
+  "route": "/cases/CASE-0001",
+  "final_url": "/cases/CASE-0001",
+  "shot": "desktop_unassigned_cases_CASE-0001.png",
+  "h_overflow": false,
+  "errors": [
+   [
+    "http",
+    403,
+    "/api/v1/cases/CASE-0001"
+   ],
+   [
+    "console",
+    "error",
+    "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+   ]
+  ],
+  "h1": []
+ },
+ {
+  "label": "before",
+  "vp": "desktop",
+  "role": "unassigned",
+  "route": "/cases",
+  "final_url": "/cases",
+  "shot": "desktop_unassigned_cases.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": []
+ },
+ {
+  "label": "before",
+  "vp": "tablet",
+  "role": "investigator",
+  "route": "/command-center",
+  "final_url": "/command-center",
+  "shot": "tablet_investigator_command-center.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": [
+   "DRISTI-NET Dashboard"
+  ]
+ },
+ {
+  "label": "before",
+  "vp": "tablet",
+  "role": "investigator",
+  "route": "/cases",
+  "final_url": "/cases",
+  "shot": "tablet_investigator_cases.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": []
+ },
+ {
+  "label": "before",
+  "vp": "tablet",
+  "role": "investigator",
+  "route": "/cases/CASE-0001",
+  "final_url": "/cases/CASE-0001",
+  "shot": "tablet_investigator_cases_CASE-0001.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": []
+ },
+ {
+  "label": "before",
+  "vp": "tablet",
+  "role": "investigator",
+  "route": "/cases/CASE-0001/graph",
+  "final_url": "/cases/CASE-0001/graph",
+  "shot": "tablet_investigator_cases_CASE-0001_graph.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": []
+ },
+ {
+  "label": "before",
+  "vp": "tablet",
+  "role": "investigator",
+  "route": "/cases/CASE-0001/evidence",
+  "final_url": "/cases/CASE-0001/evidence",
+  "shot": "tablet_investigator_cases_CASE-0001_evidence.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": []
+ },
+ {
+  "label": "before",
+  "vp": "tablet",
+  "role": "investigator",
+  "route": "/cases/CASE-0001/timeline",
+  "final_url": "/cases/CASE-0001/timeline",
+  "shot": "tablet_investigator_cases_CASE-0001_timeline.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": []
+ },
+ {
+  "label": "before",
+  "vp": "tablet",
+  "role": "investigator",
+  "route": "/cases/CASE-0001/map",
+  "final_url": "/cases/CASE-0001/map",
+  "shot": "tablet_investigator_cases_CASE-0001_map.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": []
+ },
+ {
+  "label": "before",
+  "vp": "tablet",
+  "role": "investigator",
+  "route": "/cases/CASE-0001/analysis",
+  "final_url": "/cases/CASE-0001/analysis",
+  "shot": "tablet_investigator_cases_CASE-0001_analysis.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": []
+ },
+ {
+  "label": "before",
+  "vp": "tablet",
+  "role": "investigator",
+  "route": "/cases/CASE-0001/hitl",
+  "final_url": "/cases/CASE-0001/hitl",
+  "shot": "tablet_investigator_cases_CASE-0001_hitl.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": [
+   "Human-in-the-Loop (HITL) Review & Evidentiary Arbitration"
+  ]
+ },
+ {
+  "label": "before",
+  "vp": "tablet",
+  "role": "investigator",
+  "route": "/cases/CASE-0001/reviews",
+  "final_url": "/cases/CASE-0001/reviews",
+  "shot": "tablet_investigator_cases_CASE-0001_reviews.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": []
+ },
+ {
+  "label": "before",
+  "vp": "tablet",
+  "role": "investigator",
+  "route": "/cases/CASE-0001/audit",
+  "final_url": "/cases/CASE-0001/audit",
+  "shot": "tablet_investigator_cases_CASE-0001_audit.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": []
+ },
+ {
+  "label": "before",
+  "vp": "tablet",
+  "role": "investigator",
+  "route": "/cases/CASE-0001/reports",
+  "final_url": "/cases/CASE-0001/reports",
+  "shot": "tablet_investigator_cases_CASE-0001_reports.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": [
+   "Case Reports & Exports"
+  ]
+ },
+ {
+  "label": "before",
+  "vp": "tablet",
+  "role": "investigator",
+  "route": "/audit",
+  "final_url": "/audit",
+  "shot": "tablet_investigator_audit.png",
+  "h_overflow": false,
+  "errors": [
+   [
+    "http",
+    403,
+    "/api/v1/audit?limit=500"
+   ],
+   [
+    "console",
+    "error",
+    "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+   ]
+  ],
+  "h1": []
+ },
+ {
+  "label": "before",
+  "vp": "phone",
+  "role": "investigator",
+  "route": "/command-center",
+  "final_url": "/command-center",
+  "shot": "phone_investigator_command-center.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": [
+   "DRISTI-NET Dashboard"
+  ]
+ },
+ {
+  "label": "before",
+  "vp": "phone",
+  "role": "investigator",
+  "route": "/cases",
+  "final_url": "/cases",
+  "shot": "phone_investigator_cases.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": []
+ },
+ {
+  "label": "before",
+  "vp": "phone",
+  "role": "investigator",
+  "route": "/cases/CASE-0001",
+  "final_url": "/cases/CASE-0001",
+  "shot": "phone_investigator_cases_CASE-0001.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": []
+ },
+ {
+  "label": "before",
+  "vp": "phone",
+  "role": "investigator",
+  "route": "/cases/CASE-0001/graph",
+  "final_url": "/cases/CASE-0001/graph",
+  "shot": "phone_investigator_cases_CASE-0001_graph.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": []
+ },
+ {
+  "label": "before",
+  "vp": "phone",
+  "role": "investigator",
+  "route": "/cases/CASE-0001/evidence",
+  "final_url": "/cases/CASE-0001/evidence",
+  "shot": "phone_investigator_cases_CASE-0001_evidence.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": []
+ },
+ {
+  "label": "before",
+  "vp": "phone",
+  "role": "investigator",
+  "route": "/cases/CASE-0001/timeline",
+  "final_url": "/cases/CASE-0001/timeline",
+  "shot": "phone_investigator_cases_CASE-0001_timeline.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": []
+ },
+ {
+  "label": "before",
+  "vp": "phone",
+  "role": "investigator",
+  "route": "/cases/CASE-0001/map",
+  "final_url": "/cases/CASE-0001/map",
+  "shot": "phone_investigator_cases_CASE-0001_map.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": []
+ },
+ {
+  "label": "before",
+  "vp": "phone",
+  "role": "investigator",
+  "route": "/cases/CASE-0001/analysis",
+  "final_url": "/cases/CASE-0001/analysis",
+  "shot": "phone_investigator_cases_CASE-0001_analysis.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": []
+ },
+ {
+  "label": "before",
+  "vp": "phone",
+  "role": "investigator",
+  "route": "/cases/CASE-0001/hitl",
+  "final_url": "/cases/CASE-0001/hitl",
+  "shot": "phone_investigator_cases_CASE-0001_hitl.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": [
+   "Human-in-the-Loop (HITL) Review & Evidentiary Arbitration"
+  ]
+ },
+ {
+  "label": "before",
+  "vp": "phone",
+  "role": "investigator",
+  "route": "/cases/CASE-0001/reviews",
+  "final_url": "/cases/CASE-0001/reviews",
+  "shot": "phone_investigator_cases_CASE-0001_reviews.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": []
+ },
+ {
+  "label": "before",
+  "vp": "phone",
+  "role": "investigator",
+  "route": "/cases/CASE-0001/audit",
+  "final_url": "/cases/CASE-0001/audit",
+  "shot": "phone_investigator_cases_CASE-0001_audit.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": []
+ },
+ {
+  "label": "before",
+  "vp": "phone",
+  "role": "investigator",
+  "route": "/cases/CASE-0001/reports",
+  "final_url": "/cases/CASE-0001/reports",
+  "shot": "phone_investigator_cases_CASE-0001_reports.png",
+  "h_overflow": false,
+  "errors": [],
+  "h1": [
+   "Case Reports & Exports"
+  ]
+ },
+ {
+  "label": "before",
+  "vp": "phone",
+  "role": "investigator",
+  "route": "/audit",
+  "final_url": "/audit",
+  "shot": "phone_investigator_audit.png",
+  "h_overflow": false,
+  "errors": [
+   [
+    "http",
+    403,
+    "/api/v1/audit?limit=500"
+   ],
+   [
+    "console",
+    "error",
+    "Failed to load resource: the server responded with a status of 403 (Forbidden)"
+   ]
+  ],
+  "h1": []
+ }
+]

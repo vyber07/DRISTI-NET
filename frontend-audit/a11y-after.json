@@ -1,0 +1,16 @@
+{
+ "/login": [],
+ "/command-center": [],
+ "/cases": [],
+ "/cases/CASE-0001": [],
+ "/cases/CASE-0001/evidence": [],
+ "/cases/CASE-0001/review": [],
+ "/cases/CASE-0001/graph": [],
+ "/cases/CASE-0001/timeline": [],
+ "/cases/CASE-0001/locations": [],
+ "/cases/CASE-0001/analysis": [],
+ "/cases/CASE-0001/decisions": [],
+ "/cases/CASE-0001/reports": [],
+ "/cases/CASE-0001/audit": [],
+ "/profile": []
+}

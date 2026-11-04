@@ -1,0 +1,90 @@
+{
+ "old": {
+  "T1 open CASE-0002's evidence list from Home": {
+   "completed": true,
+   "clicks": 2,
+   "seconds": 1.3,
+   "note": ""
+  },
+  "T2 open a pending candidate from Home": {
+   "completed": true,
+   "clicks": 2,
+   "seconds": 1.2,
+   "note": ""
+  },
+  "T3 re-check the integrity of calls.csv from the case overview": {
+   "completed": false,
+   "clicks": null,
+   "seconds": 4.9,
+   "note": "not reachable in the UI (Page.wait_for_selector: Timeout 4000ms exceeded.)"
+  },
+  "T4 from an evidence file, open the exact line a claim was read from": {
+   "completed": false,
+   "clicks": null,
+   "seconds": 4.9,
+   "note": "not reachable in the UI (Page.wait_for_selector: Timeout 4000ms exceeded.)"
+  },
+  "T5 go from a candidate to the case's reports": {
+   "completed": true,
+   "clicks": 4,
+   "seconds": 1.8,
+   "note": "counted from the candidate page (first click opens it)"
+  },
+  "T6 see who uploaded the evidence (by name)": {
+   "completed": false,
+   "clicks": null,
+   "seconds": 1.4,
+   "note": "uploader shown only as a USR- id"
+  },
+  "T7 reach the control to reverse a recorded decision": {
+   "completed": false,
+   "clicks": null,
+   "seconds": 4.6,
+   "note": "not reachable in the UI (Page.wait_for_selector: Timeout 4000ms exceeded.)"
+  }
+ },
+ "new": {
+  "T1 open CASE-0002's evidence list from Home": {
+   "completed": true,
+   "clicks": 2,
+   "seconds": 1.2,
+   "note": ""
+  },
+  "T2 open a pending candidate from Home": {
+   "completed": true,
+   "clicks": 2,
+   "seconds": 1.2,
+   "note": ""
+  },
+  "T3 re-check the integrity of calls.csv from the case overview": {
+   "completed": true,
+   "clicks": 3,
+   "seconds": 1.6,
+   "note": ""
+  },
+  "T4 from an evidence file, open the exact line a claim was read from": {
+   "completed": true,
+   "clicks": 3,
+   "seconds": 1.5,
+   "note": ""
+  },
+  "T5 go from a candidate to the case's reports": {
+   "completed": true,
+   "clicks": 2,
+   "seconds": 1.3,
+   "note": "counted from the candidate page (first click opens it)"
+  },
+  "T6 see who uploaded the evidence (by name)": {
+   "completed": true,
+   "clicks": 1,
+   "seconds": 1.5,
+   "note": "uploader shown by name"
+  },
+  "T7 reach the control to reverse a recorded decision": {
+   "completed": true,
+   "clicks": 2,
+   "seconds": 1.2,
+   "note": "reaching the reverse control (not executing it)"
+  }
+ }
+}
