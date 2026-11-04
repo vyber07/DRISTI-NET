@@ -48,10 +48,15 @@ def main() -> int:
         "DRISHTI_NEO4J_URI": "",
     })
 
+    # alembic_version exists only on the Postgres side (apps/api/app/db.py: SQLite uses create_all()
+    # directly and never runs Alembic) -- a schema-bookkeeping artifact, not application data.
+    IGNORE_TABLES = {"alembic_version"}
+    src_tables = {t: c for t, c in src["tables"].items() if t not in IGNORE_TABLES}
+    dst_tables = {t: c for t, c in dst["tables"].items() if t not in IGNORE_TABLES}
     problems = []
-    if src["tables"] != dst["tables"]:
-        problems.append({"tables_differ": {t: (src["tables"].get(t), dst["tables"].get(t))
-                                            for t in set(src["tables"]) | set(dst["tables"]) if src["tables"].get(t) != dst["tables"].get(t)}})
+    if src_tables != dst_tables:
+        problems.append({"tables_differ": {t: (src_tables.get(t), dst_tables.get(t))
+                                            for t in set(src_tables) | set(dst_tables) if src_tables.get(t) != dst_tables.get(t)}})
     not_match = {k: v for k, v in dst["evidence"].items() if v != "MATCH"}
     if not_match:
         problems.append({"evidence_not_matching": not_match})
