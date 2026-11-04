@@ -1,5 +1,25 @@
 # Frontend changelog
 
+## 2026-11-04 (third pass): visual refresh, live deployment (commits `4622a40`, live at 15:09 UTC)
+- **Look:** navy sidebar, icon chips on headers, case accent bar and fact chips, softer cards, redesigned sign-in page.
+- **Charts built from real data** (no new libraries):
+  - Home: summary tiles, awaiting-review by case, evidence status.
+  - Overview: summary tiles, evidence status, review progress, activity over time.
+  - All follow the dataviz rules: validated palettes, legends with counts and shares, a hidden table, hover and focus detail.
+- **Cross-engine fixes:**
+  - unlayered CSS (heading colours, borders) overrode utilities;
+  - `height:100%` page containers collapsed in Obscura;
+  - gradients now have a solid fallback;
+  - hidden tables caused sideways scroll;
+  - label contrast while a segment has focus.
+- **Tested:**
+  - E2E 16/16 on Chromium, Firefox and WebKit;
+  - axe 0 violations;
+  - keyboard audit 0 issues;
+  - Obscura 9 pages, 0 errors (`tests/ui-evaluation/obscura_pages.py`).
+- **Deployed to the live site** after a full backup; verified on the public address in four engines.
+
+
 ## 2026-11-04 (second pass): closing the remaining items (commits `d98df5c`, `e61188e`, `fa3e0bc`)
 - **Server-side search and paging:** Cases, Evidence and the Review queue; summary endpoints for filter counts; candidate search never matches masked phone or account labels.
 - **Case creation and assignment:** "New case" dialog; "Add person" on the Overview; the backend now dates new cases today and rejects blank fields.
