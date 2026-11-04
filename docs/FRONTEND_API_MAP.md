@@ -1,3 +1,6 @@
+> **Superseded (2026-11-04).** This table predates the frontend redesign and several rows are out of date. The current, verified
+> mapping is `frontend-audit/FRONTEND_API_MAPPING.md` (audit of `817bfd0`) plus the regression report's API section.
+
 # DRISTI-NET Frontend API Map
 
 This file maps the required alignment between frontend features, API service files, and actual backend implementations as dictated by the MASTER_INTEGRATION_MATRIX.

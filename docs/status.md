@@ -126,3 +126,13 @@ pagination are Demonstrated (see §10 row above). Query *cancellation* specifica
 recorded as an architecture-blocked item in `task.md`'s appended note rather than silently dropped.
 
 Archive upload limits (size/nesting/ratio/decompression-bomb ratio) are now Demonstrated — see §8 row above.
+
+## Frontend redesign (2026-11-04)
+| Requirement | Status | Evidence |
+|---|---|---|
+| One case workspace (case → graph → timeline → source → review → report without leaving the case) | Demonstrated | `features/cases/case-layout.tsx`; E2E `tests/e2e/test_ui_demo.py` (11 passed) |
+| Review: accept / reject / defer / **reverse**, with a reason | Demonstrated | E2E `test_review_queue` |
+| Evidence integrity re-check and claim → exact source from the evidence page | Demonstrated | E2E `test_evidence_details_verify_and_claim_source` |
+| Denied, loading, empty and error states on every data view | Demonstrated on the redesigned pages | `components/layout/page.tsx`; E2E denial test |
+| Automated accessibility (axe-core, WCAG 2.x A/AA rules, 14 pages) | 0 violations; **not** a conformance claim | `frontend-audit/FRONTEND_ACCESSIBILITY_REPORT.md` |
+| Live demo serves the redesign | **Not done — owner decision** | `frontend-audit/FRONTEND_CONTINUATION_STATE.md` |
