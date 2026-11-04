@@ -1,0 +1,1686 @@
+{
+ "dataset": "ner_synthetic_v1",
+ "seed": 20261104,
+ "sentences": [
+  {
+   "id": "S001",
+   "text": "Asha Nair met Arjun Fernandes near Nashik on 12 March.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 0,
+     "end": 9,
+     "text": "Asha Nair"
+    },
+    {
+     "type": "PERSON",
+     "start": 14,
+     "end": 29,
+     "text": "Arjun Fernandes"
+    },
+    {
+     "type": "LOCATION",
+     "start": 35,
+     "end": 41,
+     "text": "Nashik"
+    }
+   ]
+  },
+  {
+   "id": "S002",
+   "text": "Harish Sharma, a director of Lakeside Finance Ltd, was questioned in Pune.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 0,
+     "end": 13,
+     "text": "Harish Sharma"
+    },
+    {
+     "type": "ORGANIZATION",
+     "start": 29,
+     "end": 49,
+     "text": "Lakeside Finance Ltd"
+    },
+    {
+     "type": "LOCATION",
+     "start": 69,
+     "end": 73,
+     "text": "Pune"
+    }
+   ]
+  },
+  {
+   "id": "S003",
+   "text": "The complainant Gurpreet Mehta stated that funds were transferred to Coastal Agencies.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 16,
+     "end": 30,
+     "text": "Gurpreet Mehta"
+    },
+    {
+     "type": "ORGANIZATION",
+     "start": 69,
+     "end": 85,
+     "text": "Coastal Agencies"
+    }
+   ]
+  },
+  {
+   "id": "S004",
+   "text": "A van registered to Silverline Textiles was seen in Jaipur late at night.",
+   "entities": [
+    {
+     "type": "ORGANIZATION",
+     "start": 20,
+     "end": 39,
+     "text": "Silverline Textiles"
+    },
+    {
+     "type": "LOCATION",
+     "start": 52,
+     "end": 58,
+     "text": "Jaipur"
+    }
+   ]
+  },
+  {
+   "id": "S005",
+   "text": "Aarav Joshi called Revathi Patel twice from Nashik.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 0,
+     "end": 11,
+     "text": "Aarav Joshi"
+    },
+    {
+     "type": "PERSON",
+     "start": 19,
+     "end": 32,
+     "text": "Revathi Patel"
+    },
+    {
+     "type": "LOCATION",
+     "start": 44,
+     "end": 50,
+     "text": "Nashik"
+    }
+   ]
+  },
+  {
+   "id": "S006",
+   "text": "Witness Manoj Banerjee works at Silverline Exports.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 8,
+     "end": 22,
+     "text": "Manoj Banerjee"
+    },
+    {
+     "type": "ORGANIZATION",
+     "start": 32,
+     "end": 50,
+     "text": "Silverline Exports"
+    }
+   ]
+  },
+  {
+   "id": "S007",
+   "text": "Hilltop Freight has a warehouse in Indore.",
+   "entities": [
+    {
+     "type": "ORGANIZATION",
+     "start": 0,
+     "end": 15,
+     "text": "Hilltop Freight"
+    },
+    {
+     "type": "LOCATION",
+     "start": 35,
+     "end": 41,
+     "text": "Indore"
+    }
+   ]
+  },
+  {
+   "id": "S008",
+   "text": "According to Revathi Das, the meeting took place at the Starlight Motors office in Nashik.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 13,
+     "end": 24,
+     "text": "Revathi Das"
+    },
+    {
+     "type": "ORGANIZATION",
+     "start": 56,
+     "end": 72,
+     "text": "Starlight Motors"
+    },
+    {
+     "type": "LOCATION",
+     "start": 83,
+     "end": 89,
+     "text": "Nashik"
+    }
+   ]
+  },
+  {
+   "id": "S009",
+   "text": "Statement of Tanvir Ahmed recorded at Jaipur police station.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 13,
+     "end": 25,
+     "text": "Tanvir Ahmed"
+    },
+    {
+     "type": "LOCATION",
+     "start": 38,
+     "end": 44,
+     "text": "Jaipur"
+    }
+   ]
+  },
+  {
+   "id": "S010",
+   "text": "Divya Joshi and Arjun Patel were both employed by Bluewater Freight.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 0,
+     "end": 11,
+     "text": "Divya Joshi"
+    },
+    {
+     "type": "PERSON",
+     "start": 16,
+     "end": 27,
+     "text": "Arjun Patel"
+    },
+    {
+     "type": "ORGANIZATION",
+     "start": 50,
+     "end": 67,
+     "text": "Bluewater Freight"
+    }
+   ]
+  },
+  {
+   "id": "S011",
+   "text": "Rohan Verma met Ananya Iyer near Ranchi on 12 March.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 0,
+     "end": 11,
+     "text": "Rohan Verma"
+    },
+    {
+     "type": "PERSON",
+     "start": 16,
+     "end": 27,
+     "text": "Ananya Iyer"
+    },
+    {
+     "type": "LOCATION",
+     "start": 33,
+     "end": 39,
+     "text": "Ranchi"
+    }
+   ]
+  },
+  {
+   "id": "S012",
+   "text": "Asha Ahmed, a director of Starlight Traders, was questioned in Madurai.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 0,
+     "end": 10,
+     "text": "Asha Ahmed"
+    },
+    {
+     "type": "ORGANIZATION",
+     "start": 26,
+     "end": 43,
+     "text": "Starlight Traders"
+    },
+    {
+     "type": "LOCATION",
+     "start": 63,
+     "end": 70,
+     "text": "Madurai"
+    }
+   ]
+  },
+  {
+   "id": "S013",
+   "text": "The complainant Kavya Chowdhury stated that funds were transferred to Bluewater Freight.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 16,
+     "end": 31,
+     "text": "Kavya Chowdhury"
+    },
+    {
+     "type": "ORGANIZATION",
+     "start": 70,
+     "end": 87,
+     "text": "Bluewater Freight"
+    }
+   ]
+  },
+  {
+   "id": "S014",
+   "text": "A van registered to Lakeside Motors was seen in Pune late at night.",
+   "entities": [
+    {
+     "type": "ORGANIZATION",
+     "start": 20,
+     "end": 35,
+     "text": "Lakeside Motors"
+    },
+    {
+     "type": "LOCATION",
+     "start": 48,
+     "end": 52,
+     "text": "Pune"
+    }
+   ]
+  },
+  {
+   "id": "S015",
+   "text": "Tanvir Joshi called Divya Banerjee twice from Vadodara.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 0,
+     "end": 12,
+     "text": "Tanvir Joshi"
+    },
+    {
+     "type": "PERSON",
+     "start": 20,
+     "end": 34,
+     "text": "Divya Banerjee"
+    },
+    {
+     "type": "LOCATION",
+     "start": 46,
+     "end": 54,
+     "text": "Vadodara"
+    }
+   ]
+  },
+  {
+   "id": "S016",
+   "text": "Witness Revathi Pillai works at Sunrise Logistics.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 8,
+     "end": 22,
+     "text": "Revathi Pillai"
+    },
+    {
+     "type": "ORGANIZATION",
+     "start": 32,
+     "end": 49,
+     "text": "Sunrise Logistics"
+    }
+   ]
+  },
+  {
+   "id": "S017",
+   "text": "Starlight Logistics has a warehouse in Ranchi.",
+   "entities": [
+    {
+     "type": "ORGANIZATION",
+     "start": 0,
+     "end": 19,
+     "text": "Starlight Logistics"
+    },
+    {
+     "type": "LOCATION",
+     "start": 39,
+     "end": 45,
+     "text": "Ranchi"
+    }
+   ]
+  },
+  {
+   "id": "S018",
+   "text": "According to Pooja Reddy, the meeting took place at the Starlight Traders office in Coimbatore.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 13,
+     "end": 24,
+     "text": "Pooja Reddy"
+    },
+    {
+     "type": "ORGANIZATION",
+     "start": 56,
+     "end": 73,
+     "text": "Starlight Traders"
+    },
+    {
+     "type": "LOCATION",
+     "start": 84,
+     "end": 94,
+     "text": "Coimbatore"
+    }
+   ]
+  },
+  {
+   "id": "S019",
+   "text": "Statement of Zoya Fernandes recorded at Kochi police station.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 13,
+     "end": 27,
+     "text": "Zoya Fernandes"
+    },
+    {
+     "type": "LOCATION",
+     "start": 40,
+     "end": 45,
+     "text": "Kochi"
+    }
+   ]
+  },
+  {
+   "id": "S020",
+   "text": "Sneha Khan and Manoj Fernandes were both employed by Hilltop Finance Ltd.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 0,
+     "end": 10,
+     "text": "Sneha Khan"
+    },
+    {
+     "type": "PERSON",
+     "start": 15,
+     "end": 30,
+     "text": "Manoj Fernandes"
+    },
+    {
+     "type": "ORGANIZATION",
+     "start": 53,
+     "end": 72,
+     "text": "Hilltop Finance Ltd"
+    }
+   ]
+  },
+  {
+   "id": "S021",
+   "text": "Ananya Joshi met Ananya Patel near Indore on 12 March.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 0,
+     "end": 12,
+     "text": "Ananya Joshi"
+    },
+    {
+     "type": "PERSON",
+     "start": 17,
+     "end": 29,
+     "text": "Ananya Patel"
+    },
+    {
+     "type": "LOCATION",
+     "start": 35,
+     "end": 41,
+     "text": "Indore"
+    }
+   ]
+  },
+  {
+   "id": "S022",
+   "text": "Lakshmi Banerjee, a director of Bluewater Logistics, was questioned in Indore.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 0,
+     "end": 16,
+     "text": "Lakshmi Banerjee"
+    },
+    {
+     "type": "ORGANIZATION",
+     "start": 32,
+     "end": 51,
+     "text": "Bluewater Logistics"
+    },
+    {
+     "type": "LOCATION",
+     "start": 71,
+     "end": 77,
+     "text": "Indore"
+    }
+   ]
+  },
+  {
+   "id": "S023",
+   "text": "The complainant Asha Verma stated that funds were transferred to Starlight Finance Ltd.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 16,
+     "end": 26,
+     "text": "Asha Verma"
+    },
+    {
+     "type": "ORGANIZATION",
+     "start": 65,
+     "end": 86,
+     "text": "Starlight Finance Ltd"
+    }
+   ]
+  },
+  {
+   "id": "S024",
+   "text": "A van registered to Silverline Agencies was seen in Coimbatore late at night.",
+   "entities": [
+    {
+     "type": "ORGANIZATION",
+     "start": 20,
+     "end": 39,
+     "text": "Silverline Agencies"
+    },
+    {
+     "type": "LOCATION",
+     "start": 52,
+     "end": 62,
+     "text": "Coimbatore"
+    }
+   ]
+  },
+  {
+   "id": "S025",
+   "text": "Meera Pillai called Asha Nair twice from Vadodara.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 0,
+     "end": 12,
+     "text": "Meera Pillai"
+    },
+    {
+     "type": "PERSON",
+     "start": 20,
+     "end": 29,
+     "text": "Asha Nair"
+    },
+    {
+     "type": "LOCATION",
+     "start": 41,
+     "end": 49,
+     "text": "Vadodara"
+    }
+   ]
+  },
+  {
+   "id": "S026",
+   "text": "Witness Zoya Banerjee works at Hilltop Motors.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 8,
+     "end": 21,
+     "text": "Zoya Banerjee"
+    },
+    {
+     "type": "ORGANIZATION",
+     "start": 31,
+     "end": 45,
+     "text": "Hilltop Motors"
+    }
+   ]
+  },
+  {
+   "id": "S027",
+   "text": "Lakeside Holdings Pvt Ltd has a warehouse in Surat.",
+   "entities": [
+    {
+     "type": "ORGANIZATION",
+     "start": 0,
+     "end": 25,
+     "text": "Lakeside Holdings Pvt Ltd"
+    },
+    {
+     "type": "LOCATION",
+     "start": 45,
+     "end": 50,
+     "text": "Surat"
+    }
+   ]
+  },
+  {
+   "id": "S028",
+   "text": "According to Divya Rao, the meeting took place at the Sunrise Logistics office in Guwahati.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 13,
+     "end": 22,
+     "text": "Divya Rao"
+    },
+    {
+     "type": "ORGANIZATION",
+     "start": 54,
+     "end": 71,
+     "text": "Sunrise Logistics"
+    },
+    {
+     "type": "LOCATION",
+     "start": 82,
+     "end": 90,
+     "text": "Guwahati"
+    }
+   ]
+  },
+  {
+   "id": "S029",
+   "text": "Statement of Aarav Verma recorded at Vadodara police station.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 13,
+     "end": 24,
+     "text": "Aarav Verma"
+    },
+    {
+     "type": "LOCATION",
+     "start": 37,
+     "end": 45,
+     "text": "Vadodara"
+    }
+   ]
+  },
+  {
+   "id": "S030",
+   "text": "Aarav Ahmed and Sneha Menon were both employed by Bluewater Exports.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 0,
+     "end": 11,
+     "text": "Aarav Ahmed"
+    },
+    {
+     "type": "PERSON",
+     "start": 16,
+     "end": 27,
+     "text": "Sneha Menon"
+    },
+    {
+     "type": "ORGANIZATION",
+     "start": 50,
+     "end": 67,
+     "text": "Bluewater Exports"
+    }
+   ]
+  },
+  {
+   "id": "S031",
+   "text": "Revathi Kulkarni met Sneha Sharma near Mysuru on 12 March.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 0,
+     "end": 16,
+     "text": "Revathi Kulkarni"
+    },
+    {
+     "type": "PERSON",
+     "start": 21,
+     "end": 33,
+     "text": "Sneha Sharma"
+    },
+    {
+     "type": "LOCATION",
+     "start": 39,
+     "end": 45,
+     "text": "Mysuru"
+    }
+   ]
+  },
+  {
+   "id": "S032",
+   "text": "Farhan Sharma, a director of Sunrise Exports, was questioned in Surat.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 0,
+     "end": 13,
+     "text": "Farhan Sharma"
+    },
+    {
+     "type": "ORGANIZATION",
+     "start": 29,
+     "end": 44,
+     "text": "Sunrise Exports"
+    },
+    {
+     "type": "LOCATION",
+     "start": 64,
+     "end": 69,
+     "text": "Surat"
+    }
+   ]
+  },
+  {
+   "id": "S033",
+   "text": "The complainant Imran Singh stated that funds were transferred to Greenfield Enterprises.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 16,
+     "end": 27,
+     "text": "Imran Singh"
+    },
+    {
+     "type": "ORGANIZATION",
+     "start": 66,
+     "end": 88,
+     "text": "Greenfield Enterprises"
+    }
+   ]
+  },
+  {
+   "id": "S034",
+   "text": "A van registered to Silverline Textiles was seen in Jaipur late at night.",
+   "entities": [
+    {
+     "type": "ORGANIZATION",
+     "start": 20,
+     "end": 39,
+     "text": "Silverline Textiles"
+    },
+    {
+     "type": "LOCATION",
+     "start": 52,
+     "end": 58,
+     "text": "Jaipur"
+    }
+   ]
+  },
+  {
+   "id": "S035",
+   "text": "Farhan Patel called Lakshmi Pillai twice from Kochi.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 0,
+     "end": 12,
+     "text": "Farhan Patel"
+    },
+    {
+     "type": "PERSON",
+     "start": 20,
+     "end": 34,
+     "text": "Lakshmi Pillai"
+    },
+    {
+     "type": "LOCATION",
+     "start": 46,
+     "end": 51,
+     "text": "Kochi"
+    }
+   ]
+  },
+  {
+   "id": "S036",
+   "text": "Witness Revathi Sharma works at Hilltop Freight.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 8,
+     "end": 22,
+     "text": "Revathi Sharma"
+    },
+    {
+     "type": "ORGANIZATION",
+     "start": 32,
+     "end": 47,
+     "text": "Hilltop Freight"
+    }
+   ]
+  },
+  {
+   "id": "S037",
+   "text": "Northgate Freight has a warehouse in Coimbatore.",
+   "entities": [
+    {
+     "type": "ORGANIZATION",
+     "start": 0,
+     "end": 17,
+     "text": "Northgate Freight"
+    },
+    {
+     "type": "LOCATION",
+     "start": 37,
+     "end": 47,
+     "text": "Coimbatore"
+    }
+   ]
+  },
+  {
+   "id": "S038",
+   "text": "According to Manoj Joshi, the meeting took place at the Northgate Freight office in Lucknow.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 13,
+     "end": 24,
+     "text": "Manoj Joshi"
+    },
+    {
+     "type": "ORGANIZATION",
+     "start": 56,
+     "end": 73,
+     "text": "Northgate Freight"
+    },
+    {
+     "type": "LOCATION",
+     "start": 84,
+     "end": 91,
+     "text": "Lucknow"
+    }
+   ]
+  },
+  {
+   "id": "S039",
+   "text": "Statement of Aarav Sharma recorded at Ranchi police station.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 13,
+     "end": 25,
+     "text": "Aarav Sharma"
+    },
+    {
+     "type": "LOCATION",
+     "start": 38,
+     "end": 44,
+     "text": "Ranchi"
+    }
+   ]
+  },
+  {
+   "id": "S040",
+   "text": "Arjun Das and Aarav Nair were both employed by Lakeside Logistics.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 0,
+     "end": 9,
+     "text": "Arjun Das"
+    },
+    {
+     "type": "PERSON",
+     "start": 14,
+     "end": 24,
+     "text": "Aarav Nair"
+    },
+    {
+     "type": "ORGANIZATION",
+     "start": 47,
+     "end": 65,
+     "text": "Lakeside Logistics"
+    }
+   ]
+  },
+  {
+   "id": "S041",
+   "text": "Vikram Das met Farhan Joshi near Mysuru on 12 March.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 0,
+     "end": 10,
+     "text": "Vikram Das"
+    },
+    {
+     "type": "PERSON",
+     "start": 15,
+     "end": 27,
+     "text": "Farhan Joshi"
+    },
+    {
+     "type": "LOCATION",
+     "start": 33,
+     "end": 39,
+     "text": "Mysuru"
+    }
+   ]
+  },
+  {
+   "id": "S042",
+   "text": "Zoya Nair, a director of Silverline Textiles, was questioned in Guwahati.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 0,
+     "end": 9,
+     "text": "Zoya Nair"
+    },
+    {
+     "type": "ORGANIZATION",
+     "start": 25,
+     "end": 44,
+     "text": "Silverline Textiles"
+    },
+    {
+     "type": "LOCATION",
+     "start": 64,
+     "end": 72,
+     "text": "Guwahati"
+    }
+   ]
+  },
+  {
+   "id": "S043",
+   "text": "The complainant Nandini Joshi stated that funds were transferred to Bluewater Logistics.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 16,
+     "end": 29,
+     "text": "Nandini Joshi"
+    },
+    {
+     "type": "ORGANIZATION",
+     "start": 68,
+     "end": 87,
+     "text": "Bluewater Logistics"
+    }
+   ]
+  },
+  {
+   "id": "S044",
+   "text": "A van registered to Starlight Holdings Pvt Ltd was seen in Lucknow late at night.",
+   "entities": [
+    {
+     "type": "ORGANIZATION",
+     "start": 20,
+     "end": 46,
+     "text": "Starlight Holdings Pvt Ltd"
+    },
+    {
+     "type": "LOCATION",
+     "start": 59,
+     "end": 66,
+     "text": "Lucknow"
+    }
+   ]
+  },
+  {
+   "id": "S045",
+   "text": "Siddharth Nair called Divya Bhat twice from Kochi.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 0,
+     "end": 14,
+     "text": "Siddharth Nair"
+    },
+    {
+     "type": "PERSON",
+     "start": 22,
+     "end": 32,
+     "text": "Divya Bhat"
+    },
+    {
+     "type": "LOCATION",
+     "start": 44,
+     "end": 49,
+     "text": "Kochi"
+    }
+   ]
+  },
+  {
+   "id": "S046",
+   "text": "Witness Vikram Mehta works at Riverside Agencies.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 8,
+     "end": 20,
+     "text": "Vikram Mehta"
+    },
+    {
+     "type": "ORGANIZATION",
+     "start": 30,
+     "end": 48,
+     "text": "Riverside Agencies"
+    }
+   ]
+  },
+  {
+   "id": "S047",
+   "text": "Lakeside Traders has a warehouse in Nashik.",
+   "entities": [
+    {
+     "type": "ORGANIZATION",
+     "start": 0,
+     "end": 16,
+     "text": "Lakeside Traders"
+    },
+    {
+     "type": "LOCATION",
+     "start": 36,
+     "end": 42,
+     "text": "Nashik"
+    }
+   ]
+  },
+  {
+   "id": "S048",
+   "text": "According to Aarav Reddy, the meeting took place at the Sunrise Enterprises office in Coimbatore.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 13,
+     "end": 24,
+     "text": "Aarav Reddy"
+    },
+    {
+     "type": "ORGANIZATION",
+     "start": 56,
+     "end": 75,
+     "text": "Sunrise Enterprises"
+    },
+    {
+     "type": "LOCATION",
+     "start": 86,
+     "end": 96,
+     "text": "Coimbatore"
+    }
+   ]
+  },
+  {
+   "id": "S049",
+   "text": "Statement of Arjun Kulkarni recorded at Jaipur police station.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 13,
+     "end": 27,
+     "text": "Arjun Kulkarni"
+    },
+    {
+     "type": "LOCATION",
+     "start": 40,
+     "end": 46,
+     "text": "Jaipur"
+    }
+   ]
+  },
+  {
+   "id": "S050",
+   "text": "Aarav Fernandes and Sneha Sharma were both employed by Starlight Enterprises.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 0,
+     "end": 15,
+     "text": "Aarav Fernandes"
+    },
+    {
+     "type": "PERSON",
+     "start": 20,
+     "end": 32,
+     "text": "Sneha Sharma"
+    },
+    {
+     "type": "ORGANIZATION",
+     "start": 55,
+     "end": 76,
+     "text": "Starlight Enterprises"
+    }
+   ]
+  },
+  {
+   "id": "S051",
+   "text": "Gurpreet Sharma met Rohan Fernandes near Coimbatore on 12 March.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 0,
+     "end": 15,
+     "text": "Gurpreet Sharma"
+    },
+    {
+     "type": "PERSON",
+     "start": 20,
+     "end": 35,
+     "text": "Rohan Fernandes"
+    },
+    {
+     "type": "LOCATION",
+     "start": 41,
+     "end": 51,
+     "text": "Coimbatore"
+    }
+   ]
+  },
+  {
+   "id": "S052",
+   "text": "Imran Iyer, a director of Sunrise Enterprises, was questioned in Lucknow.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 0,
+     "end": 10,
+     "text": "Imran Iyer"
+    },
+    {
+     "type": "ORGANIZATION",
+     "start": 26,
+     "end": 45,
+     "text": "Sunrise Enterprises"
+    },
+    {
+     "type": "LOCATION",
+     "start": 65,
+     "end": 72,
+     "text": "Lucknow"
+    }
+   ]
+  },
+  {
+   "id": "S053",
+   "text": "The complainant Sneha Joshi stated that funds were transferred to Sunrise Agencies.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 16,
+     "end": 27,
+     "text": "Sneha Joshi"
+    },
+    {
+     "type": "ORGANIZATION",
+     "start": 66,
+     "end": 82,
+     "text": "Sunrise Agencies"
+    }
+   ]
+  },
+  {
+   "id": "S054",
+   "text": "A van registered to Northgate Finance Ltd was seen in Pune late at night.",
+   "entities": [
+    {
+     "type": "ORGANIZATION",
+     "start": 20,
+     "end": 41,
+     "text": "Northgate Finance Ltd"
+    },
+    {
+     "type": "LOCATION",
+     "start": 54,
+     "end": 58,
+     "text": "Pune"
+    }
+   ]
+  },
+  {
+   "id": "S055",
+   "text": "Kabir Banerjee called Kavya Banerjee twice from Vadodara.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 0,
+     "end": 14,
+     "text": "Kabir Banerjee"
+    },
+    {
+     "type": "PERSON",
+     "start": 22,
+     "end": 36,
+     "text": "Kavya Banerjee"
+    },
+    {
+     "type": "LOCATION",
+     "start": 48,
+     "end": 56,
+     "text": "Vadodara"
+    }
+   ]
+  },
+  {
+   "id": "S056",
+   "text": "Witness Revathi Joshi works at Sunrise Textiles.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 8,
+     "end": 21,
+     "text": "Revathi Joshi"
+    },
+    {
+     "type": "ORGANIZATION",
+     "start": 31,
+     "end": 47,
+     "text": "Sunrise Textiles"
+    }
+   ]
+  },
+  {
+   "id": "S057",
+   "text": "Hilltop Holdings Pvt Ltd has a warehouse in Lucknow.",
+   "entities": [
+    {
+     "type": "ORGANIZATION",
+     "start": 0,
+     "end": 24,
+     "text": "Hilltop Holdings Pvt Ltd"
+    },
+    {
+     "type": "LOCATION",
+     "start": 44,
+     "end": 51,
+     "text": "Lucknow"
+    }
+   ]
+  },
+  {
+   "id": "S058",
+   "text": "According to Zoya Fernandes, the meeting took place at the Greenfield Finance Ltd office in Nashik.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 13,
+     "end": 27,
+     "text": "Zoya Fernandes"
+    },
+    {
+     "type": "ORGANIZATION",
+     "start": 59,
+     "end": 81,
+     "text": "Greenfield Finance Ltd"
+    },
+    {
+     "type": "LOCATION",
+     "start": 92,
+     "end": 98,
+     "text": "Nashik"
+    }
+   ]
+  },
+  {
+   "id": "S059",
+   "text": "Statement of Ishita Singh recorded at Bhopal police station.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 13,
+     "end": 25,
+     "text": "Ishita Singh"
+    },
+    {
+     "type": "LOCATION",
+     "start": 38,
+     "end": 44,
+     "text": "Bhopal"
+    }
+   ]
+  },
+  {
+   "id": "S060",
+   "text": "Ananya Sharma and Gurpreet Iyer were both employed by Lakeside Traders.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 0,
+     "end": 13,
+     "text": "Ananya Sharma"
+    },
+    {
+     "type": "PERSON",
+     "start": 18,
+     "end": 31,
+     "text": "Gurpreet Iyer"
+    },
+    {
+     "type": "ORGANIZATION",
+     "start": 54,
+     "end": 70,
+     "text": "Lakeside Traders"
+    }
+   ]
+  },
+  {
+   "id": "S061",
+   "text": "Meera Patel met Meera Pillai near Patna on 12 March.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 0,
+     "end": 11,
+     "text": "Meera Patel"
+    },
+    {
+     "type": "PERSON",
+     "start": 16,
+     "end": 28,
+     "text": "Meera Pillai"
+    },
+    {
+     "type": "LOCATION",
+     "start": 34,
+     "end": 39,
+     "text": "Patna"
+    }
+   ]
+  },
+  {
+   "id": "S062",
+   "text": "Ishita Mehta, a director of Lakeside Traders, was questioned in Nashik.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 0,
+     "end": 12,
+     "text": "Ishita Mehta"
+    },
+    {
+     "type": "ORGANIZATION",
+     "start": 28,
+     "end": 44,
+     "text": "Lakeside Traders"
+    },
+    {
+     "type": "LOCATION",
+     "start": 64,
+     "end": 70,
+     "text": "Nashik"
+    }
+   ]
+  },
+  {
+   "id": "S063",
+   "text": "The complainant Farhan Menon stated that funds were transferred to Riverside Traders.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 16,
+     "end": 28,
+     "text": "Farhan Menon"
+    },
+    {
+     "type": "ORGANIZATION",
+     "start": 67,
+     "end": 84,
+     "text": "Riverside Traders"
+    }
+   ]
+  },
+  {
+   "id": "S064",
+   "text": "A van registered to Lakeside Holdings Pvt Ltd was seen in Surat late at night.",
+   "entities": [
+    {
+     "type": "ORGANIZATION",
+     "start": 20,
+     "end": 45,
+     "text": "Lakeside Holdings Pvt Ltd"
+    },
+    {
+     "type": "LOCATION",
+     "start": 58,
+     "end": 63,
+     "text": "Surat"
+    }
+   ]
+  },
+  {
+   "id": "S065",
+   "text": "Rohan Singh called Imran Rao twice from Lucknow.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 0,
+     "end": 11,
+     "text": "Rohan Singh"
+    },
+    {
+     "type": "PERSON",
+     "start": 19,
+     "end": 28,
+     "text": "Imran Rao"
+    },
+    {
+     "type": "LOCATION",
+     "start": 40,
+     "end": 47,
+     "text": "Lucknow"
+    }
+   ]
+  },
+  {
+   "id": "S066",
+   "text": "Witness Harish Singh works at Lakeside Freight.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 8,
+     "end": 20,
+     "text": "Harish Singh"
+    },
+    {
+     "type": "ORGANIZATION",
+     "start": 30,
+     "end": 46,
+     "text": "Lakeside Freight"
+    }
+   ]
+  },
+  {
+   "id": "S067",
+   "text": "Silverline Logistics has a warehouse in Kochi.",
+   "entities": [
+    {
+     "type": "ORGANIZATION",
+     "start": 0,
+     "end": 20,
+     "text": "Silverline Logistics"
+    },
+    {
+     "type": "LOCATION",
+     "start": 40,
+     "end": 45,
+     "text": "Kochi"
+    }
+   ]
+  },
+  {
+   "id": "S068",
+   "text": "According to Kavya Pillai, the meeting took place at the Lakeside Exports office in Madurai.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 13,
+     "end": 25,
+     "text": "Kavya Pillai"
+    },
+    {
+     "type": "ORGANIZATION",
+     "start": 57,
+     "end": 73,
+     "text": "Lakeside Exports"
+    },
+    {
+     "type": "LOCATION",
+     "start": 84,
+     "end": 91,
+     "text": "Madurai"
+    }
+   ]
+  },
+  {
+   "id": "S069",
+   "text": "Statement of Zoya Kulkarni recorded at Jaipur police station.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 13,
+     "end": 26,
+     "text": "Zoya Kulkarni"
+    },
+    {
+     "type": "LOCATION",
+     "start": 39,
+     "end": 45,
+     "text": "Jaipur"
+    }
+   ]
+  },
+  {
+   "id": "S070",
+   "text": "Gurpreet Patel and Tanvir Reddy were both employed by Starlight Agencies.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 0,
+     "end": 14,
+     "text": "Gurpreet Patel"
+    },
+    {
+     "type": "PERSON",
+     "start": 19,
+     "end": 31,
+     "text": "Tanvir Reddy"
+    },
+    {
+     "type": "ORGANIZATION",
+     "start": 54,
+     "end": 72,
+     "text": "Starlight Agencies"
+    }
+   ]
+  },
+  {
+   "id": "S071",
+   "text": "Rohan Reddy met Farhan Mehta near Guwahati on 12 March.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 0,
+     "end": 11,
+     "text": "Rohan Reddy"
+    },
+    {
+     "type": "PERSON",
+     "start": 16,
+     "end": 28,
+     "text": "Farhan Mehta"
+    },
+    {
+     "type": "LOCATION",
+     "start": 34,
+     "end": 42,
+     "text": "Guwahati"
+    }
+   ]
+  },
+  {
+   "id": "S072",
+   "text": "Harish Sharma, a director of Coastal Finance Ltd, was questioned in Indore.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 0,
+     "end": 13,
+     "text": "Harish Sharma"
+    },
+    {
+     "type": "ORGANIZATION",
+     "start": 29,
+     "end": 48,
+     "text": "Coastal Finance Ltd"
+    },
+    {
+     "type": "LOCATION",
+     "start": 68,
+     "end": 74,
+     "text": "Indore"
+    }
+   ]
+  },
+  {
+   "id": "S073",
+   "text": "The complainant Revathi Singh stated that funds were transferred to Coastal Finance Ltd.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 16,
+     "end": 29,
+     "text": "Revathi Singh"
+    },
+    {
+     "type": "ORGANIZATION",
+     "start": 68,
+     "end": 87,
+     "text": "Coastal Finance Ltd"
+    }
+   ]
+  },
+  {
+   "id": "S074",
+   "text": "A van registered to Hilltop Exports was seen in Nagpur late at night.",
+   "entities": [
+    {
+     "type": "ORGANIZATION",
+     "start": 20,
+     "end": 35,
+     "text": "Hilltop Exports"
+    },
+    {
+     "type": "LOCATION",
+     "start": 48,
+     "end": 54,
+     "text": "Nagpur"
+    }
+   ]
+  },
+  {
+   "id": "S075",
+   "text": "Sneha Iyer called Arjun Nair twice from Ranchi.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 0,
+     "end": 10,
+     "text": "Sneha Iyer"
+    },
+    {
+     "type": "PERSON",
+     "start": 18,
+     "end": 28,
+     "text": "Arjun Nair"
+    },
+    {
+     "type": "LOCATION",
+     "start": 40,
+     "end": 46,
+     "text": "Ranchi"
+    }
+   ]
+  },
+  {
+   "id": "S076",
+   "text": "Witness Aarav Joshi works at Sunrise Logistics.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 8,
+     "end": 19,
+     "text": "Aarav Joshi"
+    },
+    {
+     "type": "ORGANIZATION",
+     "start": 29,
+     "end": 46,
+     "text": "Sunrise Logistics"
+    }
+   ]
+  },
+  {
+   "id": "S077",
+   "text": "Riverside Textiles has a warehouse in Kochi.",
+   "entities": [
+    {
+     "type": "ORGANIZATION",
+     "start": 0,
+     "end": 18,
+     "text": "Riverside Textiles"
+    },
+    {
+     "type": "LOCATION",
+     "start": 38,
+     "end": 43,
+     "text": "Kochi"
+    }
+   ]
+  },
+  {
+   "id": "S078",
+   "text": "According to Pooja Khan, the meeting took place at the Hilltop Agencies office in Surat.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 13,
+     "end": 23,
+     "text": "Pooja Khan"
+    },
+    {
+     "type": "ORGANIZATION",
+     "start": 55,
+     "end": 71,
+     "text": "Hilltop Agencies"
+    },
+    {
+     "type": "LOCATION",
+     "start": 82,
+     "end": 87,
+     "text": "Surat"
+    }
+   ]
+  },
+  {
+   "id": "S079",
+   "text": "Statement of Siddharth Nair recorded at Indore police station.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 13,
+     "end": 27,
+     "text": "Siddharth Nair"
+    },
+    {
+     "type": "LOCATION",
+     "start": 40,
+     "end": 46,
+     "text": "Indore"
+    }
+   ]
+  },
+  {
+   "id": "S080",
+   "text": "Aarav Joshi and Rohan Nair were both employed by Northgate Holdings Pvt Ltd.",
+   "entities": [
+    {
+     "type": "PERSON",
+     "start": 0,
+     "end": 11,
+     "text": "Aarav Joshi"
+    },
+    {
+     "type": "PERSON",
+     "start": 16,
+     "end": 26,
+     "text": "Rohan Nair"
+    },
+    {
+     "type": "ORGANIZATION",
+     "start": 49,
+     "end": 75,
+     "text": "Northgate Holdings Pvt Ltd"
+    }
+   ]
+  }
+ ]
+}
