@@ -44,8 +44,12 @@ DRISHTI_UI=http://127.0.0.1:8002 python -m pytest tests/e2e -q
 defects closed, cross-browser fixes). Backup taken first, of both the live demo and the test site's own data: `/home/ubuntu/drishti-backups/pre-frontend-redeploy-20261104T132154Z`. The test
 site kept its data copy (10 audit events from testing preserved). The build has no E2E hooks; the test service was restarted.
 
-- **URL:** `http://<server public address>:8181/` (nginx site `dristinet-frontend-test` → app on 127.0.0.1:8100). Port 8181 may
-  need to be allowed in the cloud firewall / security group.
+- **URL (public):** `http://test.65.0.102.181.nip.io/` — nginx site `dristinet-frontend-test` on **port 80**, selected by host
+  name (nip.io maps that name to 65.0.102.181), → app on 127.0.0.1:8100. The plain IP `http://65.0.102.181/` still goes to the
+  live demo (its `default_server`). Port 8181 was abandoned: from outside only 22/80/443 are reachable (the server's ufw also
+  blocks 8181; 5051/8000/8080 are blocked outside the server even though ufw allows them). The site also listens on
+  172.31.41.122:8000 (reachable inside the AWS network only). **No firewall rule was added or changed.**
+  Verified 2026-11-04 through the public URL in Chromium, Firefox and WebKit.
 - **App:** transient systemd unit `dristinet-frontend-test` (code from this repo at `b005108`).
 - **Data:** a *copy* of the live demo's database and evidence files in `/home/ubuntu/drishti-test/frontend/`; changes made
   while testing never reach the live demo. It uses a separate token key: test-site logins are refused by the live site (verified, 401).
@@ -55,7 +59,7 @@ site kept its data copy (10 audit events from testing preserved). The build has 
 **Stop and remove** (restores the server to how it was before the test):
 ```bash
 sudo systemctl stop dristinet-frontend-test
-sudo rm /etc/nginx/sites-enabled/dristinet-frontend-test /etc/nginx/sites-available/dristinet-frontend-test
+sudo rm /etc/nginx/sites-enabled/dristinet-frontend-test /etc/nginx/sites-available/dristinet-frontend-test   # also frees port 80 host name and 172.31.41.122:8000
 sudo nginx -t && sudo systemctl reload nginx
 # optional: rm -r /home/ubuntu/drishti-test/frontend   (the test data copy)
 ```
