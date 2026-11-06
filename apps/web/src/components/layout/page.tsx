@@ -1,10 +1,44 @@
-import type { ReactNode } from "react";
+import { Component, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { AlertCircle, ChevronRight, Inbox, Lock, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 /** Shared page building blocks, so every page has the same header, spacing and loading/empty/error/denied states. */
+
+/** React error boundary: catches unhandled render errors and shows ErrorState instead of a blank crash.
+ *  Usage: wrap each feature route with <RouteErrorBoundary> in router.tsx.
+ */
+interface ErrorBoundaryState { error: Error | null }
+export class RouteErrorBoundary extends Component<{ children: ReactNode }, ErrorBoundaryState> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { error: null };
+  }
+
+  static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+    return { error };
+  }
+
+  override componentDidCatch(error: Error, info: React.ErrorInfo): void {
+    console.error("[RouteErrorBoundary] unhandled render error:", error, info.componentStack);
+  }
+
+  override render(): ReactNode {
+    if (this.state.error) {
+      return (
+        <div className="p-6">
+          <ErrorState
+            title="An unexpected error occurred"
+            message="This section could not be displayed. The error has been logged."
+            onRetry={() => this.setState({ error: null })}
+          />
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 export interface Crumb { label: string; to?: string }
 

@@ -10,12 +10,15 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import config
+from .core.exceptions import DristiBaseError
+from .core.logging import configure_logging
 from .db import engine, init_db
 # Import integrity service before init_db so LedgerAnchor is registered with Base.metadata
 from .services import integrity as _integrity_svc  # noqa: F401 (side-effect: table registration)
 from .routes import audit_routes, auth_routes, case_routes, demo_routes, evidence_routes, graph_routes, integrity_routes, report_routes, review_routes
 from .services import neo4j_store
 
+configure_logging()
 logger = logging.getLogger("drishti.startup")
 
 init_db()
@@ -44,6 +47,22 @@ async def trace_middleware(request: Request, call_next):
     response.headers["X-Trace-Id"] = request.state.trace_id
     response.headers["X-Content-Type-Options"] = "nosniff"
     return response
+
+
+@app.exception_handler(DristiBaseError)
+async def domain_error_handler(request: Request, exc: DristiBaseError):
+    """Translate domain exceptions to standard API error responses.
+
+    Services raise DristiBaseError subclasses; this handler converts them to the
+    consistent {"error": {"code": ..., "message": ..., "trace_id": ...}} format
+    (see docs/engineering/ERROR_HANDLING_STANDARD.md).
+    """
+    trace_id = getattr(request.state, "trace_id", None)
+    return JSONResponse(
+        status_code=exc.http_status,
+        content={"error": {"code": exc.code, "message": exc.safe_message(), "trace_id": trace_id,
+                            "details": exc.detail}},
+    )
 
 
 @app.exception_handler(ValueError)
