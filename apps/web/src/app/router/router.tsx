@@ -17,6 +17,7 @@ import { CaseAuditTab } from "@/features/cases/audit/case-audit-view";
 import { ReportsPage } from "@/features/reports/reports-page";
 import { ProfilePage } from "@/features/profile/profile-page";
 import { GlobalAuditPage } from "@/features/audit/global-audit-page";
+import { UserManagementPage } from "@/features/admin/user-management-page";
 import { NotFoundPage } from "@/features/not-found/not-found-page";
 import { RouteErrorPage } from "@/features/not-found/route-error-page";
 
@@ -75,6 +76,7 @@ export const router = createBrowserRouter([
       { path: "profile", element: <ProfilePage /> },
       { path: "settings", element: <Navigate to="/profile" replace /> },
       { path: "audit", element: <GlobalAuditPage /> },
+      { path: "admin/users", element: <UserManagementPage /> },
       { path: "*", element: <NotFoundPage /> },
     ],
   },

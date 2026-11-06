@@ -14,7 +14,8 @@ export type Capability =
   | "listAnchors"     // GET /cases/{id}/integrity/anchors
   | "report"          // POST /cases/{id}/report and /report/court-pdf
   | "globalAudit"     // GET /audit
-  | "createCase";     // POST /cases
+  | "createCase"      // POST /cases
+  | "manageUsers";    // POST/PATCH /users, /users/{id}/deactivate|reactivate|reset-password
 
 const RULES: Record<Capability, readonly string[]> = {
   upload: ["EVIDENCE_OFFICER", "INVESTIGATOR", "ADMIN"],
@@ -26,6 +27,7 @@ const RULES: Record<Capability, readonly string[]> = {
   report: ["INVESTIGATOR", "REVIEWER", "ANALYST", "ADMIN"],
   globalAudit: ["AUDITOR", "ADMIN"],
   createCase: ["INVESTIGATOR", "ADMIN"],
+  manageUsers: ["ADMIN"],
 };
 
 const ROLE_LABEL: Record<string, string> = {
@@ -36,6 +38,9 @@ const ROLE_LABEL: Record<string, string> = {
   REVIEWER: "Reviewer",
   ANALYST: "Analyst",
 };
+
+/** The 6 roles the backend accepts (models.ROLES) — for building a role picker. */
+export const ALL_ROLES = Object.keys(ROLE_LABEL);
 
 export function can(role: string | undefined | null, capability: Capability): boolean {
   return !!role && RULES[capability].includes(role);
@@ -61,6 +66,7 @@ export const CAPABILITY_TEXT: Record<Capability, string> = {
   report: "Generate case reports and the integrity-reference PDF",
   globalAudit: "View the audit log across all cases",
   createCase: "Create cases",
+  manageUsers: "Create, update and deactivate user accounts",
 };
 
 export const ALL_CAPABILITIES = Object.keys(RULES) as Capability[];
