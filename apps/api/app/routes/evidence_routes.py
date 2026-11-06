@@ -10,6 +10,7 @@ from ..models import Claim, Evidence, Job, User
 from ..services import extract as extract_svc
 from ..services import pipeline, storage
 from ..services.audit import record_audit
+from ..services.evidence_service import build_context_window, mark_object_missing
 from ..services.masking import mask_text
 from .listing import MAX_LIMIT, like_pattern, page
 
@@ -143,7 +144,7 @@ def verify(evidence_id: str, request: Request, user: User = Depends(current_user
     """Recompute the stored file's SHA-256 and compare with the manifest."""
     ev = _get_ev(db, user, evidence_id, request, action="EVIDENCE_VERIFY")
     if not storage.exists(ev.storage_path):
-        _mark_object_missing(db, ev, user, request)  # DEF-042: was reported without changing state
+        _do_mark_object_missing(db, ev, user, request)  # DEF-042: was reported without changing state
         return {"evidence_id": evidence_id, "match": False, "status": ev.status, "reason": "stored object missing"}
     ok, actual = storage.verify_hash(ev.storage_path, ev.sha256)
     record_audit(db, request.state.trace_id, user.user_id, "HASH_VERIFY", "EVIDENCE", evidence_id, ev.case_id, outcome="OK" if ok else "ERROR",
@@ -165,28 +166,9 @@ def context(evidence_id: str, request: Request, row: int | None = None, page: in
     """Return the source lines around a locator (masked by default) so a graph edge can be traced to its origin."""
     ev = _authorize_evidence_read(db, user, evidence_id, request, action="EVIDENCE_CONTEXT")
     data = storage.read_bytes(ev.storage_path)
-    ok = True
-    if ev.extension == ".pdf":
-        pages = _pdf_pages(data)
-        pno = page or 1
-        lines = pages[pno - 1] if 0 < pno <= len(pages) else []
-        centre = (line or 1) - 1
-    else:
-        lines = data.decode("utf-8", "replace").splitlines()
-        if json_path:
-            import re
-            m = re.match(r"\$\[(\d+)\]", json_path)
-            idx = int(m.group(1)) if m else 0
-            import json as _json
-            obj = _json.loads(data.decode("utf-8", "replace"))
-            rec = obj[idx] if isinstance(obj, list) and idx < len(obj) else None
-            text = _json.dumps(rec, indent=1) if rec is not None else ""
-            return {"evidence_id": evidence_id, "filename": ev.filename, "hash_match": ok, "locator": {"json_path": json_path},
-                    "lines": [{"n": i + 1, "text": mask_text(t), "hit": True} for i, t in enumerate(text.splitlines())]}
-        centre = (row or line or 1) - 1
-    lo, hi = max(0, centre - window), min(len(lines), centre + window + 1)
-    out = [{"n": i + 1, "text": mask_text(lines[i]), "hit": i == centre} for i in range(lo, hi)]
-    return {"evidence_id": evidence_id, "filename": ev.filename, "hash_match": ok, "locator": {"row": row, "page": page, "line": line}, "lines": out}
+    ctx = build_context_window(data, ev.extension, row=row, page=page, line=line,
+                               json_path=json_path, window=window, mask=True)
+    return {"evidence_id": evidence_id, "filename": ev.filename, "hash_match": True, **ctx}
 
 
 from ..schemas import ContextRevealIn, DownloadIn
@@ -199,41 +181,16 @@ def context_reveal(evidence_id: str, body: ContextRevealIn, request: Request, us
         record_audit(db, request.state.trace_id, user.user_id, "UNMASK", "EVIDENCE", evidence_id, case_id, outcome="DENIED", detail={"reason": body.reason, "why": "role not permitted"})
         db.commit()
         raise HTTPException(403, f"role {user.role} may not reveal masked values")
-    
+
     ev = _authorize_evidence_read(db, user, evidence_id, request, action="UNMASK")
     data = storage.read_bytes(ev.storage_path)
-    ok = True
-    
     row, page, line, json_path, window = body.row, body.page, body.line, body.json_path, body.window
-    
-    if ev.extension == ".pdf":
-        pages = _pdf_pages(data)
-        pno = page or 1
-        lines = pages[pno - 1] if 0 < pno <= len(pages) else []
-        centre = (line or 1) - 1
-    else:
-        lines = data.decode("utf-8", "replace").splitlines()
-        if json_path:
-            import re
-            m = re.match(r"\$\[(\d+)\]", json_path)
-            idx = int(m.group(1)) if m else 0
-            import json as _json
-            obj = _json.loads(data.decode("utf-8", "replace"))
-            rec = obj[idx] if isinstance(obj, list) and idx < len(obj) else None
-            text = _json.dumps(rec, indent=1) if rec is not None else ""
-            record_audit(db, request.state.trace_id, user.user_id, "UNMASK", "EVIDENCE", evidence_id, ev.case_id, detail={"reason": body.reason, "locator": {"json_path": json_path}})
-            db.commit()
-            return {"evidence_id": evidence_id, "filename": ev.filename, "hash_match": ok, "locator": {"json_path": json_path},
-                    "lines": [{"n": i + 1, "text": t, "hit": True} for i, t in enumerate(text.splitlines())]}
-        centre = (row or line or 1) - 1
-        
-    lo, hi = max(0, centre - window), min(len(lines), centre + window + 1)
-    out = [{"n": i + 1, "text": lines[i], "hit": i == centre} for i in range(lo, hi)]
-    
-    record_audit(db, request.state.trace_id, user.user_id, "UNMASK", "EVIDENCE", evidence_id, ev.case_id, detail={"reason": body.reason, "locator": {"row": row, "page": page, "line": line}})
+    ctx = build_context_window(data, ev.extension, row=row, page=page, line=line,
+                               json_path=json_path, window=window, mask=False)
+    record_audit(db, request.state.trace_id, user.user_id, "UNMASK", "EVIDENCE", evidence_id, ev.case_id,
+                 detail={"reason": body.reason, "locator": ctx["locator"]})
     db.commit()
-    
-    return {"evidence_id": evidence_id, "filename": ev.filename, "hash_match": ok, "locator": {"row": row, "page": page, "line": line}, "lines": out}
+    return {"evidence_id": evidence_id, "filename": ev.filename, "hash_match": True, **ctx}
 
 
 @router.post("/evidence/{evidence_id}/download")
@@ -258,24 +215,9 @@ def evidence_claims(evidence_id: str, request: Request, limit: int = 100, user: 
     claims = db.query(Claim).filter_by(evidence_id=ev.evidence_id).order_by(Claim.created_at).limit(min(limit, 500)).all()
     return [claim_out(c, db) for c in claims]
 
-def _pdf_pages(data: bytes) -> list[list[str]]:
-    """Text lines per page. DEF-047: a corrupt PDF (it can only reach EXTRACTION_FAILED) raised inside pypdf -> 500."""
-    import io
-    from pypdf import PdfReader
-    try:
-        return [(p.extract_text() or "").splitlines() for p in PdfReader(io.BytesIO(data)).pages]
-    except Exception:
-        raise HTTPException(422, "source document could not be parsed; the original is preserved unchanged")
-
-
-def _mark_object_missing(db: Session, ev: Evidence, user: User, request: Request) -> None:
-    """A stored object that has disappeared is an integrity failure (docs/context.md §6.1): block normal use,
-    keep the record, audit it. Recorded as INTEGRITY_MISMATCH with an explicit reason (decision DEC-011)."""
-    if ev.status != "INTEGRITY_MISMATCH":
-        ev.status = "INTEGRITY_MISMATCH"
-        ev.error = "stored object missing"
-        record_audit(db, request.state.trace_id, user.user_id, "INTEGRITY_MISMATCH", "EVIDENCE", ev.evidence_id, ev.case_id,
-                     outcome="ERROR", detail={"expected": ev.sha256, "actual": None, "reason": "stored object missing"})
+def _do_mark_object_missing(db: Session, ev: Evidence, user: User, request: Request) -> None:
+    """Route-layer wrapper for mark_object_missing that commits the session."""
+    mark_object_missing(db, ev, user.user_id, request.state.trace_id)
     db.commit()
 
 
@@ -290,7 +232,7 @@ def _authorize_evidence_read(db: Session, user: User, evidence_id: str, request:
     
     # Always verify integrity on read. DEF-042: a missing object used to raise inside verify_hash -> HTTP 500.
     if not storage.exists(ev.storage_path):
-        _mark_object_missing(db, ev, user, request)
+        _do_mark_object_missing(db, ev, user, request)
         raise HTTPException(409, "evidence integrity verification failed: stored object missing")
     ok, actual_hash = storage.verify_hash(ev.storage_path, ev.sha256)
     if not ok:
