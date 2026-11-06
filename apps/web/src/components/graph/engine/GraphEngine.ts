@@ -11,8 +11,6 @@ import type { EvidenceTier } from "@/constants/evidenceTiers";
 import { maskPersonName, maskSensitiveText } from "@/lib/pii";
 import { exposeForTests } from "@/lib/test-hooks";
 import {
-  KNOWN_ENTITY_TYPES,
-  KNOWN_RELATIONSHIP_TYPES,
   isNodeVisibleForFilters,
   isEdgeVisibleForFilters,
 } from "@/lib/graphFilters";
