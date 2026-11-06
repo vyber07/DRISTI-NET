@@ -20,12 +20,12 @@ function getEntityIcon(type: string) {
   }
 }
 
-export function EntityDrawer({ onFocusNode }: { onFocusNode?: (nodeId: string) => void }) {
-  const navigate = useNavigate();
+export function EntityDrawer({ onFocusNode: _onFocusNode }: { onFocusNode?: (nodeId: string) => void }) {
+  const _navigate = useNavigate();
   const { selectedEntityDetail: entity, clearSelection, edges, nodes, selectEdge } = useGraphStore();
   const { openRevealModal, isRevealed, getRevealedValue } = useRevealStore();
   const [showAdvanced, setShowAdvanced] = useState(false);
-  const [isExpanding, setIsExpanding] = useState(false);
+  const [_isExpanding, _setIsExpanding] = useState(false);
 
   if (!entity) return null;
 

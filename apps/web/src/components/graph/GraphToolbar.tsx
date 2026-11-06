@@ -45,7 +45,6 @@ export function GraphToolbar({
     isFilterPanelOpen,
     toggleTier,
     toggleEntityType,
-    setOnlyContradictions,
     setSearchTerm,
     selectNode,
     toggleFilterPanel,

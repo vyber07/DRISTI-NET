@@ -36,7 +36,7 @@ export function LoginPage() {
       } else {
         setError(result.error || "Authentication failed");
       }
-    } catch (e: any) {
+    } catch (_e: unknown) {
       setError("An unexpected error occurred during login.");
     } finally {
       setIsSubmitting(false);

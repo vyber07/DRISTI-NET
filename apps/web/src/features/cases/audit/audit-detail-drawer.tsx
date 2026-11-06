@@ -7,15 +7,6 @@ import { useAuditStore } from "@/stores/auditStore";
 import { cn } from "@/lib/utils";
 import { useOptionalCase } from "@/features/cases/case-context";
 
-function maskIpAddress(ip: string): string {
-  if (!ip || ip.includes("No IP")) return "(No IP Logged)";
-  const parts = ip.split(".");
-  if (parts.length === 4) {
-    return `${parts[0]}.${parts[1]}.***.***`;
-  }
-  return "***.***.***.***";
-}
-
 function maskPhoneNumbersInText(text: string): string {
   if (!text) return text;
   return text.replace(/\b(\+?91[\s-]?)?([6-9]\d{2})[\s-]?(\d{3})[\s-]?(\d{4})\b/g, "$1$2-***-****");
