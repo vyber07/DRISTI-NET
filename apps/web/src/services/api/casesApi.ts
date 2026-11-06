@@ -1,7 +1,7 @@
 import { get, getPaged, post, type ApiResponse, type Paged } from "./real_client";
 import type { CaseDetail, CaseSummary } from "@/types/case";
 
-function mapBackendCaseToFrontend(backend: any): CaseDetail {
+function mapBackendCaseToFrontend(backend: Record<string, unknown>): CaseDetail {
   return {
     id: backend.case_id || "",
     title: backend.title || "Untitled Case",

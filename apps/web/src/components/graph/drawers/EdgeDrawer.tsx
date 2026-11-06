@@ -9,7 +9,7 @@ import { useProvenanceStore } from "@/stores/provenanceStore";
 export function EdgeDrawer() {
   const { selectedRelationshipDetail: rel, clearSelection } = useGraphStore();
   const { openProvenanceForRecord } = useProvenanceStore();
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  const [_showAdvanced, _setShowAdvanced] = useState(false);
 
   if (!rel) return null;
 
