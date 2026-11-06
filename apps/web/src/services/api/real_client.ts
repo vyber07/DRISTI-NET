@@ -73,6 +73,7 @@ export async function getPaged<T = any>(path: string, params: Record<string, str
 
 export const get = <T = any>(p: string) => api<T>(p)
 export const post = <T = any>(p: string, body?: unknown) => api<T>(p, { method: 'POST', body: body === undefined ? undefined : JSON.stringify(body) })
+export const patch = <T = any>(p: string, body?: unknown) => api<T>(p, { method: 'PATCH', body: body === undefined ? undefined : JSON.stringify(body) })
 export const postForm = <T = any>(p: string, fd: FormData) => api<T>(p, { method: 'POST', body: fd })
 
 export function currentUser(): User | null { try { const s = localStorage.getItem(USER_KEY); return s ? JSON.parse(s) : null } catch { return null } }

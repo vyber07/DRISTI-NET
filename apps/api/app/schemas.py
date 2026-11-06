@@ -2,6 +2,10 @@ from __future__ import annotations
 
 from pydantic import BaseModel, Field
 
+from .models import ROLES
+
+_ROLE_PATTERN = "^(" + "|".join(ROLES) + ")$"
+
 
 # ---------------------------------------------------------------------------
 # Output schemas — these mirror the dict shapes returned by helper functions
@@ -142,3 +146,22 @@ class ReportIn(BaseModel):
 class CourtPdfIn(BaseModel):
     """Request body for the integrity-reference PDF dossier endpoint."""
     analyst_comments: str = ""
+
+
+class UserCreateIn(BaseModel):
+    username: str = Field(min_length=3, max_length=40, pattern=r"^[a-z0-9_.-]+$")
+    display_name: str = Field(min_length=2, max_length=120, pattern=r"\S")
+    role: str = Field(pattern=_ROLE_PATTERN)
+    jurisdiction: str = Field(default="", max_length=120)
+    password: str = Field(min_length=8, max_length=200)
+
+
+class UserUpdateIn(BaseModel):
+    """Partial update — only the fields given are changed."""
+    display_name: str | None = Field(default=None, min_length=2, max_length=120, pattern=r"\S")
+    role: str | None = Field(default=None, pattern=_ROLE_PATTERN)
+    jurisdiction: str | None = Field(default=None, max_length=120)
+
+
+class PasswordResetIn(BaseModel):
+    new_password: str = Field(min_length=8, max_length=200)
