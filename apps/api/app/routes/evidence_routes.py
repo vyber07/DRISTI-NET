@@ -1,17 +1,20 @@
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
 from fastapi.responses import Response
 from fastapi import Response as FastAPIResponse
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from ..auth import authorize_case, current_user, require_roles
 from ..db import get_db
 from ..models import Claim, Evidence, Job, User
+from ..schemas import ContextRevealIn, DownloadIn
 
 from ..services import extract as extract_svc
 from ..services import pipeline, storage
 from ..services.audit import record_audit
 from ..services.evidence_service import build_context_window, mark_object_missing
 from ..services.masking import mask_text
+from .graph_routes import claim_out
 from .listing import MAX_LIMIT, like_pattern, page
 
 router = APIRouter(tags=["evidence"])
@@ -110,7 +113,6 @@ def list_evidence(case_id: str, request: Request, response: FastAPIResponse, q: 
 def evidence_summary(case_id: str, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db)):
     """Counts by status for the whole case (filters and the overview need them without loading every row)."""
     authorize_case(db, user, case_id, request)
-    from sqlalchemy import func
     rows = db.query(Evidence.status, func.count()).filter_by(case_id=case_id).group_by(Evidence.status).all()
     return {"case_id": case_id, "total": sum(n for _, n in rows), "by_status": {s: n for s, n in rows}}
 
@@ -171,7 +173,6 @@ def context(evidence_id: str, request: Request, row: int | None = None, page: in
     return {"evidence_id": evidence_id, "filename": ev.filename, "hash_match": True, **ctx}
 
 
-from ..schemas import ContextRevealIn, DownloadIn
 @router.post("/evidence/{evidence_id}/context/reveal")
 def context_reveal(evidence_id: str, body: ContextRevealIn, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db)):
     """Authorized unmasking of evidence context. Requires a reason, is role-gated, and writes an UNMASK audit event."""
@@ -211,7 +212,6 @@ def download(evidence_id: str, body: DownloadIn, request: Request, user: User = 
 @router.get("/evidence/{evidence_id}/claims")
 def evidence_claims(evidence_id: str, request: Request, limit: int = 100, user: User = Depends(current_user), db: Session = Depends(get_db)):
     ev = _get_ev(db, user, evidence_id, request)
-    from .graph_routes import claim_out
     claims = db.query(Claim).filter_by(evidence_id=ev.evidence_id).order_by(Claim.created_at).limit(min(limit, 500)).all()
     return [claim_out(c, db) for c in claims]
 
