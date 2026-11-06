@@ -53,7 +53,7 @@ export interface EntityDetail {
   label: string;
   masked: boolean;
   attributes: Record<string, string>;
-  access_class: number;
+  access_class: string;
   cross_case?: {
     visible_cases: string[];
     restricted_case_count: number;
@@ -229,6 +229,6 @@ export interface ContextResponse {
   evidence_id: string;
   filename: string;
   hash_match: boolean;
-  locator: Record<string, any>;
+  locator: Record<string, unknown>;
   lines: ContextLine[];
 }

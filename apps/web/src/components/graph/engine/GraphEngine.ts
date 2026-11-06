@@ -1,5 +1,4 @@
 import Graph from "graphology";
-import { recordedTimeMs } from "@/lib/utils";
 import forceAtlas2 from "graphology-layout-forceatlas2";
 import Sigma from "sigma";
 import type {
@@ -8,10 +7,13 @@ import type {
   EntityType,
   RelationshipType,
 } from "@/types/entity";
-import { RELATIONSHIP_TYPES } from "@/types/entity";
 import type { EvidenceTier } from "@/constants/evidenceTiers";
 import { maskPersonName, maskSensitiveText } from "@/lib/pii";
 import { exposeForTests } from "@/lib/test-hooks";
+import {
+  isNodeVisibleForFilters,
+  isEdgeVisibleForFilters,
+} from "@/lib/graphFilters";
 
 export interface GraphEngineFilters {
   activeEntityTypes: Set<EntityType>;
@@ -33,9 +35,6 @@ export interface GraphEngineCallbacks {
   onEdgeEnter?: (edgeId: string) => void;
   onEdgeLeave?: () => void;
 }
-
-const KNOWN_RELATIONSHIP_TYPES: ReadonlySet<string> = new Set(RELATIONSHIP_TYPES);
-const KNOWN_ENTITY_TYPES: ReadonlySet<string> = new Set(["PERSON", "ORGANIZATION", "LOCATION", "EVENT", "FINANCIAL", "CYBER"]);
 
 // DEF-062: CORE_RELATIONSHIP_IDS (hard-coded mock edge ids "R-01".."R-17") removed; real edge ids never matched them.
 
@@ -449,25 +448,10 @@ export class GraphEngine {
   /** Checks if a node is currently visible based on active filters */
   public isNodeVisible(nodeId: string): boolean {
     if (!this.graph.hasNode(nodeId)) return false;
-    const attr = this.graph.getNodeAttributes(nodeId);
-    const entityType = attr.entityType as EntityType;
-
-    // Filter by entity type. Hide only explicitly deselected KNOWN types; an unmapped backend kind (e.g. VEHICLE)
-    // stays visible rather than silently disappearing (30 of 56 CASE-0001 nodes were hidden this way).
-    if (KNOWN_ENTITY_TYPES.has(entityType) && !this.filters.activeEntityTypes.has(entityType)) return false;
-
-
-    // Filter by search term
-    const search = this.filters.searchTerm.trim().toLowerCase();
-    if (search) {
-      const rawLabel = ((attr.maskedLabel || attr.label || "") as string).toLowerCase();
-      const safeLabel = (entityType === "PERSON" ? maskPersonName(rawLabel) : maskSensitiveText(rawLabel)).toLowerCase();
-      if (!rawLabel.includes(search) && !safeLabel.includes(search)) {
-        return false;
-      }
-    }
-
-    return true;
+    return isNodeVisibleForFilters(
+      this.graph.getNodeAttributes(nodeId) as GraphNodeAttributes,
+      this.filters,
+    );
   }
 
   /**
@@ -476,57 +460,12 @@ export class GraphEngine {
    */
   public isEdgeVisible(edgeId: string): boolean {
     if (!this.graph.hasEdge(edgeId)) return false;
-    const attr = this.graph.getEdgeAttributes(edgeId);
-    const source = this.graph.source(edgeId);
-    const target = this.graph.target(edgeId);
-
-    // CRITICAL: Both endpoints must be visible
-    if (!this.isNodeVisible(source) || !this.isNodeVisible(target)) {
-      return false;
-    }
-
-
-    // Filter by relationship type
-    // Hide only types the user has explicitly deselected. A rel_type outside the known vocabulary is SHOWN, so a
-    // frontend/backend vocabulary drift can never again silently hide every relationship.
-    const relType = attr.relationshipType as RelationshipType;
-    if (
-      this.filters.activeRelationshipTypes &&
-      KNOWN_RELATIONSHIP_TYPES.has(relType) &&
-      !this.filters.activeRelationshipTypes.has(relType)
-    ) {
-      return false;
-    }
-
-
-    // Filter by date range
-    const edgeTimeStr = (attr.firstSeen || attr.lastSeen || attr.timestamp) as string | undefined;
-    const timestamp = recordedTimeMs(edgeTimeStr); // FE-058: same time base as the slider
-    if (this.filters.dateRange && !isNaN(timestamp)) {
-      if (timestamp < this.filters.dateRange[0] || timestamp > this.filters.dateRange[1]) {
-        return false;
-      }
-    }
-
-    // Filter by temporal playback
-    if (!isNaN(timestamp) && timestamp > this.filters.currentTimestamp) {
-      return false;
-    }
-
-    // Filter by contradiction
-    const isContradiction = Boolean(attr.hasContradiction);
-    if (this.filters.onlyContradictions && !isContradiction) {
-      return false;
-    }
-
-    // Minimum extraction confidence (DEF-063: the slider existed but was never applied). Edges with no recorded
-    // confidence are kept rather than hidden.
-    const minConf = this.filters.minConfidence ?? 0;
-    if (minConf > 0 && typeof attr.minConfidence === "number" && (attr.minConfidence as number) < minConf) {
-      return false;
-    }
-
-    return true;
+    return isEdgeVisibleForFilters(
+      this.graph.getEdgeAttributes(edgeId) as GraphEdgeAttributes,
+      this.isNodeVisible(this.graph.source(edgeId)),
+      this.isNodeVisible(this.graph.target(edgeId)),
+      this.filters,
+    );
   }
 
   /**

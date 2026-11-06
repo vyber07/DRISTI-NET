@@ -5,7 +5,7 @@ from sqlalchemy.orm import Session
 from ..auth import authorize_case, current_user, require_roles
 from ..db import get_db
 from ..models import Case, CaseAssignment, Evidence, MatchCandidate, User
-from ..schemas import AssignIn, CaseIn
+from ..schemas import AssignIn, CaseIn, CaseOut
 from ..services.audit import record_audit
 from .listing import MAX_LIMIT, page, text_filter
 
@@ -26,7 +26,7 @@ def case_out(c: Case, db: Session) -> dict:
             "pending_reviews": db.query(MatchCandidate).filter_by(case_id=c.case_id, state="REVIEW_REQUIRED").count()}
 
 
-@router.get("/cases")
+@router.get("/cases", response_model=list[CaseOut])
 def list_cases(response: Response, q: str | None = Query(None, max_length=200), awaiting_review: bool = False,
                limit: int | None = Query(None, ge=1, le=MAX_LIMIT), offset: int = Query(0, ge=0),
                user: User = Depends(current_user), db: Session = Depends(get_db)):
@@ -42,7 +42,7 @@ def list_cases(response: Response, q: str | None = Query(None, max_length=200), 
     return [case_out(c, db) for c in page(query.order_by(Case.case_id), response, limit, offset)]
 
 
-@router.post("/cases", status_code=201)
+@router.post("/cases", status_code=201, response_model=CaseOut)
 def create_case(body: CaseIn, request: Request, user: User = Depends(require_roles("INVESTIGATOR", "ADMIN")), db: Session = Depends(get_db)):
     if db.get(Case, body.case_id):
         raise HTTPException(409, "case_id already exists")
@@ -56,7 +56,7 @@ def create_case(body: CaseIn, request: Request, user: User = Depends(require_rol
     return case_out(c, db)
 
 
-@router.get("/cases/{case_id}")
+@router.get("/cases/{case_id}", response_model=CaseOut)
 def get_case(case_id: str, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db)):
     c = authorize_case(db, user, case_id, request)
     record_audit(db, request.state.trace_id, user.user_id, "CASE_VIEW", "CASE", case_id, case_id)
@@ -64,7 +64,7 @@ def get_case(case_id: str, request: Request, user: User = Depends(current_user),
     return case_out(c, db)
 
 
-@router.post("/cases/{case_id}/assign")
+@router.post("/cases/{case_id}/assign", response_model=CaseOut)
 def assign(case_id: str, body: AssignIn, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db)):
     c = authorize_case(db, user, case_id, request, action="CASE_ASSIGN")
     if user.role != "ADMIN" and c.owner_id != user.user_id:
