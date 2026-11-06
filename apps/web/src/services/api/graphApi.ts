@@ -13,14 +13,51 @@ export interface CaseGraphResponse {
   };
 }
 
+/** Raw node shape returned by the backend /graph endpoint (before frontend mapping). */
+interface BackendRawNode {
+  entity_id: string;
+  label?: string;
+  kind: string;
+  degree?: number;
+  masked?: boolean;
+  [key: string]: unknown;
+}
+
+/** Raw graph envelope returned by the backend /graph endpoint. */
+interface BackendRawGraph {
+  case_id?: string;
+  case_title?: string;
+  truncated?: boolean;
+  total_nodes?: number;
+  projection_stale?: boolean;
+  nodes?: BackendRawNode[];
+  edges?: BackendRawEdge[];
+}
+
+/** Raw edge shape returned by the backend /graph endpoint (before frontend mapping). */
+interface BackendRawEdge {
+  source: string;
+  target: string;
+  rel_type: string;
+  count?: number;
+  weight?: number;
+  min_confidence?: number;
+  evidence_ids?: string[];
+  claim_ids?: string[];
+  first_seen?: string | null;
+  last_seen?: string | null;
+  relevance?: string;
+  [key: string]: unknown;
+}
+
 // Backend node kinds (graph/README.md) -> UI entity categories. The UI groups phones/devices as CYBER and accounts
 // as FINANCIAL; the original kind is kept on `sourceKind`. Unmapped kinds (VEHICLE, CASE, ...) pass through as-is.
 const KIND_TO_ENTITY_TYPE: Record<string, string> = { PHONE: "CYBER", DEVICE: "CYBER", ACCOUNT: "FINANCIAL" };
 
 export async function getCaseGraph(caseId: string): Promise<ApiResponse<CaseGraphResponse>> {
-  const rawData = await get(`/cases/${caseId}/graph`);
-  
-  const mappedNodes = (rawData.nodes || []).map((n: any) => ({
+  const rawData = await get<BackendRawGraph>(`/cases/${caseId}/graph`);
+
+  const mappedNodes = (rawData.nodes || []).map((n: BackendRawNode) => ({
     id: n.entity_id,
     label: n.label || n.entity_id,
     x: Math.random() * 100,
@@ -33,7 +70,7 @@ export async function getCaseGraph(caseId: string): Promise<ApiResponse<CaseGrap
     isMasked: !!n.masked,
   }));
 
-  const mappedEdges = (rawData.edges || []).map((e: any, i: number) => ({
+  const mappedEdges = (rawData.edges || []).map((e: BackendRawEdge, i: number) => ({
     id: `${e.source}-${e.target}-${e.rel_type}-${i}`,
     source: e.source,
     target: e.target,
