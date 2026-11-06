@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from ..auth import authorize_case, current_user, require_roles
 from ..db import get_db
 from ..models import Claim, Evidence, Job, User
-from ..schemas import ContextRevealIn, DownloadIn
+from ..schemas import ContextRevealIn, DownloadIn, EvidenceOut
 
 from ..services import extract as extract_svc
 from ..services import pipeline, storage
@@ -35,7 +35,7 @@ def evidence_out(ev: Evidence, db: Session | None = None) -> dict:
     return d
 
 
-@router.post("/cases/{case_id}/evidence", status_code=201)
+@router.post("/cases/{case_id}/evidence", status_code=201, response_model=EvidenceOut)
 async def upload(case_id: str, request: Request, file: UploadFile = File(...), source_label: str = Form("synthetic"),
                  process: bool = Form(True),
                  user: User = Depends(require_roles("EVIDENCE_OFFICER", "INVESTIGATOR", "ADMIN")), db: Session = Depends(get_db)):
@@ -93,7 +93,7 @@ async def upload(case_id: str, request: Request, file: UploadFile = File(...), s
     return evidence_out(ev, db)
 
 
-@router.get("/cases/{case_id}/evidence")
+@router.get("/cases/{case_id}/evidence", response_model=list[EvidenceOut])
 def list_evidence(case_id: str, request: Request, response: FastAPIResponse, q: str | None = Query(None, max_length=200),
                   status: str | None = Query(None, max_length=40), limit: int | None = Query(None, ge=1, le=MAX_LIMIT),
                   offset: int = Query(0, ge=0), user: User = Depends(current_user), db: Session = Depends(get_db)):
@@ -125,12 +125,12 @@ def _get_ev(db: Session, user: User, evidence_id: str, request: Request, action=
     return ev
 
 
-@router.get("/evidence/{evidence_id}")
+@router.get("/evidence/{evidence_id}", response_model=EvidenceOut)
 def get_evidence(evidence_id: str, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db)):
     return evidence_out(_get_ev(db, user, evidence_id, request), db)
 
 
-@router.post("/evidence/{evidence_id}/process")
+@router.post("/evidence/{evidence_id}/process", response_model=EvidenceOut)
 def process(evidence_id: str, request: Request, user: User = Depends(require_roles("EVIDENCE_OFFICER", "INVESTIGATOR", "ADMIN")), db: Session = Depends(get_db)):
     ev = _get_ev(db, user, evidence_id, request, action="EVIDENCE_PROCESS")
     if ev.status not in ("QUARANTINED", "SCAN_FAILED", "SCAN_TIMEOUT", "SCANNER_UNAVAILABLE", "ACCEPTED", "EXTRACTION_FAILED", "EXTRACTED",
