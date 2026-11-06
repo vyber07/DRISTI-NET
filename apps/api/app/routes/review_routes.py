@@ -3,6 +3,7 @@ from sqlalchemy.orm import aliased
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from .graph_routes import claim_out
 from .listing import MAX_LIMIT, like_pattern, page
 from ..auth import authorize_case, current_user, require_roles
 from ..db import get_db
@@ -182,5 +183,4 @@ def list_reviews(case_id: str, request: Request, user: User = Depends(current_us
 @router.get("/cases/{case_id}/contradictions")
 def contradictions(case_id: str, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db)):
     authorize_case(db, user, case_id, request)
-    from .graph_routes import claim_out
     return [claim_out(c, db) for c in db.query(Claim).filter_by(case_id=case_id, state="CONTRADICTORY").all()]
