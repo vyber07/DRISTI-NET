@@ -9,43 +9,35 @@ Only claims in state ALLOWED or APPROVE enter the projection. Approved identity 
 entity nodes into one; rejected/deferred/pending matches never merge (pending/deferred ones are shown as
 dashed POSSIBLE_SAME_AS candidate edges). Contradictory attribute claims flag the node, and history is
 never deleted: temporal decay only changes *relevance*.
+
+Pure analytics functions (aggregate, analyze, rule_candidates, snapshot_hash, etc.) live in
+graph_analytics.py — they accept only the already-built in-memory graph and have no DB/storage deps.
 """
 from __future__ import annotations
 
-import hashlib
-import json
-import math
-import random
-from collections import defaultdict
-from datetime import datetime, timedelta
+import logging
+from datetime import datetime
 
 import networkx as nx
 from sqlalchemy.orm import Session
 
-import logging
-
 from .. import config
 from .masking import case_attributes
-
-logger = logging.getLogger("drishti.graph")
 from ..models import Claim, Entity, Evidence, MatchCandidate
 from . import neo4j_store
+from .graph_analytics import (  # re-exported for callers that use `graph_svc.X`
+    HISTORICAL_AFTER_DAYS,
+    HALF_LIFE_DAYS,
+    GOVERNANCE_SET_KEYS,
+    _parse_time,
+    aggregate,
+    _community_stability,
+    analyze,
+    rule_candidates,
+    snapshot_hash,
+)
 
-HISTORICAL_AFTER_DAYS = 365
-HALF_LIFE_DAYS = 180
-
-
-def _parse_time(s: str | None) -> datetime | None:
-    if not s:
-        return None
-    # DEF-087: also the ISO 'T' forms a browser datetime-local input sends. Values carrying a zone are not accepted
-    # anywhere (stored times are recorded without one), so they fall through to None.
-    for fmt in ("%Y-%m-%d %H:%M:%S", "%Y-%m-%d", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%dT%H:%M", "%Y-%m-%d %H:%M"):
-        try:
-            return datetime.strptime(s, fmt)
-        except ValueError:
-            continue
-    return None
+logger = logging.getLogger("drishti.graph")
 
 
 # ----------------------------------------------------------------------------- union-find for approved matches
@@ -146,72 +138,6 @@ def _sync_to_neo4j(case_id: str, G: nx.MultiDiGraph) -> None:
     neo4j_store.write_projection(case_id, nodes, edges)
 
 
-GOVERNANCE_SET_KEYS = {"jurisdiction": "jurisdictions", "access_class": "access_classes", "authority_reference": "authority_references"}
-
-
-def aggregate(G: nx.MultiDiGraph, reference: datetime | None = None) -> tuple[list[dict], list[dict], datetime | None]:
-    """Collapse parallel edges into one summary edge per (source, target, rel_type)."""
-    if reference is None:
-        times = [_parse_time(d.get("observed_time")) for _, _, d in G.edges(data=True)]
-        times = [t for t in times if t]
-        reference = max(times) if times else None
-    agg: dict[tuple[str, str, str], dict] = {}
-    for u, v, d in G.edges(data=True):
-        key = (u, v, d["rel_type"])
-        a = agg.setdefault(key, {"source": u, "target": v, "rel_type": d["rel_type"], "count": 0, "weight": 0.0, "first_seen": None,
-                                 "last_seen": None, "claim_ids": [], "evidence_ids": set(), "min_confidence": 1.0, "missing_count": 0, "methods": set(),
-                                 "_governance_seen_at": None, **{set_key: set() for set_key in GOVERNANCE_SET_KEYS.values()}})
-        a["count"] += 1
-        a["weight"] += d.get("weight") or 0
-        a["min_confidence"] = min(a["min_confidence"], d.get("confidence", 1.0))
-        a["missing_count"] += 1 if d.get("missing") else 0
-        a["methods"].add(d.get("method"))
-        if len(a["claim_ids"]) < 50:
-            a["claim_ids"].append(d["claim_id"])
-        a["evidence_ids"].add(d["evidence_id"])
-        for field, set_key in GOVERNANCE_SET_KEYS.items():
-            if d.get(field) is not None:
-                a[set_key].add(d[field])
-        t = d.get("observed_time")
-        if t:
-            a["first_seen"] = t if a["first_seen"] is None or t < a["first_seen"] else a["first_seen"]
-            a["last_seen"] = t if a["last_seen"] is None or t > a["last_seen"] else a["last_seen"]
-        # Governance fields (jurisdiction/access_class/authority_reference) are per-evidence, and in
-        # normal operation identical across every claim in a case (there is no case-edit endpoint that
-        # would let them diverge mid-case). Where they DO differ across the claims collapsed into this
-        # one summary edge, take the most recently observed one -- same recency rule as last_seen --
-        # rather than picking arbitrarily.
-        t_key = t or ""
-        if a["_governance_seen_at"] is None or t_key >= a["_governance_seen_at"]:
-            a["_governance_seen_at"] = t_key
-            a["jurisdiction"], a["access_class"], a["authority_reference"] = d.get("jurisdiction"), d.get("access_class"), d.get("authority_reference")
-    edges = []
-    for a in agg.values():
-        a.pop("_governance_seen_at", None)
-        mixed_flags = [len(a.pop(set_key)) > 1 for set_key in GOVERNANCE_SET_KEYS.values()]
-        a["governance_mixed"] = any(mixed_flags)
-        last = _parse_time(a["last_seen"])
-        if reference and last:
-            age = (reference - last).days
-            a["relevance"] = "HISTORICAL" if age > HISTORICAL_AFTER_DAYS else "CURRENT"
-            a["decay_score"] = round(math.exp(-max(age, 0) * math.log(2) / HALF_LIFE_DAYS), 3)
-            a["age_days"] = age
-        else:
-            a["relevance"], a["decay_score"], a["age_days"] = "UNDATED", None, None
-        a["evidence_ids"] = sorted(a["evidence_ids"])
-        a["methods"] = sorted(m for m in a["methods"] if m)
-        a["weight"] = round(a["weight"], 2)
-        edges.append(a)
-    nodes = []
-    U = G.to_undirected(as_view=True)
-    deg = {n: len(set(U.neighbors(n))) for n in G.nodes}  # unique neighbours, not parallel edges
-    for n, d in G.nodes(data=True):
-        nd = dict(d)
-        nd["degree"] = deg.get(n, 0)
-        if nd["degree"] >= config.SUPERNODE_DEGREE:
-            nd["flags"] = {**nd.get("flags", {}), "supernode": True, "supernode_note": f"degree {nd['degree']} ≥ {config.SUPERNODE_DEGREE}; neighbourhood expansion is capped"}
-        nodes.append(nd)
-    return nodes, edges, reference
 
 
 def candidate_edges(db: Session, case_id: str, merges: dict[str, str]) -> list[dict]:
@@ -282,136 +208,3 @@ def bounded_subgraph(G: nx.MultiDiGraph, case_id: str, center: str | None, hops:
                     nxt.append(m)
         frontier = nxt
     return keep, truncated
-
-
-def _community_stability(core: nx.Graph, communities: list[set], trials: int = 20, drop_frac: float = 0.15, seed: int = 42) -> list[float]:
-    """Bootstrap-style robustness check for greedy_modularity_communities, which is itself deterministic
-    -- rerunning it on the exact same graph would trivially "stabilise" at 1.0 every time and say nothing
-    real. Instead this reruns detection `trials` times on the core subgraph with a random `drop_frac`
-    fraction of its edges removed each time, and scores each original community by the best Jaccard
-    overlap it finds among that trial's communities, averaged across trials. A community whose membership
-    barely changes when a chunk of the underlying evidence is held out deserves more weight than one that
-    only appears because of a handful of edges; this makes that distinction visible instead of presenting
-    every community as equally solid. Seeded for reproducibility (tests assert on the resulting numbers).
-    """
-    if not communities:
-        return []
-    edges = list(core.edges())
-    if not edges:
-        return [1.0 for _ in communities]
-    rng = random.Random(seed)
-    n_drop = max(1, min(len(edges), int(len(edges) * drop_frac)))
-    scores = [[] for _ in communities]
-    for _ in range(trials):
-        dropped_idx = set(rng.sample(range(len(edges)), n_drop))
-        H = core.copy()
-        H.remove_edges_from(edges[i] for i in dropped_idx)
-        H.remove_nodes_from([n for n in list(H.nodes) if H.degree(n) == 0])
-        try:
-            perturbed = [set(c) for c in nx.community.greedy_modularity_communities(H)] if H.number_of_edges() else []
-        except Exception:
-            perturbed = []
-        for idx, orig in enumerate(communities):
-            best = max((len(orig & p) / len(orig | p) for p in perturbed if orig | p), default=0.0)
-            scores[idx].append(best)
-    return [round(sum(s) / len(s), 3) if s else 1.0 for s in scores]
-
-
-# ----------------------------------------------------------------------------- explainable analysis
-def analyze(G: nx.MultiDiGraph) -> dict:
-    U = nx.Graph()
-    for u, v, d in G.edges(data=True):
-        if u == v:
-            continue
-        if U.has_edge(u, v):
-            U[u][v]["weight"] += 1
-        else:
-            U.add_edge(u, v, weight=1)
-    for n in G.nodes:
-        U.add_node(n)
-    labels = {n: G.nodes[n]["label"] for n in G.nodes}
-    kinds = {n: G.nodes[n]["kind"] for n in G.nodes}
-
-    degree = sorted(({"entity_id": n, "label": labels[n], "kind": kinds[n], "degree": d} for n, d in U.degree()), key=lambda x: -x["degree"])[:10]
-    weighted = sorted(({"entity_id": n, "label": labels[n], "kind": kinds[n], "weighted_degree": d} for n, d in U.degree(weight="weight")), key=lambda x: -x["weighted_degree"])[:10]
-
-    # bridge candidates: betweenness on person/phone/account/org subgraph (structural, neutral language)
-    core = U.subgraph([n for n in U if kinds[n] in ("PERSON", "PHONE", "ACCOUNT", "ORGANIZATION", "VEHICLE")]).copy()
-    bet = nx.betweenness_centrality(core, normalized=True) if core.number_of_nodes() > 2 else {}
-    bridges = sorted(({"entity_id": n, "label": labels[n], "kind": kinds[n], "betweenness": round(b, 4)} for n, b in bet.items()), key=lambda x: -x["betweenness"])[:5]
-
-    communities = []
-    comm_sets: list[set] = []
-    if core.number_of_edges() > 0:
-        try:
-            for i, comm in enumerate(nx.community.greedy_modularity_communities(core)):
-                comm_sets.append(set(comm))
-                members = sorted(comm, key=lambda n: -core.degree(n))
-                communities.append({"community_id": f"C{i+1}", "size": len(members), "members": [{"entity_id": n, "label": labels[n], "kind": kinds[n]} for n in members[:12]]})
-        except Exception as exc:  # community detection is best-effort
-            communities = [{"error": str(exc)}]
-    if comm_sets:
-        for c, score in zip(communities, _community_stability(core, comm_sets)):
-            c["stability"] = score
-            c["stability_note"] = ("share of this community's membership that survives when a random 15% "
-                                    "of this view's edges are removed, averaged over 20 trials — a robustness "
-                                    "check against how much this grouping depends on exactly which evidence "
-                                    "is present, not a confidence or accuracy percentage")
-    # which community does each bridge candidate touch?
-    # DEF-089: built from the full community sets. It used the displayed member list (capped at 12), so a bridge
-    # whose neighbours were outside a large community's top 12 reported touching no community at all.
-    comm_of = {n: f"C{i+1}" for i, cset in enumerate(comm_sets) for n in cset}
-    for b in bridges:
-        touched = {comm_of.get(nb) for nb in U.neighbors(b["entity_id"]) if comm_of.get(nb)}
-        b["touches_communities"] = sorted(touched)
-        b["note"] = "candidate bridge / possible intermediary — structural observation only, not an accusation"
-
-    return {"degree": degree, "weighted_degree": weighted, "bridge_candidates": bridges, "communities": communities,
-            "rules": rule_candidates(G), "language_note": "All outputs are review priorities derived from the evidence approved for this case. They do not assert guilt, threat, or wrongdoing."}
-
-
-def rule_candidates(G: nx.MultiDiGraph, burst_n: int = 8, burst_window_h: int = 2, fanin_k: int = 4, fanin_days: int = 3) -> list[dict]:
-    out = []
-    labels = {n: G.nodes[n]["label"] for n in G.nodes}
-    # communication burst: ≥ burst_n CALLED edges between the same pair inside burst_window_h hours
-    pair_times: dict[tuple[str, str], list[datetime]] = defaultdict(list)
-    fanin: dict[str, list[tuple[datetime, str]]] = defaultdict(list)
-    for u, v, d in G.edges(data=True):
-        t = _parse_time(d.get("observed_time"))
-        if not t:
-            continue
-        if d["rel_type"] == "CALLED":
-            pair_times[(u, v)].append(t)
-        elif d["rel_type"] == "TRANSFERRED_TO":
-            fanin[v].append((t, u))
-    for (u, v), times in pair_times.items():
-        times.sort()
-        for i in range(len(times)):
-            j = i
-            while j + 1 < len(times) and times[j + 1] - times[i] <= timedelta(hours=burst_window_h):
-                j += 1
-            if j - i + 1 >= burst_n:
-                out.append({"rule": "communication_burst", "version": "1.0", "subject": labels[u], "object": labels[v], "source": u, "target": v,
-                            "count": j - i + 1, "window_start": times[i].isoformat(sep=" "), "window_end": times[j].isoformat(sep=" "),
-                            "explanation": f"{j-i+1} calls within {burst_window_h}h (threshold {burst_n})", "priority": "review"})
-                break
-    for v, items in fanin.items():
-        items.sort()
-        for i in range(len(items)):
-            srcs = {items[i][1]}
-            j = i
-            while j + 1 < len(items) and items[j + 1][0] - items[i][0] <= timedelta(days=fanin_days):
-                j += 1
-                srcs.add(items[j][1])
-            if len(srcs) >= fanin_k:
-                out.append({"rule": "transaction_fan_in", "version": "1.0", "subject": labels[v], "target": v, "distinct_sources": len(srcs),
-                            "sources": [labels[s] for s in sorted(srcs)], "window_start": items[i][0].isoformat(sep=" "), "window_end": items[j][0].isoformat(sep=" "),
-                            "explanation": f"{len(srcs)} distinct source accounts within {fanin_days} days (threshold {fanin_k})", "priority": "review"})
-                break
-    return out
-
-
-def snapshot_hash(nodes: list[dict], edges: list[dict]) -> str:
-    payload = json.dumps({"nodes": sorted(n["entity_id"] for n in nodes),
-                          "edges": sorted((e["source"], e["target"], e["rel_type"], e.get("count", 0)) for e in edges)}, sort_keys=True)
-    return hashlib.sha256(payload.encode()).hexdigest()

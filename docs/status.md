@@ -134,5 +134,24 @@ Archive upload limits (size/nesting/ratio/decompression-bomb ratio) are now Demo
 | Review: accept / reject / defer / **reverse**, with a reason | Demonstrated | E2E `test_review_queue` |
 | Evidence integrity re-check and claim → exact source from the evidence page | Demonstrated | E2E `test_evidence_details_verify_and_claim_source` |
 | Denied, loading, empty and error states on every data view | Demonstrated on the redesigned pages | `components/layout/page.tsx`; E2E denial test |
+| Error boundary on every feature route | **Demonstrated (2026-11-06)** — `RouteErrorBoundary` class component added to `components/layout/page.tsx`; catches render errors, shows retry button, logs via `componentDidCatch` |
 | Automated accessibility (axe-core, WCAG 2.x A/AA rules, 14 pages) | 0 violations; **not** a conformance claim | `frontend-audit/FRONTEND_ACCESSIBILITY_REPORT.md` |
 | Live demo serves the redesign | Demonstrated — live at `http://65.0.102.181/` since 2026-11-04 15:09 UTC | `frontend-audit/FRONTEND_CONTINUATION_STATE.md` |
+
+## Engineering modernization (2026-11-06)
+
+> These are engineering-quality improvements. They change no product features, evidence states, or API contracts.
+> All verified against baseline: **199 passed / 7 skipped** (`make test-unit`), TypeScript `0 errors`.
+
+| Item | Status | Evidence |
+|---|---|---|
+| Domain exception hierarchy (`DristiBaseError` + 14 subclasses) | **Demonstrated** | `apps/api/app/core/exceptions.py`; registered in `main.py`; each subclass carries HTTP status, error code, safe_message |
+| Structured JSON logging | **Demonstrated** | `apps/api/app/core/logging.py`; `configure_logging()` called at startup; `DRISHTI_LOG_FORMAT=json` emits one JSON object per record |
+| Centralized exception handler in FastAPI app | **Demonstrated** | `main.py` `@app.exception_handler(DristiBaseError)`; returns `{"error":{"code","message","trace_id","details"}}` envelope |
+| Evidence service layer (`evidence_service.py`) | **Demonstrated** | `build_context_window()` and `mark_object_missing()` extracted; duplicate context extraction eliminated from `evidence_routes.py` |
+| Pure graph analytics module | **Demonstrated** | `services/graph_analytics.py` (333 lines, zero DB dependencies); `graph.py` reduced 418→212 lines; all callers unchanged via re-exports |
+| Pydantic response schemas for case + evidence routes | **Demonstrated** | `CaseOut`, `CasePersonOut`, `EvidenceOut`, `JobOut` in `schemas.py`; `response_model=` on 9 key routes; **also fixed** `access_class` stored as string `"RESTRICTED"`, not int |
+| Pure graph filter predicates | **Demonstrated** | `lib/graphFilters.ts`: `isNodeVisibleForFilters`, `isEdgeVisibleForFilters` testable without Sigma.js |
+| API client type safety | **Demonstrated** | `BackendRawNode`/`BackendRawEdge`/`BackendRawGraph` in `graphApi.ts`; `casesApi.ts` mapper param typed; `evidenceApi.ts` context endpoints return `ContextResponse` |
+| Dead-code removal (oxlint pass) | **Demonstrated** | 53 → 44 warnings; `maskIpAddress` dead functions removed, unused imports/vars prefixed `_` |
+| Ruff + mypy configuration | **Configured** (not yet run on full codebase — ruff not in venv) | `pyproject.toml`; targets `apps/api/**/*.py`, strict mypy on `core/` and new service files |

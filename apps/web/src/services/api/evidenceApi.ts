@@ -1,5 +1,6 @@
 import { get, getPaged, post, postForm, ApiError, TOKEN_KEY, type ApiResponse, type Paged } from "./real_client";
 import type { EvidenceItem, EvidenceFilter } from "@/types/evidence";
+import type { ContextResponse } from "@/types/entity";
 
 export async function listEvidence(caseId: string, _filter?: EvidenceFilter): Promise<ApiResponse<EvidenceItem[]>> {
   const data = await get(`/cases/${caseId}/evidence`);
@@ -34,7 +35,7 @@ export async function getEvidenceClaims(evidenceId: string, limit = 100): Promis
   return { data: Array.isArray(data) ? data : [], meta: { requestId: "req", timestamp: new Date().toISOString(), durationMs: 0, securityClassification: "REAL" } };
 }
 
-export async function getEvidenceContext(evidenceId: string, params?: { row?: number; page?: number; line?: number; window?: number }): Promise<ApiResponse<any>> {
+export async function getEvidenceContext(evidenceId: string, params?: { row?: number; page?: number; line?: number; window?: number }): Promise<ApiResponse<ContextResponse>> {
   let url = `/evidence/${evidenceId}/context`;
   if (params) {
     const p = new URLSearchParams();
@@ -49,7 +50,7 @@ export async function getEvidenceContext(evidenceId: string, params?: { row?: nu
   return { data, meta: { requestId: "req", timestamp: new Date().toISOString(), durationMs: 0, securityClassification: "REAL" } };
 }
 
-export async function revealEvidenceContext(evidenceId: string, reason: string, params?: { row?: number; page?: number; line?: number }): Promise<ApiResponse<any>> {
+export async function revealEvidenceContext(evidenceId: string, reason: string, params?: { row?: number; page?: number; line?: number }): Promise<ApiResponse<ContextResponse>> {
   const data = await post(`/evidence/${evidenceId}/context/reveal`, { reason, ...params });
   return { data, meta: { requestId: "req", timestamp: new Date().toISOString(), durationMs: 0, securityClassification: "REAL" } };
 }
