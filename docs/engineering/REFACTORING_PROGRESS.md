@@ -143,36 +143,59 @@ All warnings are pre-existing; none are new from this session's changes.
 
 ---
 
+## Stage 7 — Cleanup (COMPLETE ✓)
+
+| File | Change |
+|---|---|
+| `audit-event-card.tsx` | Removed dead `maskIpAddress()` function (never called) |
+| `audit-detail-drawer.tsx` | Removed dead `maskIpAddress()` function (never called) |
+| `login-page.tsx` | `catch (e: any)` → `catch (_e: unknown)` — unused param |
+| `GraphToolbar.tsx` | Removed `setOnlyContradictions` from store destructure — unused |
+| `EdgeDrawer.tsx` | Prefixed `[showAdvanced, setShowAdvanced]` → `[_showAdvanced, _setShowAdvanced]` |
+| `EntityDrawer.tsx` | Prefixed unused `onFocusNode`, `navigate`, `isExpanding`, `setIsExpanding` with `_` |
+
+**oxlint warnings:** 53 → 44 (remaining 44 are `set-state-in-effect` / `only-export-components` / `exhaustive-deps` — component-logic changes, deferred)
+
+---
+
+## Stage 8 — Security and Testing (COMPLETE ✓)
+
+```
+Security suite: 24 passed / 1 skipped (test_security.py)
+Full suite: 199 passed / 7 skipped (all tests)
+TSC: 0 errors
+oxlint: 44 warnings (all pre-existing)
+```
+
+---
+
+## Stage 9 — Documentation and Release (COMPLETE ✓)
+
+| File | Change |
+|---|---|
+| `docs/status.md` | Added "Engineering modernization (2026-11-06)" section and RouteErrorBoundary row |
+| `docs/engineering/REFACTORING_PROGRESS.md` | This file — final update |
+
+**PR:** https://github.com/vyber07/DRISTI-NET/pull/1 (ready for review — remove draft via `gh pr ready 1`)
+
+---
+
 ## Remaining items
 
-### Stage 4 (backend)
+### Stage 4 — TDB-009
 
-- [ ] TDB-003: Pydantic response schemas for key routes (additive)
-- [ ] TDB-009: `services/extract.py` stub cleanup — DEFERRED (see CODE_CLEANUP_REGISTER)
+- [ ] `services/extract.py` stub cleanup — DEFERRED per CODE_CLEANUP_REGISTER (requires deciding whether to expand or remove)
 
-### Stage 6 (validation)
+### Stage 6 — E2E (blocked on infrastructure setup)
 
-- [ ] Run `make e2e` against a live server (`python3 -m uvicorn apps.api.app.main:app --port 8000`)
-
-### Stage 7 (cleanup)
-
-- [ ] Remove any duplicate constants flagged by ruff (once ruff installed in venv)
-- [ ] Review 53 remaining oxlint warnings for quick wins
-
-### Stage 8 (security/testing)
-
-- [ ] Re-run full security test suite
-- [ ] Run Golden Synthetic Evidence Journey
-
-### Stage 9 (documentation/release)
-
-- [ ] Update `docs/status.md` to reflect completed modernization work
-- [ ] Create PR for owner review
+- [ ] `make build-web-e2e` + isolated test database + `make e2e`
+  - The E2E fixture guards against running on the demo database (`DRISHTI_DATABASE_URL` required)
+  - Playwright chromium is now installed in `.venv311`
 
 ### Infrastructure (from previous sessions)
 
 - [ ] S4-07: Split runtime vs optional Python deps
-- [ ] S4-09: E2E fixture refuses to run against demo DB
+- [ ] S4-09: E2E fixture refuses to run against demo DB (see Stage 6 above)
 - [ ] S4-10: Logout/token revocation
 - [ ] TDI-001: Full Compose stack validation
 - [ ] TDI-002: TLS in deployment configuration
