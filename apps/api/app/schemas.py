@@ -3,6 +3,83 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 
 
+# ---------------------------------------------------------------------------
+# Output schemas — these mirror the dict shapes returned by helper functions
+# in route files (case_out, evidence_out, etc.). Adding response_model= to
+# a route makes FastAPI validate and document the response shape without
+# changing what the route actually returns.
+# ---------------------------------------------------------------------------
+
+class CasePersonOut(BaseModel):
+    user_id: str
+    display_name: str
+    role: str
+    purpose: str
+    is_owner: bool
+
+
+class CaseOut(BaseModel):
+    case_id: str
+    title: str
+    jurisdiction: str
+    purpose: str
+    authority_reference: str
+    classification: str
+    sensitivity: str
+    owner_id: str
+    opened_at: str
+    assigned: list[str]
+    people: list[CasePersonOut]
+    evidence_count: int
+    pending_reviews: int
+
+
+class JobOut(BaseModel):
+    job_id: str
+    kind: str
+    status: str
+    attempts: int
+    trace_id: str | None = None
+    error: str | None = None
+    metrics: dict | None = None
+
+
+class EvidenceOut(BaseModel):
+    evidence_id: str
+    case_id: str
+    version: int
+    filename: str | None = None
+    extension: str | None = None
+    detected_type: str | None = None
+    record_type: str | None = None
+    size_bytes: int
+    sha256: str
+    status: str
+    storage_area: str
+    source_label: str | None = None
+    uploaded_by: str
+    scan_engine: str | None = None
+    scan_result: str | None = None
+    error: str | None = None
+    retention_policy: str | None = None
+    legal_hold: bool
+    tombstoned: bool
+    created_at: str
+    updated_at: str
+    classification: str
+    jurisdiction: str
+    purpose: str
+    access_class: str  # sensitivity label string, e.g. "RESTRICTED" or "SENSITIVE"
+    authority_reference: str
+    # Optional — present when fetched individually (evidence_out(ev, db))
+    jobs: list[JobOut] | None = None
+    claim_count: int | None = None
+
+
+# ---------------------------------------------------------------------------
+# Input schemas
+# ---------------------------------------------------------------------------
+
 class LoginIn(BaseModel):
     username: str
     password: str
