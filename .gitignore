@@ -20,3 +20,15 @@ releases/
 *.sqlite3
 *.tar.gz
 *.tgz
+
+# Internal project-management docs, kept locally for the owner -- not needed by other developers
+# who clone this repo. Canonical, shared status/context docs stay under docs/ (see CLAUDE.md).
+/CONTINUATION_STATE.md
+/PROJECT_TASK_BOARD.md
+/PROJECT_PROGRESS.md
+/STATUS.md
+/PROJECT_DECISION_LOG.md
+/PROJECT_BLOCKERS.md
+/PROJECT_RISK_REGISTER.md
+/MODULE_STATUS.md
+/REQUIREMENTS_MATRIX.md
