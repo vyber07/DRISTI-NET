@@ -131,4 +131,3 @@ if config.WEB_DIST.exists():
         if target is not None:
             return FileResponse(target)
         return FileResponse(config.WEB_DIST / "index.html")
-# trigger rebuild

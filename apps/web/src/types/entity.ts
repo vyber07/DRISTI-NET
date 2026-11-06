@@ -229,6 +229,6 @@ export interface ContextResponse {
   evidence_id: string;
   filename: string;
   hash_match: boolean;
-  locator: Record<string, any>;
+  locator: Record<string, unknown>;
   lines: ContextLine[];
 }
