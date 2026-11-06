@@ -21,8 +21,8 @@ def create_zip(name, includes, excludes):
 
 def main():
     print("Generating REVIEWER PACKAGE...")
-    create_zip("reviewer_package.zip", 
-               ["docs/", "audit/", "reports/", "README.md", "STATUS.md", "PROJECT_TASK_BOARD.md"],
+    create_zip("reviewer_package.zip",
+               ["docs/", "audit/", "reports/", "README.md"],
                ["*.git*", "*.venv*", "*__pycache__*"])
                
     print("Generating ENGINEERING PACKAGE...")
@@ -32,7 +32,7 @@ def main():
                
     print("Generating AI CONTEXT PACKAGE...")
     create_zip("ai_context_package.zip",
-               ["AGENTS.md", "CLAUDE.md", "docs/", "audit/", "PROJECT_TASK_BOARD.md", "STATUS.md"],
+               ["AGENTS.md", "CLAUDE.md", "docs/", "audit/"],
                ["*.git*", "*.venv*", "*__pycache__*"])
                
     print("All packages generated successfully.")
