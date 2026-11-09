@@ -15,6 +15,7 @@ build/
 releases/
 .ruff_cache/
 .claude/
+CLAUDE.md
 *.db
 *.sqlite
 *.sqlite3
