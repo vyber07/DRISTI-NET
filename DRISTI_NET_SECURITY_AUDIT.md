@@ -81,11 +81,27 @@ Reviewed, not changed (reasoning recorded in commit `24358fe`):
   two existing regression tests that explicitly encode "SQLite is never production, regardless of
   secret key" as intended, tested behavior. Reverted.
 
-Not addressed, still open: **SEC-02** (no per-token revocation -- though deactivating an account
-does immediately block it, since `active` is checked on every request, not just at login),
-**SEC-06** (localStorage token storage), **SEC-09/16** (data-classification policy questions),
-**SEC-12/14** (partial -- audit `limit` bounds were already fixed separately; detail-redaction and
-signature-verification-on-read were not), **SEC-18** (disaster recovery runbook).
+**2026-11-11, fourth pass: SEC-02 partially fixed.** Added `User.token_version` (Alembic migration
+`5bcde1234571`), embedded as the JWT's `"tv"` claim at issue time, checked against the current
+database value on every request. `reset_password()` increments it, so a password reset now
+invalidates every token issued before it immediately, instead of leaving them valid until their
+natural 8-hour expiry (deactivation already worked immediately via the existing `active` check --
+this specifically closes the password-change gap). Proven with a new test
+(`test_password_reset_invalidates_tokens_issued_before_it`): a pre-reset token is refused
+afterward even though unexpired; a freshly issued one works. Migrated and redeployed to the live
+stack, confirmed healthy (`/health`/`/ready` both 200, clean container logs, no errors). Not
+tested against a real live account (would have required either creating one via direct DB access,
+which the permission system correctly declined as account/credential tampering outside the normal
+API, or the admin's actual password) -- relying on the local test's proof instead, same limitation
+as the rest of this engagement's live-verification passes. Still not addressed: per-*session*
+(as opposed to per-password-change) revocation -- there's still no way to invalidate one specific
+token while leaving a user's other sessions valid.
+
+Not addressed, still open: **SEC-06** (localStorage token storage), **SEC-09/16**
+(data-classification policy questions), **SEC-12/14** (partial -- audit `limit` bounds were
+already fixed separately; detail-redaction and signature-verification-on-read were not).
+**SEC-18** (disaster recovery runbook) was fixed and drill-tested afterward -- see
+`operations/DISASTER_RECOVERY_PLAN.md`'s "Drill history" section.
 
 ## 2026-11-11 full verification sweep (second pass, same day as TLS)
 
