@@ -67,6 +67,14 @@ async def domain_error_handler(request: Request, exc: DristiBaseError):
 
 @app.exception_handler(ValueError)
 async def value_error(request: Request, exc: ValueError):
+    # SEC-07: every current `raise ValueError(...)` site in the route/service layer (storage.py,
+    # integrity.py, pipeline.py, extract_document.py) uses a deliberately caller-safe message, so
+    # echoing it back here is intentional, not an oversight -- it's how those validation failures
+    # are surfaced (e.g. "evidence X is Y; extraction requires ACCEPTED"). Logged here too so an
+    # unexpected ValueError from somewhere that was never meant to be caller-facing is still caught
+    # and visible server-side, not just silently echoed. Any new ValueError raise site must keep its
+    # message safe to show an API caller -- never include a path, a stack detail, or a secret.
+    logger.warning("ValueError on %s %s: %s", request.method, request.url.path, exc)
     return JSONResponse(status_code=409, content={"detail": str(exc), "trace_id": request.state.trace_id})
 
 

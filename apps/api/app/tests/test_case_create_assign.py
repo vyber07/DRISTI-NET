@@ -41,3 +41,22 @@ def test_only_owner_or_admin_may_assign(client, investigator, reviewer):
     # reviewer is now on the case but is not its owner
     assert client.post("/api/v1/cases/CASE-T105/assign", json={"username": "analyst"}, headers=reviewer).status_code == 403
     assert client.post("/api/v1/cases/CASE-T105/assign", json={"username": "no-such-user"}, headers=investigator).status_code == 404
+
+
+def test_assign_refuses_a_different_jurisdiction(client, investigator, outsider):
+    """BUG-NEW-10: previously this recorded the assignment, then authorize_case() silently refused
+    the outsider the next time they tried to actually open the case -- a misleading success."""
+    client.post("/api/v1/cases", json={"case_id": "CASE-T106", **GOOD}, headers=investigator)  # Demo District A
+    r = client.post("/api/v1/cases/CASE-T106/assign", json={"username": "outsider"}, headers=investigator)  # District B
+    assert r.status_code == 400
+    assert client.get("/api/v1/cases/CASE-T106", headers=outsider).status_code == 403
+
+
+def test_assign_refuses_a_deactivated_user(client, admin, investigator):
+    created = client.post("/api/v1/users", json={"username": "assign-deactivated", "display_name": "Deactivated",
+                                                   "role": "ANALYST", "jurisdiction": "Demo District A",
+                                                   "password": "assign-deactivated1"}, headers=admin).json()
+    client.post(f"/api/v1/users/{created['user_id']}/deactivate", headers=admin)
+    client.post("/api/v1/cases", json={"case_id": "CASE-T107", **GOOD}, headers=investigator)
+    r = client.post("/api/v1/cases/CASE-T107/assign", json={"username": "assign-deactivated"}, headers=investigator)
+    assert r.status_code == 400

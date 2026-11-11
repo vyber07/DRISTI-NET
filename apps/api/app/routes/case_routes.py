@@ -72,6 +72,14 @@ def assign(case_id: str, body: AssignIn, request: Request, user: User = Depends(
     target = db.query(User).filter_by(username=body.username).first()
     if target is None:
         raise HTTPException(404, "unknown user")
+    # BUG-NEW-10: an inactive account or one in a different jurisdiction would otherwise be
+    # recorded as "assigned" by this call and only fail silently later, at authorize_case(), the
+    # next time they try to actually open the case -- a misleading success for an action that
+    # never granted real access.
+    if not target.active:
+        raise HTTPException(400, "cannot assign a deactivated user")
+    if target.jurisdiction != c.jurisdiction:
+        raise HTTPException(400, f"user's jurisdiction ({target.jurisdiction!r}) does not match the case's ({c.jurisdiction!r})")
     if not db.query(CaseAssignment).filter_by(case_id=case_id, user_id=target.user_id).first():
         db.add(CaseAssignment(case_id=case_id, user_id=target.user_id, purpose=body.purpose))
     record_audit(db, request.state.trace_id, user.user_id, "CASE_ASSIGN", "USER", target.user_id, case_id, detail={"purpose": body.purpose})

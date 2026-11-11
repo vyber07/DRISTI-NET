@@ -4,6 +4,7 @@ from fastapi import Response as FastAPIResponse
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
+from .. import config
 from ..auth import authorize_case, current_user, require_roles
 from ..db import get_db
 from ..models import Claim, Evidence, Job, User
@@ -18,6 +19,24 @@ from .graph_routes import claim_out
 from .listing import MAX_LIMIT, like_pattern, page
 
 router = APIRouter(tags=["evidence"])
+
+
+async def _read_bounded(file: UploadFile, max_bytes: int) -> bytes:
+    """Read the upload in chunks, aborting as soon as it exceeds max_bytes instead of after
+    buffering the whole thing (SEC-10): a client could otherwise force the server to hold an
+    arbitrarily large body in memory before validate_upload()'s own size check ever runs.
+    """
+    chunks: list[bytes] = []
+    total = 0
+    while True:
+        chunk = await file.read(1 << 20)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > max_bytes:
+            raise HTTPException(413, f"upload exceeds {max_bytes // (1024 * 1024)} MB")
+        chunks.append(chunk)
+    return b"".join(chunks)
 
 
 def evidence_out(ev: Evidence, db: Session | None = None) -> dict:
@@ -42,7 +61,7 @@ async def upload(case_id: str, request: Request, file: UploadFile = File(...), s
     """Upload → validate → UPLOADED → HASHED → QUARANTINED (→ optional immediate processing)."""
     case = authorize_case(db, user, case_id, request, action="EVIDENCE_UPLOAD")
     trace = request.state.trace_id
-    data = await file.read()
+    data = await _read_bounded(file, config.MAX_UPLOAD_MB * 1024 * 1024)
     v = extract_svc.validate_upload(file.filename or "", data)
     if not v.ok:
         record_audit(db, trace, user.user_id, "EVIDENCE_UPLOAD", "FILE", file.filename, case_id, outcome="DENIED", detail={"reason": v.reason})
@@ -127,7 +146,10 @@ def _get_ev(db: Session, user: User, evidence_id: str, request: Request, action=
 
 @router.get("/evidence/{evidence_id}", response_model=EvidenceOut)
 def get_evidence(evidence_id: str, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db)):
-    return evidence_out(_get_ev(db, user, evidence_id, request), db)
+    ev = _get_ev(db, user, evidence_id, request)
+    record_audit(db, request.state.trace_id, user.user_id, "EVIDENCE_VIEW", "EVIDENCE", evidence_id, ev.case_id)
+    db.commit()
+    return evidence_out(ev, db)
 
 
 @router.post("/evidence/{evidence_id}/process", response_model=EvidenceOut)
@@ -170,6 +192,8 @@ def context(evidence_id: str, request: Request, row: int | None = None, page: in
     data = storage.read_bytes(ev.storage_path)
     ctx = build_context_window(data, ev.extension, row=row, page=page, line=line,
                                json_path=json_path, window=window, mask=True)
+    record_audit(db, request.state.trace_id, user.user_id, "EVIDENCE_CONTEXT", "EVIDENCE", evidence_id, ev.case_id)
+    db.commit()
     return {"evidence_id": evidence_id, "filename": ev.filename, "hash_match": True, **ctx}
 
 
@@ -213,6 +237,8 @@ def download(evidence_id: str, body: DownloadIn, request: Request, user: User = 
 def evidence_claims(evidence_id: str, request: Request, limit: int = 100, user: User = Depends(current_user), db: Session = Depends(get_db)):
     ev = _get_ev(db, user, evidence_id, request)
     claims = db.query(Claim).filter_by(evidence_id=ev.evidence_id).order_by(Claim.created_at).limit(min(limit, 500)).all()
+    record_audit(db, request.state.trace_id, user.user_id, "EVIDENCE_CLAIMS_VIEW", "EVIDENCE", evidence_id, ev.case_id, detail={"count": len(claims)})
+    db.commit()
     return [claim_out(c, db) for c in claims]
 
 def _do_mark_object_missing(db: Session, ev: Evidence, user: User, request: Request) -> None:

@@ -193,4 +193,7 @@ def test_timeline_filters_and_cross_case(client, investigator, ingested, unassig
     g = client.get("/api/v1/cases/CASE-0001/graph?max_nodes=150", headers=investigator).json()
     acct = next(n for n in g["nodes"] if n["kind"] == "ACCOUNT" and n["label"].endswith("01") and "0901" in n["entity_id"] or n["label"] == "ACC-DEMO-••01")
     e = client.get(f"/api/v1/entities/{acct['entity_id']}?case_id=CASE-0001", headers=investigator).json()
-    assert e["cross_case"]["total_cases"] >= 1
+    # SEC-13: total_cases (always >= 1 trivially, since the entity appears in its own current case)
+    # was dropped as a redundant, unused aggregate -- it never actually proved this node was the
+    # cross-case bridge account the comment above describes; this only checks the response shape.
+    assert "visible_cases" in e["cross_case"] and "restricted_case_count" in e["cross_case"]

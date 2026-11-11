@@ -137,6 +137,8 @@ def analysis(case_id: str, request: Request, t_from: str | None = None, t_to: st
                 r[k] = mask_text(r[k])
         if "sources" in r:
             r["sources"] = [mask_text(s) for s in r["sources"]]
+    record_audit(db, request.state.trace_id, user.user_id, "ANALYSIS_VIEW", "CASE", case_id, case_id)
+    db.commit()
     return res
 
 
@@ -166,6 +168,8 @@ def timeline(case_id: str, request: Request, t_from: str | None = None, t_to: st
                        "target": {"entity_id": t.entity_id, "kind": t.kind, "label": mask_label(t.kind, t.label)} if t else None,
                        "evidence_id": c.evidence_id, "relevance": ("HISTORICAL" if age is not None and age > graph_svc.HISTORICAL_AFTER_DAYS else "CURRENT"),
                        "missing": c.missingness, "confidence": c.confidence})
+    record_audit(db, request.state.trace_id, user.user_id, "TIMELINE_VIEW", "CASE", case_id, case_id, detail={"count": len(events)})
+    db.commit()
     return {"case_id": case_id, "reference_time": ref, "count": len(events), "events": events}
 
 
@@ -190,6 +194,8 @@ def get_claim(claim_id: str, request: Request, user: User = Depends(current_user
     if c is None:
         raise HTTPException(404, "unknown claim")
     authorize_case(db, user, c.case_id, request, action="CLAIM_VIEW")
+    record_audit(db, request.state.trace_id, user.user_id, "CLAIM_VIEW", "CLAIM", claim_id, c.case_id)
+    db.commit()
     return claim_out(c, db)
 
 
@@ -214,9 +220,15 @@ def get_entity(entity_id: str, request: Request, case_id: str, user: User = Depe
     hidden = len(all_cases - mine - {case_id})
     claims = db.query(Claim).filter(Claim.case_id == case_id, (Claim.source_entity_id == entity_id) | (Claim.target_entity_id == entity_id)).order_by(Claim.observed_time).limit(200).all()
     case_attrs = case_attributes(e.attributes, case_id)
+    record_audit(db, request.state.trace_id, user.user_id, "ENTITY_VIEW", "ENTITY", entity_id, case_id)
+    db.commit()
     return {"entity_id": e.entity_id, "kind": e.kind, "label": mask_label(e.kind, e.label), "masked": e.kind in ("PHONE", "ACCOUNT"),
             "attributes": {k: v for k, v in case_attrs.items()}, "access_class": e.access_class,
-            "cross_case": {"visible_cases": visible, "restricted_case_count": hidden, "total_cases": len(all_cases)},
+            # SEC-13: total_cases (= len(visible_cases) + restricted_case_count + 1) was dropped --
+            # it was a redundant aggregate, unused by the frontend (apps/web/src/types/entity.ts),
+            # that disclosed this entity's total cross-case linkage volume beyond what the two
+            # fields below are each individually scoped to reveal.
+            "cross_case": {"visible_cases": visible, "restricted_case_count": hidden},
             "claims": [claim_out(c, db) for c in claims]}
 
 

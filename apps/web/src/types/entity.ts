@@ -57,7 +57,6 @@ export interface EntityDetail {
   cross_case?: {
     visible_cases: string[];
     restricted_case_count: number;
-    total_cases: number;
   };
   claims?: any[];
 }

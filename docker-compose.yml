@@ -73,10 +73,15 @@ services:
         condition: service_healthy
       migrations:
         condition: service_completed_successfully
+      # BUG-NEW-14: Kafka and Besu are both optional, documented-degraded-path dependencies
+      # (services/kafka_bus.py falls back to direct, synchronous pipeline processing when Kafka
+      # is unavailable; integrity_routes.py simply skips the Besu ledger submission when it isn't
+      # configured). service_started -- not service_healthy -- so an outage or slow-to-pass
+      # healthcheck on either one never blocks the whole stack from starting.
       kafka:
-        condition: service_healthy
+        condition: service_started
       besu:
-        condition: service_healthy
+        condition: service_started
   postgres:
     image: postgres:16@sha256:5db6dac2ef5dcff512f4f00a009c3c332b9f2f28f24277175bf3e4a3d02ef83a
     # Run as postgres directly to bypass the root-to-postgres gosu transition.
@@ -191,10 +196,10 @@ services:
         condition: service_healthy
       migrations:
         condition: service_completed_successfully
-      kafka:
-        condition: service_healthy
+      kafka:  # BUG-NEW-14: optional, see the matching comment on the api service above
+        condition: service_started
       besu:
-        condition: service_healthy
+        condition: service_started
   redis:
     image: redis:7-alpine@sha256:8da19c7399dca900c6822a1cf30f9d2285585e2c4b457ff4095b0f4500054d3f
     restart: unless-stopped

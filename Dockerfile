@@ -20,5 +20,11 @@ COPY . .
 COPY --from=web /web/dist apps/web/dist
 RUN python3 data/synthetic/generate.py
 ENV DRISHTI_STORAGE_ROOT=/data
+# SEC-19: don't run the application process as root. /data is created (not just referenced) here,
+# before the volume mount, so a fresh named volume inherits this ownership instead of root's.
+RUN useradd --system --create-home --home-dir /home/appuser --shell /usr/sbin/nologin appuser \
+ && mkdir -p /data \
+ && chown -R appuser:appuser /app /data
+USER appuser
 EXPOSE 8000
 CMD ["python3", "-m", "uvicorn", "apps.api.app.main:app", "--host", "0.0.0.0", "--port", "8000"]
