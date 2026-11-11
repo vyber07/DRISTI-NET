@@ -103,3 +103,14 @@ error pages. The host's `/etc/nginx/nginx.conf` had `server_tokens build;` with 
 "Recommended practice is to turn this off" comment that had never been acted on. Changed to
 `server_tokens off;`; verified live (`Server: nginx` only, no version/OS, including on 404/405
 error pages). This is a host-level nginx config change, not part of this repository's own files.
+
+**Same day, third pass: Content-Security-Policy added**, partially closing the CSP half of the
+remediation suggested under **SEC-06**. Deployed report-only first (zero risk), verified 0
+violations with a real headless browser against the reachable login page, then promoted to
+enforcing and re-verified identically. `script-src 'self'` with no `unsafe-inline`/`unsafe-eval`
+exception (confirmed the built bundle never uses `eval`/`new Function`); `style-src` keeps
+`'unsafe-inline'` for Radix UI's dynamic positioning. See
+`DRISTI_NET_PRODUCTION_READINESS_REPORT.md`'s matching update for the exact policy and what wasn't
+tested (authenticated pages, same credential limitation as the rest of this pass). SEC-06 itself
+remains open -- CSP is one of several suggested mitigations there, not a full fix for localStorage
+token storage.

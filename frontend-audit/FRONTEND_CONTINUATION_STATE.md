@@ -153,3 +153,25 @@ sudo cp /home/ubuntu/drishti-backups/pre-tls-20261111T062204Z/nginx-dristinet-be
 sudo nginx -t && sudo systemctl reload nginx
 # certificate files under /etc/letsencrypt/live/65.0.102.181.nip.io/ are left in place, unused
 ```
+
+### Also same day, later: CSP added, nginx version disclosure fixed
+
+- **CSP**: `Content-Security-Policy: default-src 'self'; script-src 'self'; style-src 'self'
+  'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; object-src
+  'none'; base-uri 'self'; frame-ancestors 'self';` on the DRISTI-NET port-443 block. Deployed as
+  `-Report-Only` first, verified 0 violations with a real headless browser against the login page,
+  then promoted to enforcing and re-verified identically. `style-src` keeps `'unsafe-inline'` for
+  Radix UI's dynamic inline positioning; `script-src` has no such exception (confirmed the built
+  bundle never uses `eval`/`new Function`). Backup:
+  `/home/ubuntu/drishti-backups/pre-tls-20261111T062204Z/nginx-dristinet-before-csp.conf`.
+  Authenticated pages (graph canvas, dialogs, admin panel) weren't click-tested live under
+  enforcement (no credentials this pass) -- if something breaks there, revert is just removing
+  that one `add_header` line.
+- **nginx version disclosure**: `/etc/nginx/nginx.conf` had `server_tokens build;` (with an
+  existing, never-acted-on "recommended to turn this off" comment). Changed to `server_tokens
+  off;`. This is the shared host nginx.conf, not the DRISTI-NET site file, so it also affects the
+  unrelated code-server instance on this host (strictly a hardening improvement for it too, not a
+  behavior change).
+
+Rollback for either: restore the relevant backed-up file and reload; see each bullet above for the
+exact path.

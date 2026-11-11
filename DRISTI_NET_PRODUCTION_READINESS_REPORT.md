@@ -81,10 +81,22 @@ flow tests across `test_case_create_assign.py`/`test_workflow_restored.py`/
 live would have required either the current admin password or creating a new account, and neither
 was authorized this pass); a formal `backup_restore_drill.py`-equivalent backup-and-restore cycle
 specifically against the live Postgres+MinIO (the migration *to* them was independently verified,
-which is related but distinct, as noted in `operations/RESTORE_TEST_REPORT.md`); a Content-Security-
-Policy header (still absent -- would need careful testing against this app's actual asset-loading
-pattern before adding, to avoid breaking the page); per-token/session revocation design (SEC-02);
-the disaster recovery runbook (SEC-18, still unsafe as written).
+which is related but distinct, as noted in `operations/RESTORE_TEST_REPORT.md`); per-token/session
+revocation design (SEC-02); the disaster recovery runbook (SEC-18, still unsafe as written).
+
+**Update (same day, second pass): CSP added.** Inspected the actual built bundle first (no
+external CDN references, no `eval`/`new Function` usage, fonts embedded as `data:font/woff`) before
+writing a policy, deployed it as `Content-Security-Policy-Report-Only` (zero risk -- only logs,
+never blocks), tested with a real headless browser against the reachable login page (0
+violations), then promoted to enforcing `Content-Security-Policy` and re-tested identically (still
+0 violations, same behavior). Policy: `default-src 'self'; script-src 'self'; style-src 'self'
+'unsafe-inline'; img-src 'self' data:; font-src 'self' data:; connect-src 'self'; object-src
+'none'; base-uri 'self'; frame-ancestors 'self';`. `style-src` keeps `'unsafe-inline'` (Radix UI,
+used throughout the dialog/dropdown components, needs it for dynamic inline positioning);
+`script-src` stays strict with no such exception, since that's the vector that actually matters
+against XSS. Authenticated pages (graph canvas, dialogs, admin panel) were not click-tested live
+under enforcement, same credential limitation as above -- if something unexpected breaks there,
+the fix is reverting this one `add_header` line, not a deeper rollback.
 
 **Updated bottom line**: the live deployment is healthy, running over trusted TLS, with verified
 RBAC, rate limiting, input validation, path-containment, non-root containers and a cryptographically
