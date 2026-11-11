@@ -86,3 +86,20 @@ does immediately block it, since `active` is checked on every request, not just 
 **SEC-06** (localStorage token storage), **SEC-09/16** (data-classification policy questions),
 **SEC-12/14** (partial -- audit `limit` bounds were already fixed separately; detail-redaction and
 signature-verification-on-read were not), **SEC-18** (disaster recovery runbook).
+
+## 2026-11-11 full verification sweep (second pass, same day as TLS)
+
+A comprehensive basic-through-advanced verification against the live deployment, prompted by a
+direct "is this actually in production, with everything checked" question. Full results and exact
+commands: `DRISTI_NET_PRODUCTION_READINESS_REPORT.md`'s matching addendum. Summary: 231 backend
+tests + frontend typecheck/build all pass; TLS, auth, rate limiting, JWT tamper/alg-confusion
+rejection, SQL-injection and path-traversal defenses, non-root containers, and audit-chain
+integrity (92/92 current events verify) were all independently re-confirmed live, not assumed from
+prior passes.
+
+**One new finding from this pass, fixed**: **SEC-20 (P2, information disclosure)** -- nginx
+disclosed its exact version and OS (`Server: nginx/1.28.3 (Ubuntu)`) on every response, including
+error pages. The host's `/etc/nginx/nginx.conf` had `server_tokens build;` with an existing
+"Recommended practice is to turn this off" comment that had never been acted on. Changed to
+`server_tokens off;`; verified live (`Server: nginx` only, no version/OS, including on 404/405
+error pages). This is a host-level nginx config change, not part of this repository's own files.
