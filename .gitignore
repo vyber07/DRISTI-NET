@@ -22,6 +22,7 @@ AGENTS.md
 *.sqlite3
 *.tar.gz
 *.tgz
+/memory/
 
 # Internal project-management docs, kept locally for the owner -- not needed by other developers
 # who clone this repo. Canonical, shared status/context docs stay under docs/.

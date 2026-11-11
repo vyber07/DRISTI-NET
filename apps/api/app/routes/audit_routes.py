@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, Request
+from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy.orm import Session
 
 from ..auth import authorize_case, current_user, require_roles
@@ -14,7 +14,7 @@ def audit_out(a: AuditEvent) -> dict:
 
 
 @router.get("/audit")
-def all_audit(limit: int = 200, action: str | None = None, _: User = Depends(require_roles("AUDITOR", "ADMIN")), db: Session = Depends(get_db)):
+def all_audit(limit: int = Query(200, ge=1, le=1000), action: str | None = None, _: User = Depends(require_roles("AUDITOR", "ADMIN")), db: Session = Depends(get_db)):
     q = db.query(AuditEvent)
     if action:
         q = q.filter(AuditEvent.action == action)
@@ -22,7 +22,7 @@ def all_audit(limit: int = 200, action: str | None = None, _: User = Depends(req
 
 
 @router.get("/cases/{case_id}/audit")
-def case_audit(case_id: str, request: Request, limit: int = 200, user: User = Depends(current_user), db: Session = Depends(get_db)):
+def case_audit(case_id: str, request: Request, limit: int = Query(200, ge=1, le=1000), user: User = Depends(current_user), db: Session = Depends(get_db)):
     """Case-scoped audit trail: assigned users see decisions/access for their case; auditors see everything."""
     authorize_case(db, user, case_id, request, action="AUDIT_VIEW")
     return [audit_out(a) for a in db.query(AuditEvent).filter_by(case_id=case_id).order_by(AuditEvent.created_at.desc()).limit(min(limit, 1000)).all()]

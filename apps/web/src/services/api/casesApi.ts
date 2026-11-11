@@ -1,7 +1,24 @@
 import { get, getPaged, post, type ApiResponse, type Paged } from "./real_client";
-import type { CaseDetail, CaseSummary } from "@/types/case";
+import type { CaseDetail, CasePerson, CaseSummary } from "@/types/case";
 
-function mapBackendCaseToFrontend(backend: Record<string, unknown>): CaseDetail {
+/** Response contract shared with apps/api/app/schemas.py::CaseOut. */
+interface BackendCase {
+  case_id: string;
+  title: string;
+  purpose: string;
+  classification: string;
+  jurisdiction: string;
+  authority_reference: string;
+  owner_id: string;
+  opened_at: string;
+  evidence_count: number;
+  pending_reviews: number;
+  assigned: string[];
+  people: CasePerson[];
+  sensitivity: string;
+}
+
+function mapBackendCaseToFrontend(backend: BackendCase): CaseDetail {
   return {
     id: backend.case_id || "",
     title: backend.title || "Untitled Case",
@@ -20,12 +37,12 @@ function mapBackendCaseToFrontend(backend: Record<string, unknown>): CaseDetail 
 }
 
 export async function getCaseDetails(caseId: string): Promise<ApiResponse<CaseDetail | null>> {
-  const data = await get(`/cases/${caseId}`);
+  const data = await get<BackendCase>(`/cases/${caseId}`);
   return { data: mapBackendCaseToFrontend(data), meta: { requestId: "req", timestamp: new Date().toISOString(), durationMs: 0, securityClassification: "REAL" } };
 }
 
 export async function listCases(): Promise<ApiResponse<CaseSummary[]>> {
-  const data = await get(`/cases`);
+  const data = await get<BackendCase[]>(`/cases`);
   const mapped = Array.isArray(data) ? data.map(mapBackendCaseToFrontend) : [];
   return { data: mapped, meta: { requestId: "req", timestamp: new Date().toISOString(), durationMs: 0, securityClassification: "REAL" } };
 }
@@ -68,12 +85,12 @@ export async function assignCase(caseId: string, username: string, purpose = "in
 
 /** Server-side search and paging over the cases this account may open (X-Total-Count = all matches). */
 export async function searchCases(opts: { q?: string; awaitingReview?: boolean; limit?: number; offset?: number }): Promise<Paged<CaseSummary>> {
-  const r = await getPaged(`/cases`, { q: opts.q, awaiting_review: opts.awaitingReview, limit: opts.limit, offset: opts.offset });
+  const r = await getPaged<BackendCase>(`/cases`, { q: opts.q, awaiting_review: opts.awaitingReview, limit: opts.limit, offset: opts.offset });
   return { items: r.items.map(mapBackendCaseToFrontend), total: r.total };
 }
 
 export async function createCase(body: { case_id: string; title: string; jurisdiction: string; purpose: string; authority_reference: string }): Promise<CaseDetail> {
-  return mapBackendCaseToFrontend(await post(`/cases`, body));
+  return mapBackendCaseToFrontend(await post<BackendCase>(`/cases`, body));
 }
 
 export interface UserSummary { user_id: string; username: string; display_name: string; role: string; jurisdiction: string }

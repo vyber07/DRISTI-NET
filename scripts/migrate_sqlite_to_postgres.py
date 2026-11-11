@@ -8,9 +8,10 @@ DEF-088 depends on) runs exactly as the app itself would run it -- nothing here 
 timestamp or re-serializes a JSON blob by hand. Primary/foreign-key string values are copied
 byte-for-byte; nothing is regenerated.
 
-Idempotent by design (safe to run more than once, including as part of a wipe-and-redo cutover):
-every target table is emptied (plain DELETE, reverse FK order) immediately before it is repopulated
-in FK order, all inside one transaction. There is no partial state to clean up by hand between runs.
+One-time import into an empty target. The script refuses to write if any modeled target table already
+contains rows. It never deletes target rows. Run it only against a dedicated migration target while
+the application is stopped; the PostgreSQL transaction locks modeled tables during the emptiness
+check and import so concurrent writes cannot race the preflight.
 """
 from __future__ import annotations
 
@@ -21,7 +22,7 @@ from pathlib import Path
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO))
 
-from sqlalchemy import create_engine, select  # noqa: E402
+from sqlalchemy import create_engine, func, select, text  # noqa: E402
 
 from apps.api.app.models import (  # noqa: E402
     AuditEvent, Case, CaseAssignment, Claim, Entity, Evidence, Job,
@@ -46,15 +47,28 @@ def main() -> int:
     pg_engine = create_engine(args.pg_url, future=True)
 
     with sqlite_engine.connect() as sconn:
-        counts = {model.__tablename__: len(sconn.execute(select(model.__table__)).fetchall()) for model in TABLES_IN_ORDER}
+        counts = {model.__tablename__: sconn.execute(select(func.count()).select_from(model.__table__)).scalar_one()
+                  for model in TABLES_IN_ORDER}
     print("Source row counts:", counts)
     if args.dry_run:
+        with pg_engine.connect() as pconn:
+            target_counts = {model.__tablename__: pconn.execute(select(func.count()).select_from(model.__table__)).scalar_one()
+                             for model in TABLES_IN_ORDER}
+        print("Target row counts:", target_counts)
         print("--dry-run: no changes made.")
         return 0
 
     with sqlite_engine.connect() as sconn, pg_engine.begin() as pconn:
-        for model in reversed(TABLES_IN_ORDER):
-            pconn.execute(model.__table__.delete())
+        if pg_engine.dialect.name == "postgresql":
+            pconn.execute(text("SET LOCAL lock_timeout = '5s'"))
+            table_names = ", ".join(f'"{model.__tablename__}"' for model in TABLES_IN_ORDER)
+            pconn.execute(text(f"LOCK TABLE {table_names} IN ACCESS EXCLUSIVE MODE"))
+        target_counts = {model.__tablename__: pconn.execute(select(func.count()).select_from(model.__table__)).scalar_one()
+                         for model in TABLES_IN_ORDER}
+        nonempty = {name: count for name, count in target_counts.items() if count}
+        if nonempty:
+            raise SystemExit(f"refusing to migrate: target tables are not empty: {nonempty}")
+
         for model in TABLES_IN_ORDER:
             rows = [dict(r._mapping) for r in sconn.execute(select(model.__table__)).fetchall()]
             if rows:
@@ -63,9 +77,10 @@ def main() -> int:
 
         # CaseAssignment.id is the only auto-incrementing integer PK in the schema (models.py). Explicit
         # inserts above bypassed its sequence, so the next auto-assigned id would collide.
-        from sqlalchemy import text
-        max_id = pconn.execute(text("SELECT COALESCE(MAX(id), 0) FROM case_assignments")).scalar()
-        pconn.execute(text("SELECT setval(pg_get_serial_sequence('case_assignments', 'id'), :n, true)"), {"n": max(max_id, 1)})
+        if pg_engine.dialect.name == "postgresql":
+            max_id = pconn.execute(text("SELECT COALESCE(MAX(id), 0) FROM case_assignments")).scalar()
+            if max_id:
+                pconn.execute(text("SELECT setval(pg_get_serial_sequence('case_assignments', 'id'), :n, true)"), {"n": max_id})
 
     print("Migration complete.")
     return 0

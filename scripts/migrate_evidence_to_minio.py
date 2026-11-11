@@ -5,12 +5,14 @@
 
 Walks accepted/, quarantine/ and derived/ under --storage-root and uploads each file under its
 identical relative key (apps/api/app/services/storage.py uses the same key shape for both the
-local-filesystem and S3 backends, so no key is renamed or restructured). Idempotent: deletes every
-existing object in the bucket first, so a wipe-and-redo cutover run leaves no stale objects behind.
+local-filesystem and S3 backends, so no key is renamed or restructured). Existing objects at those
+keys are skipped only when their content matches; conflicting keys abort before any upload. Other
+objects in the bucket are left untouched. This makes retries safe without wiping unrelated data.
 """
 from __future__ import annotations
 
 import argparse
+import hashlib
 from pathlib import Path
 
 import boto3
@@ -36,31 +38,58 @@ def main() -> int:
     )
     try:
         client.head_bucket(Bucket=args.bucket)
-    except ClientError:
+    except ClientError as exc:
+        code = exc.response.get("Error", {}).get("Code", "")
+        if code not in {"404", "NoSuchBucket", "NotFound"}:
+            raise
         client.create_bucket(Bucket=args.bucket)
 
-    existing = []
-    paginator = client.get_paginator("list_objects_v2")
-    for page in paginator.paginate(Bucket=args.bucket):
-        existing.extend(o["Key"] for o in page.get("Contents", []))
-    if existing:
-        for i in range(0, len(existing), 1000):  # DeleteObjects caps at 1000 keys per call
-            client.delete_objects(Bucket=args.bucket, Delete={"Objects": [{"Key": k} for k in existing[i:i + 1000]]})
-        print(f"Removed {len(existing)} pre-existing object(s) from bucket {args.bucket!r}.")
-
     root = args.storage_root.resolve()
-    uploaded = 0
+    planned: list[tuple[Path, str, str, bool]] = []
     for prefix in OBJECT_PREFIXES:
         base = root / prefix
         if not base.is_dir():
             continue
+        if base.is_symlink():
+            raise SystemExit(f"refusing to follow symlink storage prefix: {base}")
         for path in sorted(base.rglob("*")):
             if not path.is_file():
                 continue
-            key = str(path.relative_to(root))
-            client.put_object(Bucket=args.bucket, Key=key, Body=path.read_bytes())
-            uploaded += 1
-    print(f"Uploaded {uploaded} object(s) to bucket {args.bucket!r} at {args.endpoint_url}.")
+            if path.is_symlink():
+                raise SystemExit(f"refusing to follow symlink evidence path: {path}")
+            key = path.relative_to(root).as_posix()
+            source_hash = hashlib.sha256(path.read_bytes()).hexdigest()
+            try:
+                client.head_object(Bucket=args.bucket, Key=key)
+            except ClientError as exc:
+                code = exc.response.get("Error", {}).get("Code", "")
+                if code not in {"404", "NoSuchKey", "NotFound"}:
+                    raise
+                planned.append((path, key, source_hash, False))
+                continue
+
+            response = client.get_object(Bucket=args.bucket, Key=key)
+            with response["Body"] as body:
+                existing_hash = hashlib.sha256(body.read()).hexdigest()
+            if existing_hash != source_hash:
+                raise SystemExit(f"refusing to overwrite conflicting object s3://{args.bucket}/{key}")
+            planned.append((path, key, source_hash, True))
+
+    # Complete conflict checks before the first write. If a source file changed after preflight,
+    # stop rather than uploading content different from the bytes that were checked.
+    uploaded = skipped = 0
+    for path, key, source_hash, already_matches in planned:
+        if already_matches:
+            skipped += 1
+            continue
+        data = path.read_bytes()
+        if hashlib.sha256(data).hexdigest() != source_hash:
+            raise SystemExit(f"source changed during migration; no upload attempted for {key}")
+        # Conditional create closes the gap between preflight and upload: if another writer
+        # creates the key in that interval, the provider must reject rather than overwrite it.
+        client.put_object(Bucket=args.bucket, Key=key, Body=data, IfNoneMatch="*")
+        uploaded += 1
+    print(f"Uploaded {uploaded} object(s), skipped {skipped} identical object(s); other bucket objects were left untouched.")
     return 0
 
 

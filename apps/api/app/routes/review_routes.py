@@ -143,7 +143,7 @@ def hitl_stats(case_id: str, request: Request, user: User = Depends(require_role
         "totalTasks": total,
         "pendingCount": pending,
         "criticalCount": contradictions,
-        "identityMergesCount": total,
+        "identityMergesCount": sum(1 for c in cands if c.state == "APPROVE"),
         "resolvedCount": resolved,
         "activeAnalysts": active_analysts,
         "inReviewCount": in_review,
