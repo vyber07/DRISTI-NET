@@ -400,7 +400,9 @@ def test_audit_signature_is_unambiguous_and_legacy_signatures_still_verify():
     e1 = AuditEvent(audit_id="AUD-1", trace_id="T|USR-a", actor_id="USR-b", action="EXPORT", target_kind="CASE", target_id="X",
                     case_id="C", outcome="OK", detail={}, created_at=t)
     e1.signature = audit.sign_audit_event(e1)
-    assert e1.signature.split(":")[1] == "hmac-sha256-json"
+    # New rows use the v2 algorithm (covers every stored field, see services/audit.py); the JSON-array algorithm
+    # below remains verifiable for rows written before v2.
+    assert e1.signature.split(":")[1] == "hmac-sha256-json-v2"
     assert audit.verify_audit_event(e1)  # success path
     e2 = AuditEvent(audit_id="AUD-1", trace_id="T", actor_id="USR-a|USR-b", action="EXPORT", target_kind="CASE", target_id="X",
                     case_id="C", outcome="OK", detail={}, created_at=t, signature=e1.signature)

@@ -155,6 +155,8 @@ class UserCreateIn(BaseModel):
     display_name: str = Field(min_length=2, max_length=120, pattern=r"\S")
     role: str = Field(pattern=_ROLE_PATTERN)
     jurisdiction: str = Field(default="", max_length=120)
+    # Verified organisational office code, e.g. "OFF-DDA". Assigned by an administrator; audit records read it from the user row.
+    office_id: str | None = Field(default=None, pattern=r"^[A-Z0-9][A-Z0-9-]{1,31}$")
     password: str = Field(min_length=8, max_length=200)
 
 
@@ -163,6 +165,8 @@ class UserUpdateIn(BaseModel):
     display_name: str | None = Field(default=None, min_length=2, max_length=120, pattern=r"\S")
     role: str | None = Field(default=None, pattern=_ROLE_PATTERN)
     jurisdiction: str | None = Field(default=None, max_length=120)
+    # Empty string clears the office; otherwise the same format as UserCreateIn.office_id.
+    office_id: str | None = Field(default=None, pattern=r"^([A-Z0-9][A-Z0-9-]{1,31})?$")
 
 
 class PasswordResetIn(BaseModel):

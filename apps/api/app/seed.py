@@ -35,7 +35,10 @@ def seed() -> None:
     for username, name, role, jur, pw in DEMO_USERS:
         u = db.query(User).filter_by(username=username).first()
         if u is None:
-            u = User(username=username, display_name=name, role=role, jurisdiction=jur, password_hash=hash_password(pw))
+            # Verified office for demo accounts (fictional). Real deployments assign office_id through the admin API.
+            office_id = {"Demo District A": "OFF-DDA"}.get(jur)
+            u = User(username=username, display_name=name, role=role, jurisdiction=jur, office_id=office_id,
+                     password_hash=hash_password(pw))
             db.add(u)
             db.flush()
         users[username] = u

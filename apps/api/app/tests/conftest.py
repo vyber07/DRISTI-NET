@@ -78,6 +78,9 @@ def _reset_non_sqlite_schema() -> None:
 
     Base.metadata.drop_all(engine)
     Base.metadata.create_all(engine)
+    # create_all() does not create the append-only triggers that production gets from the migrations.
+    from apps.api.app.db import install_audit_immutability
+    install_audit_immutability()
 
 
 @pytest.fixture(scope="session")

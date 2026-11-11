@@ -1,3 +1,20 @@
+# Unreleased — audit logging (branch `worktree-auth-login-ratelimit`)
+- SECURITY: audit records now carry actor username and role, verified office, the case's resource office, session ID,
+  client IP (trusted-proxy aware), sanitised user agent, server request ID, validated correlation ID, and failure reason.
+  See `docs/AUDIT_LOG_POLICY.md` and ADR-013.
+- SECURITY: `X-Trace-Id` from a client is no longer used as the audit request ID (it could write arbitrary values into the trail).
+- SECURITY: `audit_events` is append-only at the database: PostgreSQL triggers refuse UPDATE, DELETE and TRUNCATE; SQLite triggers refuse UPDATE and DELETE.
+- SECURITY: signatures cover every field (`hmac-sha256-json-v2`); older signatures still verify. New `GET /audit/verify` and `GET /audit/digest`
+  (AUDITOR, ADMIN); the earlier docs described a verify endpoint that did not exist.
+- Access: full audit reads, export, verify and digest restricted to AUDITOR and ADMIN, and audited fail-closed. Assigned
+  investigators see case audit trails without IP, user agent or session fields. New `GET /audit/export` (CSV or JSON).
+- Sessions: login creates a server-side session; new `POST /auth/logout` revokes it. Tokens issued before this change are rejected once: users sign in again.
+- Coverage added: case, evidence, candidate and review lists and summaries; searches (as a digest, never the text); anchor and proof reads; user lists; login-status; logout; token rejections.
+- Office: `users.office_id` (assigned by an administrator, validated). Demo users have fictional offices. Admin create and update accept it.
+- Failure handling: operations that change state or reveal case content fail closed; plain list views are best-effort (logged, still served).
+- Migration `5bcde1234572` (PostgreSQL verified: fresh build, downgrade and re-upgrade). SQLite upgrades additively.
+- Tests: `test_audit_logging.py` (34). Full suite: PostgreSQL 16 disposable container 301 passed, SQLite 299 passed.
+
 # Unreleased — login and API rate limiting (branch `worktree-auth-login-ratelimit`)
 - SECURITY: login brute-force protection by account type. Failed-login ceilings per username depend on role
   (ADMIN and AUDITOR: 3 failures / 30 min; others and unknown usernames: `DRISHTI_LOGIN_THROTTLE_MAX_ATTEMPTS`, default 5 / 15 min).

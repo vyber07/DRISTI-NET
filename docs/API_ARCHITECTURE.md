@@ -15,7 +15,8 @@
 | Method | Path | Access | Description |
 |--------|------|--------|-------------|
 | `POST` | `/auth/login` | Public | Authenticates officer credentials. Rate-limited per account, per source IP and per account across sources; see *Login and rate limits* below. Body is bounded (username 1–200, password 1–1024 characters, else 422). |
-| `GET` | `/auth/me` | Authenticated | Returns current officer profile, designation, role, and jurisdiction. Subject to the per-user API ceiling. |
+| `GET` | `/auth/me` | Authenticated | Returns current officer profile, designation, role, office and jurisdiction. Subject to the per-user API ceiling. |
+| `POST` | `/auth/logout` | Authenticated | Revokes the caller's server-side session (audited as `LOGOUT`). The token stops working; other sessions are unaffected. |
 | `GET` | `/users/{user_id}/login-status` | ADMIN | Lockout state of an account: `locked`, `retry_after`, `distinct_failing_sources`, `source_limit`, `escalation_level`. |
 | `POST` | `/users/{user_id}/unlock` | ADMIN | Clears every login lock and failure counter for the account. Audited (`USER_UNLOCK`). Returns `was_locked`. |
 | `POST` | `/users/{user_id}/reset-password` | ADMIN | Sets a new password, invalidates existing tokens, and also clears the account's login locks (audited). |
@@ -32,6 +33,31 @@
 - **Client IP** comes from `X-Forwarded-For` only when the direct peer is in `DRISHTI_TRUSTED_PROXIES`; otherwise the socket peer is used.
 - **Recovery:** the lock expires on its own. An administrator can call `unlock`, or reset the password. If no administrator can sign in, an operator runs `docker compose exec api python -m apps.api.app.unlock_cli <username>`.
 - **Errors other than these:** a body that fails validation returns `422` with FastAPI's standard detail. The web client shows this as raw text, a known cosmetic gap.
+
+#### Request identity headers
+
+- **Response:** `X-Request-Id` and `X-Trace-Id` both carry the server-generated request ID (`REQ-…`) that is stored on every audit row. A client-supplied `X-Trace-Id` is ignored.
+- **Request:** `X-Correlation-Id` is accepted only if it matches `[A-Za-z0-9._:-]{8,64}`, and is then stored on audit rows as a join hint. It never affects access decisions.
+- No other request header affects who the actor is, which office it is, or which IP address is recorded.
+
+#### Audit API
+
+Each audit record includes:
+
+| Field | Meaning |
+|---|---|
+| `audit_id`, `request_id` (= `trace_id`), `correlation_id` | identifiers |
+| `occurred_at_utc`, `created_at` | UTC timestamp (`…Z`); `created_at` is the earlier name, naive UTC |
+| `occurred_at_local`, `display_timezone` | the same instant in the deployment's display zone (`DRISHTI_AUDIT_DISPLAY_TZ`, default `Asia/Kolkata`) |
+| `actor_id`, `actor_username`, `actor_role`, `office_id` | the authenticated actor, from the user record |
+| `action`, `resource_type` (= `target_kind`), `resource_id` (= `target_id`), `case_id`, `resource_office` | what happened, to what, in which case, and the office responsible |
+| `outcome`, `failure_reason` | `OK`, `DENIED` or `ERROR`, and a short non-secret cause |
+| `session_id`, `ip_address`, `user_agent` | network and session context. Omitted from the case view for non-auditors |
+| `detail` | redacted structured payload (secrets and JWT-shaped values are replaced) |
+| `signature_present` | whether the row carries a signature (every new row does) |
+
+Errors: `401` for no or invalid credentials; `403` for a role or case denial (audited as `ACCESS_DENIED`); `422` for a
+malformed `start`, `end` or `day`; `500` when a fail-closed audit cannot be written (the operation is then not performed).
 
 ### 2.2 Case Management (`/api/v1/cases`)
 | Method | Path | Access | Description |
@@ -68,5 +94,9 @@
 | Method | Path | Access | Description |
 |--------|------|--------|-------------|
 | `POST` | `/cases/{id}/report` | Case-Authorized | Generates comprehensive case report in JSON, HTML, or signed Dossier PDF. |
-| `GET` | `/cases/{id}/audit` | Auditor/Case-Auth | Returns cryptographic audit trail for the case with signature verification. |
+| `GET` | `/cases/{id}/audit` | Case-Authorized (auditors see network fields; assigned investigators do not) | Case audit trail, newest first. Each read is audited. Fields: see *Audit API* below. |
+| `GET` | `/audit` | AUDITOR, ADMIN | Audit log with filters (`action`, `outcome`, `actor_id`, `start`, `end`, `limit`). Each read is audited, fail-closed. |
+| `GET` | `/audit/export` | AUDITOR, ADMIN | CSV or JSON export of a time window (`format`, `start`, `end`, `limit` up to 50 000). Audited (`AUDIT_EXPORT`). Contains network fields: restricted. |
+| `GET` | `/audit/verify` | AUDITOR, ADMIN | Recomputes every signature in a window. Returns `total`, `valid`, `unsigned`, `invalid` and `invalid_audit_ids`. |
+| `GET` | `/audit/digest` | AUDITOR, ADMIN | SHA-256 over one UTC day's signatures (`day=YYYY-MM-DD`). Store it off-host daily. |
 | `GET` | `/audit/verify` | Auditor | Validates end-to-end HMAC-SHA256 signature chain across all events. |

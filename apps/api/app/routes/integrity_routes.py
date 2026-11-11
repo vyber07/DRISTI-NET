@@ -30,7 +30,7 @@ from ..models import Evidence, Entity, MatchCandidate, Review, Snapshot, User
 from ..schemas import CourtPdfIn
 from ..services import graph as graph_svc
 from ..services import integrity as integrity_svc
-from ..services.audit import record_audit
+from ..services.audit import record_audit, record_read
 from ..services.masking import mask_analysis, mask_label
 from ..services.court_pdf import generate_court_pdf
 from .case_routes import case_out
@@ -121,6 +121,7 @@ def list_anchors(
     db: Session = Depends(get_db),
 ):
     authorize_case(db, user, case_id, request, action="INTEGRITY_VIEW")
+    record_read(db, None, user.user_id, "ANCHOR_LIST", case_id=case_id)
     anchors = (db.query(integrity_svc.LedgerAnchor)
                  .filter_by(case_id=case_id)
                  .order_by(integrity_svc.LedgerAnchor.created_at.desc())
@@ -142,6 +143,8 @@ def merkle_proof(
     The proof can be verified offline with integrity.MerkleProof.verify().
     """
     authorize_case(db, user, case_id, request, action="INTEGRITY_PROOF")
+    record_read(db, None, user.user_id, "MERKLE_PROOF_VIEW", case_id=case_id, target_kind="ANCHOR", target_id=anchor_id,
+                detail={"leaf_sha256": leaf_sha256[:64]})
     anchor = db.query(integrity_svc.LedgerAnchor).filter_by(anchor_id=anchor_id, case_id=case_id).first()
     if anchor is None:
         raise HTTPException(404, "anchor not found")

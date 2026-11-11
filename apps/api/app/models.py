@@ -55,6 +55,9 @@ class User(Base):
     # (checked against the JWT's own "tv" claim in auth.current_user), instead of staying valid
     # until their natural TOKEN_TTL_SECONDS expiry.
     token_version: Mapped[int] = mapped_column(Integer, default=0)
+    # Verified organisational office (e.g. "OFF-DDA"). Assigned by an administrator and read from this row for every
+    # audit event. It is never taken from request headers, IP geolocation or the client.
+    office_id: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
 
 
 class Case(Base):
@@ -229,6 +232,21 @@ class Review(Base):
 
 # ----------------------------------------------------------------------------- audit & snapshots
 class AuditEvent(Base):
+    """One immutable audit record. Stored in UTC. Database triggers (see services/audit_store.py) reject UPDATE and
+    DELETE, and every row carries an HMAC over all of its fields (services/audit.py).
+
+    Field meanings:
+      trace_id       the server-generated request ID (never taken from the client; see core/request_context.py)
+      actor_id       authenticated user ID (None for unauthenticated events such as a failed login)
+      actor_username, actor_role, office_id  the actor's record at the time of the event (from the database)
+      resource_office  the office responsible for the resource (the case's jurisdiction), from the database
+      target_kind / target_id  resource type and resource ID; case_id the case context
+      outcome        OK | DENIED | ERROR;  failure_reason  short, non-secret cause when outcome is not OK
+      session_id     the server-side session the request used (user_sessions.sid)
+      ip_address     client IP after trusted-proxy handling;  user_agent  sanitised, truncated
+      correlation_id client-supplied correlation value, accepted only when it matches a safe pattern
+      detail         redacted structured payload (see core/request_context.sanitize_detail)
+    """
     __tablename__ = "audit_events"
     audit_id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: new_id("AUD"))
     trace_id: Mapped[str] = mapped_column(String, index=True)
@@ -241,6 +259,28 @@ class AuditEvent(Base):
     detail: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
     signature: Mapped[str | None] = mapped_column(String, nullable=True)
+    actor_username: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
+    actor_role: Mapped[str | None] = mapped_column(String, nullable=True)
+    office_id: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
+    resource_office: Mapped[str | None] = mapped_column(String, nullable=True)
+    session_id: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
+    ip_address: Mapped[str | None] = mapped_column(String, nullable=True)
+    user_agent: Mapped[str | None] = mapped_column(String, nullable=True)
+    correlation_id: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
+    failure_reason: Mapped[str | None] = mapped_column(String, nullable=True)
+
+
+class UserSession(Base):
+    """Server-side session record. Each login creates one (the token's "sid" claim); logout revokes it, and
+    auth.current_user rejects tokens whose session is revoked or expired."""
+    __tablename__ = "user_sessions"
+    sid: Mapped[str] = mapped_column(String, primary_key=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.user_id"), index=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    expires_at: Mapped[datetime] = mapped_column(DateTime)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    ip_address: Mapped[str | None] = mapped_column(String, nullable=True)
+    user_agent: Mapped[str | None] = mapped_column(String, nullable=True)
 
 
 class Snapshot(Base):

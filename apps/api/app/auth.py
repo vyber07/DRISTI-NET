@@ -5,10 +5,12 @@ graph store or the object store directly.
 """
 from __future__ import annotations
 
+import datetime
 import functools
 import hashlib
 import hmac
 import os
+import secrets
 import time
 
 import jwt
@@ -18,7 +20,8 @@ from sqlalchemy.orm import Session
 
 from . import config
 from .db import get_db
-from .models import Case, CaseAssignment, User
+from .core import request_context
+from .models import Case, CaseAssignment, User, UserSession, utcnow
 from .services import ratelimit
 from .services.audit import record_audit
 
@@ -51,12 +54,36 @@ def verify_absent_user(password: str) -> bool:
     return False
 
 
-# ------------------------------------------------------------------ tokens
-def issue_token(user: User) -> str:
+# ------------------------------------------------------------------ tokens and sessions
+def _now_naive_utc() -> datetime.datetime:
+    """Stored timestamps are naive UTC (the audit and session tables); comparisons must use the same convention."""
+    return utcnow().replace(tzinfo=None)
+
+
+def create_session(db: Session, user: User, ip: str | None, user_agent: str | None) -> str:
+    """One server-side session per login. Its ID travels in the token's "sid" claim; logout revokes it."""
+    sid = secrets.token_urlsafe(24)
+    now = _now_naive_utc()
+    db.add(UserSession(sid=sid, user_id=user.user_id, created_at=now,
+                       expires_at=now + datetime.timedelta(seconds=TOKEN_TTL_SECONDS), ip_address=ip, user_agent=user_agent))
+    return sid
+
+
+def issue_token(user: User, sid: str) -> str:
     now = int(time.time())
-    payload = {"sub": user.user_id, "role": user.role, "jur": user.jurisdiction, "tv": user.token_version,
+    payload = {"sub": user.user_id, "role": user.role, "jur": user.jurisdiction, "tv": user.token_version, "sid": sid,
                "iat": now, "exp": now + TOKEN_TTL_SECONDS}
     return jwt.encode(payload, config.SECRET_KEY, algorithm="HS256")
+
+
+def _reject(request: Request, db: Session, user: User | None, reason: str) -> None:
+    """Refuse a request whose token is well-formed but no longer acceptable. Audited when the subject is a known
+    account (malformed or forged tokens are not audited, to keep unauthenticated traffic from filling the log)."""
+    if user is not None:
+        record_audit(db, getattr(request.state, "trace_id", "-"), user.user_id, "AUTH_TOKEN_REJECTED", "USER", user.user_id,
+                     outcome="DENIED", detail={"reason": reason})
+        db.commit()
+    raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid or expired token")
 
 
 def current_user(request: Request, creds: HTTPAuthorizationCredentials | None = Depends(bearer), db: Session = Depends(get_db)) -> User:
@@ -67,13 +94,24 @@ def current_user(request: Request, creds: HTTPAuthorizationCredentials | None = 
     except jwt.PyJWTError:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid or expired token")
     user = db.get(User, payload["sub"])
-    if user is None or not user.active:
+    if user is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Unknown user")
+    if not user.active:
+        _reject(request, db, user, "account inactive")
+    # Server-side session: revoked by logout, expired, or absent (tokens issued before sessions existed have no sid).
+    sid = payload.get("sid")
+    session = db.get(UserSession, sid) if sid else None
+    if session is None or session.user_id != user.user_id:
+        _reject(request, db, user, "no such session")
+    if session.revoked_at is not None:
+        _reject(request, db, user, "session revoked")
+    if session.expires_at <= _now_naive_utc():
+        _reject(request, db, user, "session expired")
     # SEC-02: a token issued before the account's last password reset carries a stale "tv" claim.
     # Tokens have no other revocation mechanism, so this is what makes a reset actually take effect
     # immediately instead of leaving every already-issued token valid until its own natural expiry.
     if payload.get("tv") != user.token_version:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid or expired token")
+        _reject(request, db, user, "password changed after token issued")
     # DoS layer, per account: the ceiling depends on the account's role (config.API_USER_RATE_PER_MIN_BY_ROLE).
     # Applied only after the token is verified, so the key is a real user id and cannot be chosen by a caller.
     limits = config.API_USER_RATE_PER_MIN_BY_ROLE
@@ -82,6 +120,8 @@ def current_user(request: Request, creds: HTTPAuthorizationCredentials | None = 
         raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "Too many requests for this account; try again shortly",
                             headers={"Retry-After": str(decision.retry_after)})
     request.state.user = user
+    # Audit context: the actor, session and office come from this database row, not from the request.
+    request_context.set_actor(user, sid)
     return user
 
 

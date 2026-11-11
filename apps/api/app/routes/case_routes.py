@@ -6,7 +6,7 @@ from ..auth import authorize_case, current_user, require_roles
 from ..db import get_db
 from ..models import Case, CaseAssignment, Evidence, MatchCandidate, User
 from ..schemas import AssignIn, CaseIn, CaseOut
-from ..services.audit import record_audit
+from ..services.audit import record_audit, record_read
 from .listing import MAX_LIMIT, page, text_filter
 
 router = APIRouter(tags=["cases"])
@@ -31,6 +31,8 @@ def list_cases(response: Response, q: str | None = Query(None, max_length=200), 
                limit: int | None = Query(None, ge=1, le=MAX_LIMIT), offset: int = Query(0, ge=0),
                user: User = Depends(current_user), db: Session = Depends(get_db)):
     """Only cases the user is assigned to (ADMIN/AUDITOR see all). Optional search/paging; X-Total-Count = matches."""
+    record_read(db, None, user.user_id, "CASE_LIST", search=q,  # request ID comes from the request context
+                detail={"awaiting_review": awaiting_review, "limit": limit, "offset": offset})
     query = db.query(Case)
     if user.role not in ("ADMIN", "AUDITOR"):
         ids = [a.case_id for a in db.query(CaseAssignment).filter_by(user_id=user.user_id).all()]

@@ -12,7 +12,7 @@ from ..schemas import ContextRevealIn, DownloadIn, EvidenceOut
 
 from ..services import extract as extract_svc
 from ..services import pipeline, storage
-from ..services.audit import record_audit
+from ..services.audit import record_audit, record_read
 from ..services.evidence_service import build_context_window, mark_object_missing
 from ..services.masking import mask_text
 from .graph_routes import claim_out
@@ -118,6 +118,8 @@ def list_evidence(case_id: str, request: Request, response: FastAPIResponse, q: 
                   offset: int = Query(0, ge=0), user: User = Depends(current_user), db: Session = Depends(get_db)):
     """Optional search (file name, evidence id, start of SHA-256), status filter and paging; X-Total-Count = matches."""
     authorize_case(db, user, case_id, request)
+    record_read(db, None, user.user_id, "EVIDENCE_LIST", case_id=case_id, search=q,
+                detail={"status_filter": status, "limit": limit, "offset": offset})
     query = db.query(Evidence).filter_by(case_id=case_id)
     if status:
         query = query.filter(Evidence.status == status)
@@ -132,6 +134,7 @@ def list_evidence(case_id: str, request: Request, response: FastAPIResponse, q: 
 def evidence_summary(case_id: str, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db)):
     """Counts by status for the whole case (filters and the overview need them without loading every row)."""
     authorize_case(db, user, case_id, request)
+    record_read(db, None, user.user_id, "EVIDENCE_SUMMARY", case_id=case_id)
     rows = db.query(Evidence.status, func.count()).filter_by(case_id=case_id).group_by(Evidence.status).all()
     return {"case_id": case_id, "total": sum(n for _, n in rows), "by_status": {s: n for s, n in rows}}
 

@@ -2,19 +2,20 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from .. import config
-from ..auth import current_user, hash_password, issue_token, require_roles, verify_absent_user, verify_password
+from ..auth import create_session, current_user, hash_password, issue_token, require_roles, verify_absent_user, verify_password
+from ..core import request_context
 from ..db import get_db
-from ..models import CaseAssignment, User
+from ..models import CaseAssignment, User, UserSession, utcnow
 from ..schemas import LoginIn, PasswordResetIn, UserCreateIn, UserUpdateIn
 from ..services import ratelimit
-from ..services.audit import record_audit
+from ..services.audit import record_audit, record_audit_best_effort
 
 router = APIRouter(tags=["auth"])
 
 
 def user_out(u: User) -> dict:
     return {"user_id": u.user_id, "username": u.username, "display_name": u.display_name, "role": u.role,
-            "jurisdiction": u.jurisdiction, "active": u.active}
+            "jurisdiction": u.jurisdiction, "office_id": u.office_id, "active": u.active}
 
 
 LOGIN_RATE_LIMITED = "Too many failed login attempts; try again later"
@@ -46,6 +47,7 @@ def login(body: LoginIn, request: Request, db: Session = Depends(get_db)):
         raise HTTPException(429, LOGIN_RATE_LIMITED, headers={"Retry-After": str(max(1, attempt.retry_after))})
 
     success = False
+    sid = None
     try:
         user = db.query(User).filter_by(username=body.username, active=True).first()
         if user is None:
@@ -53,6 +55,9 @@ def login(body: LoginIn, request: Request, db: Session = Depends(get_db)):
         else:
             success = verify_password(body.password, user.password_hash)
         if success:
+            ctx = request_context.current()
+            sid = create_session(db, user, ip, ctx.user_agent if ctx else None)
+            request_context.set_actor(user, sid)
             record_audit(db, trace, user.user_id, "LOGIN", "USER", user.user_id, detail={"ip": ip})
         else:
             record_audit(db, trace, None, "LOGIN", "USER", body.username, outcome="DENIED",
@@ -68,16 +73,34 @@ def login(body: LoginIn, request: Request, db: Session = Depends(get_db)):
         db.commit()
     if not success:
         raise HTTPException(401, LOGIN_BAD_CREDENTIALS)
-    return {"token": issue_token(user), "user": user_out(user)}
+    return {"token": issue_token(user, sid), "user": user_out(user)}
 
 
 @router.get("/users/{user_id}/login-status")
-def login_status(user_id: str, _: User = Depends(require_roles("ADMIN")), db: Session = Depends(get_db)):
-    """Administrator view of an account's lockout state, for deciding whether an unlock is needed."""
+def login_status(user_id: str, request: Request, user: User = Depends(require_roles("ADMIN")), db: Session = Depends(get_db)):
+    """Administrator view of an account's lockout state, for deciding whether an unlock is needed. Audited (fail-closed)."""
     target = db.get(User, user_id)
     if target is None:
         raise HTTPException(404, "unknown user")
-    return ratelimit.account_status(target.username, target.role)
+    status_out = ratelimit.account_status(target.username, target.role)
+    record_audit(db, request.state.trace_id, user.user_id, "LOGIN_STATUS_VIEW", "USER", target.user_id,
+                 detail={"username": target.username, "locked": status_out["locked"]})
+    db.commit()
+    return status_out
+
+
+@router.post("/auth/logout")
+def logout(request: Request, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    """Revokes the caller's session. The token stops working on its next use; other sessions of the same user are
+    unaffected. Audited (LOGOUT). Audited before the revocation commits, so a failed audit leaves the session live."""
+    sid = request_context.current().session_id if request_context.current() else None
+    session = db.get(UserSession, sid) if sid else None
+    if session is None:
+        raise HTTPException(401, "Invalid or expired token")
+    record_audit(db, request.state.trace_id, user.user_id, "LOGOUT", "USER", user.user_id, detail={"session": sid})
+    session.revoked_at = utcnow().replace(tzinfo=None)
+    db.commit()
+    return {"ok": True}
 
 
 @router.post("/users/{user_id}/unlock")
@@ -102,8 +125,10 @@ def me(user: User = Depends(current_user), db: Session = Depends(get_db)):
 
 
 @router.get("/users")
-def list_users(_: User = Depends(require_roles("ADMIN", "AUDITOR", "INVESTIGATOR")), db: Session = Depends(get_db)):
-    return [user_out(u) for u in db.query(User).order_by(User.username).all()]
+def list_users(request: Request, user: User = Depends(require_roles("ADMIN", "AUDITOR", "INVESTIGATOR")), db: Session = Depends(get_db)):
+    rows = db.query(User).order_by(User.username).all()
+    record_audit_best_effort(db, request.state.trace_id, user.user_id, "USER_LIST", "USER", None, detail={"count": len(rows)})
+    return [user_out(u) for u in rows]
 
 
 @router.post("/users", status_code=201)
@@ -111,11 +136,11 @@ def create_user(body: UserCreateIn, request: Request, user: User = Depends(requi
     if db.query(User).filter_by(username=body.username).first() is not None:
         raise HTTPException(409, f"username {body.username!r} already exists")
     new_user = User(username=body.username, display_name=body.display_name, role=body.role,
-                     jurisdiction=body.jurisdiction, password_hash=hash_password(body.password))
+                     jurisdiction=body.jurisdiction, office_id=body.office_id, password_hash=hash_password(body.password))
     db.add(new_user)
     db.flush()
     record_audit(db, request.state.trace_id, user.user_id, "USER_CREATE", "USER", new_user.user_id,
-                 detail={"username": new_user.username, "role": new_user.role})
+                 detail={"username": new_user.username, "role": new_user.role, "office_id": new_user.office_id})
     db.commit()
     return user_out(new_user)
 
@@ -128,14 +153,16 @@ def update_user(user_id: str, body: UserUpdateIn, request: Request, user: User =
     target = db.get(User, user_id)
     if target is None:
         raise HTTPException(404, "unknown user")
-    before = {"role": target.role, "jurisdiction": target.jurisdiction, "display_name": target.display_name}
+    before = {"role": target.role, "jurisdiction": target.jurisdiction, "display_name": target.display_name, "office_id": target.office_id}
     if body.display_name is not None:
         target.display_name = body.display_name
     if body.role is not None:
         target.role = body.role
     if body.jurisdiction is not None:
         target.jurisdiction = body.jurisdiction
-    after = {"role": target.role, "jurisdiction": target.jurisdiction, "display_name": target.display_name}
+    if body.office_id is not None:
+        target.office_id = body.office_id or None
+    after = {"role": target.role, "jurisdiction": target.jurisdiction, "display_name": target.display_name, "office_id": target.office_id}
     record_audit(db, request.state.trace_id, user.user_id, "USER_UPDATE", "USER", target.user_id, detail={"before": before, "after": after})
     db.commit()
     return user_out(target)

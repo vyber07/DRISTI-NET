@@ -98,6 +98,11 @@ LOGIN_ACCOUNT_LOCK_MAX_S = int(_env("LOGIN_ACCOUNT_LOCK_MAX_S", str(4 * 3600)))
 # Input bounds on the login body. Oversized values are rejected before any hashing work.
 LOGIN_USERNAME_MAX_LEN = 200
 LOGIN_PASSWORD_MAX_LEN = 1024
+# Audit timestamps are stored and exported in UTC. This zone is used only for the *_local display fields that
+# investigators read. Default: the deployment's own zone (India, for this project); change per deployment.
+AUDIT_DISPLAY_TZ = _env("AUDIT_DISPLAY_TZ", "Asia/Kolkata")
+# Retention is a policy value (docs/AUDIT_LOG_POLICY.md). Nothing in the application deletes audit rows.
+AUDIT_RETENTION_YEARS = int(_env("AUDIT_RETENTION_YEARS", "7"))
 # General API request ceilings (requests per 60 s window) -- the DoS layer.
 # API_IP_RATE_PER_MIN: every /api/v1 request from one client IP, including unauthenticated ones.
 # API_USER_RATE_PER_MIN_BY_ROLE: authenticated requests per user, by role (checked after the token is verified).

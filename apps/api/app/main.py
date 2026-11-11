@@ -10,6 +10,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
 from . import config
+from .core import request_context
 from .core.exceptions import DristiBaseError
 from .core.logging import configure_logging
 from .db import engine, init_db
@@ -63,9 +64,21 @@ async def api_ip_rate_limit_middleware(request: Request, call_next):
 
 @app.middleware("http")
 async def trace_middleware(request: Request, call_next):
-    request.state.trace_id = request.headers.get("X-Trace-Id") or f"TRC-{uuid.uuid4().hex[:12]}"
+    """Creates the per-request audit context. The request ID is server-generated: a client-supplied X-Trace-Id is
+    ignored, because it was previously written verbatim into the audit trail. A client's X-Correlation-Id is kept
+    only when it matches a safe pattern. The client IP comes from ratelimit.client_ip (trusted proxies only)."""
+    ctx = request_context.begin(request_context.RequestContext(
+        request_id=request_context.new_request_id(),
+        correlation_id=request_context.sanitize_correlation(request.headers.get("x-correlation-id")),
+        client_ip=ratelimit.client_ip(request),
+        user_agent=request_context.sanitize_user_agent(request.headers.get("user-agent")),
+        method=request.method,
+        path=request.url.path,
+    ))
+    request.state.trace_id = ctx.request_id
     response = await call_next(request)
-    response.headers["X-Trace-Id"] = request.state.trace_id
+    response.headers["X-Trace-Id"] = ctx.request_id
+    response.headers["X-Request-Id"] = ctx.request_id
     response.headers["X-Content-Type-Options"] = "nosniff"
     return response
 

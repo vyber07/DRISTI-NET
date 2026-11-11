@@ -49,6 +49,49 @@ def init_db() -> None:
     if config.DATABASE_URL.startswith("sqlite"):
         Base.metadata.create_all(engine)
         _sqlite_add_missing_columns()
+        _install_audit_immutability_sqlite()
+
+
+def install_audit_immutability() -> None:
+    """Install the append-only protection for the configured database. Used by init_db for SQLite, and by the test
+    harness after create_all() on PostgreSQL (production PostgreSQL gets the same triggers from migration
+    5bcde1234572, so this is the same protection, not a weaker one)."""
+    if engine.dialect.name == "postgresql":
+        _install_audit_immutability_postgres()
+    else:
+        _install_audit_immutability_sqlite()
+
+
+def _install_audit_immutability_postgres() -> None:
+    from sqlalchemy import text
+
+    with engine.begin() as conn:
+        conn.execute(text(
+            "CREATE OR REPLACE FUNCTION audit_events_append_only() RETURNS trigger AS $$ "
+            "BEGIN RAISE EXCEPTION 'audit_events is append-only'; END; $$ LANGUAGE plpgsql"))
+        conn.execute(text("DROP TRIGGER IF EXISTS audit_events_no_update_delete ON audit_events"))
+        conn.execute(text(
+            "CREATE TRIGGER audit_events_no_update_delete BEFORE UPDATE OR DELETE ON audit_events "
+            "FOR EACH ROW EXECUTE FUNCTION audit_events_append_only()"))
+        conn.execute(text("DROP TRIGGER IF EXISTS audit_events_no_truncate ON audit_events"))
+        conn.execute(text(
+            "CREATE TRIGGER audit_events_no_truncate BEFORE TRUNCATE ON audit_events "
+            "FOR EACH STATEMENT EXECUTE FUNCTION audit_events_append_only()"))
+
+
+def _install_audit_immutability_sqlite() -> None:
+    """audit_events is append-only: the database itself refuses UPDATE and DELETE, so an application bug, a
+    compromised route or an ad-hoc SQL session cannot rewrite history through the ORM. (A database owner can still
+    drop the triggers; the daily digest in docs/AUDIT_LOG_POLICY.md is the control that detects that.)"""
+    from sqlalchemy import text
+
+    with engine.begin() as conn:
+        conn.execute(text(
+            "CREATE TRIGGER IF NOT EXISTS audit_events_no_update BEFORE UPDATE ON audit_events "
+            "BEGIN SELECT RAISE(ABORT, 'audit_events is append-only'); END"))
+        conn.execute(text(
+            "CREATE TRIGGER IF NOT EXISTS audit_events_no_delete BEFORE DELETE ON audit_events "
+            "BEGIN SELECT RAISE(ABORT, 'audit_events is append-only'); END"))
 
 
 def _sqlite_add_missing_columns() -> None:
