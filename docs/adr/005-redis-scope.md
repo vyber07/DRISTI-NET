@@ -1,5 +1,10 @@
 # ADR-005: Redis limited to one justified use
 
+> **Partly superseded by [ADR-012](012-rate-limiting.md)** (commit `dd3831c`). The Redis scope (login counters only)
+> still holds. The fail-open outage policy described below is replaced: when Redis is configured but unreachable,
+> counters now fall back to bounded in-process memory instead of allowing unlimited attempts. The original text is
+> kept below as the historical record.
+
 ## Problem
 
 `/auth/login` had no brute-force/credential-stuffing protection at all — an attacker could try unlimited

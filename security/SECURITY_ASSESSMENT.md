@@ -20,7 +20,7 @@ This independent technical security assessment evaluated the DRISTI-NET platform
 
 | Area | Test Procedure | Observed Result | Status |
 |---|---|---|---|
-| **Authentication & Session** | Token expiration, signature forgery, algorithm downgrade, login brute force. | Short-lived JWTs, HMAC-SHA256 with 32+ char key, Redis login throttling (5 attempts/15 min). | 🟢 PASS |
+| **Authentication & Session** | Token expiration, signature forgery, algorithm downgrade, login brute force. | Short-lived JWTs, HMAC-SHA256 with 32+ char key, role-based login lockout, per-IP spraying limit, API rate limits with in-process fallback when Redis is down (ADR-012; unit-tested, not yet live-verified). | 🟢 PASS (unit-tested) |
 | **Authorization & Tenant Isolation** | Cross-case access attempts, unassigned user access, cross-jurisdiction access. | `test_denial_for_unassigned_user` verified 403 Forbidden server-side; direct DB queries verify jurisdiction filter. | 🟢 PASS |
 | **Malware Quarantine Gate** | EICAR standard test string upload, scanner timeout, scanner unreachable. | EICAR blocked as `INFECTED`; forced failure leaves file in quarantine as `SCAN_FAILED`; fail-closed. | 🟢 PASS |
 | **Integrity & Anti-Tampering** | 1-byte file alteration post-upload, pre-extraction hash verification. | Altered file caught immediately by `storage.verify_hash()`; status transitioned to `INTEGRITY_MISMATCH`. | 🟢 PASS |
