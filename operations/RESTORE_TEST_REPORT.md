@@ -7,8 +7,16 @@ MinIO, Redis, ClamAV) now starts and runs; see `frontend-audit/FRONTEND_CONTINUA
 migration" section. That was a one-time SQLite→Postgres/MinIO *migration* verified with
 `scripts/verify_pg_minio_migration.py` (reuses this script's own `fingerprint()` unmodified, comparing source
 against the freshly-migrated target), not a run of *this* backup→restore drill against Postgres/MinIO.
-**Not tested:** this backup→restore drill specifically against PostgreSQL + MinIO/S3 + Neo4j (no isolated
-host, BLK-05), off-host copies, backup encryption at rest, key escrow, RPO/RTO under load.
+**Update (2026-11-11):** a backup→restore drill specifically against PostgreSQL + MinIO was run (not
+this script, a separate one written for the Compose stack -- see `operations/DISASTER_RECOVERY_PLAN.md`'s
+"Drill history" section): `pg_dump`/`pg_restore` and a MinIO object download/upload, both into disposable,
+non-live instances, not the live ones. Row counts matched the live source exactly; all 99 audit events
+verified with zero HMAC failures after restore; the one evidence object's SHA-256 matched both the backup
+file and its database record. Neo4j needs no backup at all -- confirmed it's purely a rebuildable
+projection of PostgreSQL rows, not a separate data store.
+**Not tested:** `backup_restore_drill.py` itself (as opposed to the separate drill above) run
+against Postgres/MinIO specifically (no isolated host, BLK-05), off-host copies, backup
+encryption at rest, key escrow, RPO/RTO under load.
 
 ## Method
 `scripts/backup_restore_drill.py` (repeatable; reads the source, never writes to it):
