@@ -136,7 +136,7 @@ Archive upload limits (size/nesting/ratio/decompression-bomb ratio) are now Demo
 | Denied, loading, empty and error states on every data view | Demonstrated on the redesigned pages | `components/layout/page.tsx`; E2E denial test |
 | Error boundary on every feature route | **Demonstrated (2026-11-06)** — `RouteErrorBoundary` class component added to `components/layout/page.tsx`; catches render errors, shows retry button, logs via `componentDidCatch` |
 | Automated accessibility (axe-core, WCAG 2.x A/AA rules, 14 pages) | 0 violations; **not** a conformance claim | `frontend-audit/FRONTEND_ACCESSIBILITY_REPORT.md` |
-| Live demo serves the redesign | Demonstrated — live at `http://65.0.102.181/` since 2026-11-04 15:09 UTC | `frontend-audit/FRONTEND_CONTINUATION_STATE.md` |
+| Live demo serves the redesign | Demonstrated — live at `https://65.0.102.181.nip.io/` since 2026-11-04 15:09 UTC (TLS added 2026-11-11; `http://65.0.102.181/` now redirects there) | `frontend-audit/FRONTEND_CONTINUATION_STATE.md` |
 
 ## Engineering modernization (2026-11-06)
 

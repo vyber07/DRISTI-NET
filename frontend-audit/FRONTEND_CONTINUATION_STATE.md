@@ -111,12 +111,45 @@ profile) since the existing system nginx already serves the public site.
   and `worker` services) so every pre-existing, correctly-signed audit event stays verifiable.
 
 **Rollback** (restores the bare-metal SQLite deployment; the old unit was left installed and
-stopped, never removed, specifically so this stays possible):
+stopped, never removed, specifically so this stays possible). Note: since the TLS addition below,
+the `proxy_pass` to flip back lives in the port-443 DRISTI-NET block, not port 80 (which is now a
+redirect-only stub) -- edit `/etc/nginx/sites-available/dristinet`'s `location /` under
+`server_name 65.0.102.181.nip.io;` to point at `127.0.0.1:8000` instead of `127.0.0.1:8001`, then:
 ```bash
-sudo sed -i 's#proxy_pass http://127.0.0.1:8001;#proxy_pass http://127.0.0.1:8000;#' /etc/nginx/sites-available/dristinet
 sudo nginx -t && sudo systemctl reload nginx
 sudo systemctl start dristinet-api
 # Any writes made against the Compose stack between cutover and rollback are not auto-reconciled
 # back to SQLite -- check storage/drishti.db's state against the Compose database before assuming
 # nothing was lost.
+```
+
+## TLS added (2026-11-11)
+
+The live site previously ran entirely over plain HTTP (flagged in the independent security audit,
+`DRISTI_NET_SECURITY_AUDIT.md` SEC-19, as the no-TLS-path part of that finding -- the other half,
+running the container as non-root, was fixed earlier the same day). No real domain points at this
+host, only the bare IP, and Let's Encrypt cannot issue a certificate for a bare IP. Used the free
+nip.io wildcard DNS service instead: `65.0.102.181.nip.io` resolves to this host (already used
+earlier for the test-site deployment) and **is** a real, publicly resolvable hostname, so Let's
+Encrypt issued a genuine, browser-trusted certificate for it.
+
+- **Live URL is now `https://65.0.102.181.nip.io/`** (real, trusted cert -- no browser warning;
+  verified with `curl`'s own certificate validation, no `-k` needed). `http://65.0.102.181/`
+  still works but now 301-redirects to the HTTPS URL rather than serving the app directly.
+- Certificate obtained with `certbot certonly --nginx` (authentication only, not auto-config, to
+  avoid certbot rewriting the hand-tuned nginx site file) and installed into a new port-443 server
+  block matched by SNI on `65.0.102.181.nip.io`. Code-server's existing port-443 block (a
+  different, unrelated service on this host, self-signed cert) is untouched and still the
+  `default_server` for 443 -- confirmed serving correctly for any other hostname/no-SNI request.
+- Added `Strict-Transport-Security: max-age=63072000; includeSubDomains`.
+- Auto-renewal: certbot's own systemd timer (`certbot.timer`), confirmed scheduled; certificate
+  expires 2027-02-09 and renews automatically well before then.
+- **Backup taken first:** `/home/ubuntu/drishti-backups/pre-tls-20261111T062204Z/nginx-dristinet-before-tls.conf`.
+- Verified live: HTTPS health/ready/login/frontend all correct; HTTP redirects correctly; code-server unaffected.
+
+**Rollback** (removes TLS, restores plain-HTTP-only):
+```bash
+sudo cp /home/ubuntu/drishti-backups/pre-tls-20261111T062204Z/nginx-dristinet-before-tls.conf /etc/nginx/sites-available/dristinet
+sudo nginx -t && sudo systemctl reload nginx
+# certificate files under /etc/letsencrypt/live/65.0.102.181.nip.io/ are left in place, unused
 ```

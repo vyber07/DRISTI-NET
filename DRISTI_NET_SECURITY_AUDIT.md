@@ -53,11 +53,14 @@ container startup):
 - **SEC-13 (P2)**: `get_entity()`'s `total_cases` field removed -- it was a redundant aggregate
   (always equal to `len(visible_cases) + restricted_case_count + 1`) that disclosed cross-case
   linkage volume beyond the other two fields, and was never read by the frontend.
-- **SEC-19 (P1, partial)**: the Docker image now creates and runs as a non-root user, confirmed
-  live (`whoami` inside the `api` container returns `appuser`; `/data` is owned by `appuser`, no
-  permission errors on startup, worker's Kafka consumer group join succeeded normally). TLS
-  termination -- the other half of this finding -- remains open; the owner has been asked whether
-  to add a certificate now or handle it separately.
+- **SEC-19 (P1) -- now fully fixed.** Non-root container confirmed live (`whoami` inside the `api`
+  container returns `appuser`; `/data` owned by `appuser`, no permission errors on startup,
+  worker's Kafka consumer group join succeeded normally). TLS added 2026-11-11: no real domain
+  exists for this host, only the bare IP, so used the free nip.io wildcard DNS service
+  (`65.0.102.181.nip.io`, a real resolvable hostname Let's Encrypt can certify) to get a genuine,
+  browser-trusted certificate. Live URL is now `https://65.0.102.181.nip.io/`;
+  `http://65.0.102.181/` 301-redirects there. Auto-renews via certbot's own systemd timer. Details
+  and rollback: `frontend-audit/FRONTEND_CONTINUATION_STATE.md`'s "TLS added" section.
 - **BUG-NEW-10 (P1)**: case assignment now refuses a deactivated or wrong-jurisdiction target
   before creating the assignment row, instead of recording one that could never actually grant
   access. New tests in `apps/api/app/tests/test_case_create_assign.py`.
@@ -78,9 +81,8 @@ Reviewed, not changed (reasoning recorded in commit `24358fe`):
   two existing regression tests that explicitly encode "SQLite is never production, regardless of
   secret key" as intended, tested behavior. Reverted.
 
-Not addressed in this pass, still open: **SEC-02** (no per-token revocation -- though deactivating
-an account does immediately block it, since `active` is checked on every request, not just at
-login), **SEC-06** (localStorage token storage), **SEC-09/16** (data-classification policy
-questions), **SEC-12/14** (partial -- audit `limit` bounds were already fixed separately;
-detail-redaction and signature-verification-on-read were not), **SEC-18** (disaster recovery
-runbook), and the TLS half of **SEC-19**.
+Not addressed, still open: **SEC-02** (no per-token revocation -- though deactivating an account
+does immediately block it, since `active` is checked on every request, not just at login),
+**SEC-06** (localStorage token storage), **SEC-09/16** (data-classification policy questions),
+**SEC-12/14** (partial -- audit `limit` bounds were already fixed separately; detail-redaction and
+signature-verification-on-read were not), **SEC-18** (disaster recovery runbook).
