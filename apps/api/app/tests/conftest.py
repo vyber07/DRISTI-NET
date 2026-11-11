@@ -53,7 +53,16 @@ from fastapi.testclient import TestClient  # noqa: E402
 from apps.api.app.main import app  # noqa: E402
 from apps.api.app.seed import seed  # noqa: E402
 from apps.api.app.config import DATABASE_URL, SYNTHETIC_DIR  # noqa: E402
-from apps.api.app.services import neo4j_store  # noqa: E402
+from apps.api.app.services import neo4j_store, ratelimit  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def _fresh_rate_limit_counters():
+    # The shared TestClient is one client IP for the whole session, so without this the per-IP login and
+    # API ceilings would accumulate across unrelated tests. Each test starts with empty process-local counters.
+    ratelimit.reset_memory()
+    yield
+    ratelimit.reset_memory()
 
 
 def _reset_non_sqlite_schema() -> None:

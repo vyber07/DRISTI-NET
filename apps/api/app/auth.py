@@ -18,6 +18,7 @@ from sqlalchemy.orm import Session
 from . import config
 from .db import get_db
 from .models import Case, CaseAssignment, User
+from .services import ratelimit
 from .services.audit import record_audit
 
 bearer = HTTPBearer(auto_error=False)
@@ -60,6 +61,13 @@ def current_user(request: Request, creds: HTTPAuthorizationCredentials | None = 
     # immediately instead of leaving every already-issued token valid until its own natural expiry.
     if payload.get("tv") != user.token_version:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid or expired token")
+    # DoS layer, per account: the ceiling depends on the account's role (config.API_USER_RATE_PER_MIN_BY_ROLE).
+    # Applied only after the token is verified, so the key is a real user id and cannot be chosen by a caller.
+    limits = config.API_USER_RATE_PER_MIN_BY_ROLE
+    decision = ratelimit.hit(f"drishti:rl:user:{user.user_id}", limits.get(user.role, limits["DEFAULT"]), 60)
+    if not decision.allowed:
+        raise HTTPException(status.HTTP_429_TOO_MANY_REQUESTS, "Too many requests for this account; try again shortly",
+                            headers={"Retry-After": str(decision.retry_after)})
     request.state.user = user
     return user
 

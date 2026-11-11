@@ -1,3 +1,15 @@
+# Unreleased — login and API rate limiting (branch `worktree-auth-login-ratelimit`)
+- SECURITY: login brute-force protection by account type. Failed-login ceilings per username depend on role
+  (ADMIN and AUDITOR: 3 failures / 30 min; others and unknown usernames: `DRISHTI_LOGIN_THROTTLE_MAX_ATTEMPTS`, default 5 / 15 min).
+- SECURITY: per-client-IP login ceiling across all usernames (`DRISHTI_LOGIN_IP_MAX_FAILURES`, default 30 / 15 min) against password spraying.
+  A successful login clears only the username counter, not the IP counter.
+- SECURITY (DoS): `/api/v1` requests per client IP (`DRISHTI_API_IP_RATE_PER_MIN`, default 600/min; health and ready exempt),
+  and authenticated requests per user by role (`API_USER_RATE_PER_MIN_BY_ROLE`: default 300/min, ADMIN 600/min). Responses are 429 with `Retry-After`.
+- Counters use Redis when reachable. When Redis is configured but down, counting falls back to per-process memory. Previously it failed open
+  (no brute-force protection at all during a Redis outage).
+- Client IP comes from `X-Forwarded-For` only when the direct peer is a trusted proxy (`DRISHTI_TRUSTED_PROXIES`, default loopback and 172.16.0.0/12).
+  Callers cannot spoof their address.
+
 # Unreleased — session 4 security fixes (branch `audit/session-4-security-fixes`, 2026-11-01)
 - SECURITY (P0): SPA fallback no longer serves files outside `apps/web/dist` (path traversal, DEF-028).
 - SECURITY: case authorization on `POST /candidates/{id}/assign`, `GET /cases/{id}/stats`; entity card no longer

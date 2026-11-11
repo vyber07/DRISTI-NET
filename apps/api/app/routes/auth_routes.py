@@ -20,27 +20,32 @@ def user_out(u: User) -> dict:
 @router.post("/auth/login")
 def login(body: LoginIn, request: Request, db: Session = Depends(get_db)):
     trace = request.state.trace_id
-    if config.REDIS_URL:
-        try:
-            throttled = ratelimit.is_login_throttled(body.username)
-        except ratelimit.RateLimiterUnavailable:
-            throttled = False
-            record_audit(db, trace, None, "LOGIN_THROTTLE_DEGRADED", "USER", body.username, outcome="DEGRADED",
-                         detail={"reason": "redis unreachable; proceeding without throttling"})
-            db.commit()
-        if throttled:
-            record_audit(db, trace, None, "LOGIN", "USER", body.username, outcome="DENIED", detail={"reason": "rate limited"})
-            db.commit()
-            raise HTTPException(429, "Too many failed login attempts; try again later")
+    ip = ratelimit.client_ip(request)
+    # The account's role selects its lockout policy. Unknown usernames get the DEFAULT policy, so a probe
+    # for a non-existent name is limited exactly like a real account and reveals nothing.
+    known = db.query(User).filter_by(username=body.username).first()
+    role = known.role if known else None
+
+    retry_after = ratelimit.login_retry_after(body.username, ip, role)
+    if ratelimit.degraded():
+        record_audit(db, trace, None, "LOGIN_THROTTLE_DEGRADED", "USER", body.username, outcome="DEGRADED",
+                     detail={"reason": "redis unreachable; using per-process login counters", "ip": ip})
+    if retry_after:
+        record_audit(db, trace, None, "LOGIN", "USER", body.username, outcome="DENIED",
+                     detail={"reason": "rate limited", "ip": ip, "retry_after": retry_after})
+        db.commit()
+        raise HTTPException(429, "Too many failed login attempts; try again later",
+                            headers={"Retry-After": str(retry_after)})
 
     user = db.query(User).filter_by(username=body.username, active=True).first()
     if user is None or not verify_password(body.password, user.password_hash):
-        ratelimit.record_failed_login(body.username)
-        record_audit(db, trace, None, "LOGIN", "USER", body.username, outcome="DENIED", detail={"reason": "bad credentials"})
+        ratelimit.record_login_failure(body.username, ip, role)
+        record_audit(db, trace, None, "LOGIN", "USER", body.username, outcome="DENIED",
+                     detail={"reason": "bad credentials", "ip": ip})
         db.commit()
         raise HTTPException(401, "Invalid credentials")
-    ratelimit.clear_login_throttle(body.username)
-    record_audit(db, trace, user.user_id, "LOGIN", "USER", user.user_id)
+    ratelimit.clear_login_failures(body.username)
+    record_audit(db, trace, user.user_id, "LOGIN", "USER", user.user_id, detail={"ip": ip})
     db.commit()
     return {"token": issue_token(user), "user": user_out(user)}
 

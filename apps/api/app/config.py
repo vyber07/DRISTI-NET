@@ -70,8 +70,32 @@ NEO4J_QUERY_TIMEOUT_S = float(_env("NEO4J_QUERY_TIMEOUT_S", "10"))
 # same "empty = not configured" pattern as NEO4J_URI. Never a source of truth for anything Postgres/
 # SQLite already owns -- job status, claims, reviews etc. stay in the relational DB.
 REDIS_URL = _env("REDIS_URL", "")
+# Rate limiting / brute-force protection (services/ratelimit.py). Redis, when configured, holds the shared
+# counters; if Redis is unreachable the counters fall back to per-process memory (never to "no limit").
+#
+# Account type = role (models.ROLES). Failed-login ceiling per *username*, by role: (max failures, window s).
+# Unknown usernames use the "DEFAULT" policy so probing a name gets no different treatment from a real one.
 LOGIN_THROTTLE_MAX_ATTEMPTS = int(_env("LOGIN_THROTTLE_MAX_ATTEMPTS", "5"))
 LOGIN_THROTTLE_WINDOW_S = int(_env("LOGIN_THROTTLE_WINDOW_S", str(15 * 60)))
+LOGIN_THROTTLE_POLICY_BY_ROLE: dict[str, tuple[int, int]] = {
+    "DEFAULT": (LOGIN_THROTTLE_MAX_ATTEMPTS, LOGIN_THROTTLE_WINDOW_S),
+    # Privileged accounts are the most valuable brute-force target: fewer guesses, longer lockout.
+    "ADMIN": (3, 30 * 60),
+    "AUDITOR": (3, 30 * 60),
+}
+# Failed logins per client IP across ALL usernames (defeats password spraying, which rotates usernames
+# to stay under the per-username ceiling). Shared-NAT offices hit this together; tune via env if needed.
+LOGIN_IP_MAX_FAILURES = int(_env("LOGIN_IP_MAX_FAILURES", "30"))
+LOGIN_IP_WINDOW_S = int(_env("LOGIN_IP_WINDOW_S", str(15 * 60)))
+# General API request ceilings (requests per 60 s window) -- the DoS layer.
+# API_IP_RATE_PER_MIN: every /api/v1 request from one client IP, including unauthenticated ones.
+# API_USER_RATE_PER_MIN_BY_ROLE: authenticated requests per user, by role (checked after the token is verified).
+API_IP_RATE_PER_MIN = int(_env("API_IP_RATE_PER_MIN", "600"))
+API_USER_RATE_PER_MIN_BY_ROLE: dict[str, int] = {"DEFAULT": 300, "ADMIN": 600}
+# Proxies whose X-Forwarded-For header is trusted to report the real client IP (the nginx front end).
+# Default covers loopback and Docker bridge networks (172.16.0.0/12). Any other peer is its own client IP,
+# so a direct caller cannot spoof an address to dodge the limits.
+TRUSTED_PROXIES = [p.strip() for p in _env("TRUSTED_PROXIES", "127.0.0.1/32,::1/128,172.16.0.0/12").split(",") if p.strip()]
 SYNTHETIC_DIR = REPO_ROOT / "data" / "synthetic" / "golden"
 # DRISHTI_WEB_DIST lets a test server serve a separate build, so building for tests never replaces the files a
 # running deployment serves from apps/web/dist.

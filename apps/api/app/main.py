@@ -16,7 +16,7 @@ from .db import engine, init_db
 # Import integrity service before init_db so LedgerAnchor is registered with Base.metadata
 from .services import integrity as _integrity_svc  # noqa: F401 (side-effect: table registration)
 from .routes import audit_routes, auth_routes, case_routes, demo_routes, evidence_routes, graph_routes, integrity_routes, report_routes, review_routes
-from .services import neo4j_store
+from .services import neo4j_store, ratelimit
 
 configure_logging()
 logger = logging.getLogger("drishti.startup")
@@ -38,6 +38,23 @@ if neo4j_store.available():
 
 app = FastAPI(title="DRISHTI-NET prototype API", version="0.1.0",
               description="Evidence-linked relationship discovery for authorized human review. Synthetic data only. The system proposes; the investigator decides.")
+
+
+# DoS layer, per client IP: every /api/v1 request, authenticated or not, counts against one ceiling.
+# Defined before trace_middleware so that, being added later, trace_middleware wraps this one and the
+# 429 below still carries X-Trace-Id. Health probes are exempt so orchestration checks are never throttled.
+_RATE_LIMIT_EXEMPT = {"/api/v1/health", "/api/v1/ready"}
+
+
+@app.middleware("http")
+async def api_ip_rate_limit_middleware(request: Request, call_next):
+    path = request.url.path
+    if path.startswith("/api/v1/") and path not in _RATE_LIMIT_EXEMPT:
+        decision = ratelimit.hit(f"drishti:rl:ip:{ratelimit.client_ip(request)}", config.API_IP_RATE_PER_MIN, 60)
+        if not decision.allowed:
+            return JSONResponse(status_code=429, content={"detail": "Too many requests from this address; try again shortly"},
+                                headers={"Retry-After": str(decision.retry_after)})
+    return await call_next(request)
 
 
 @app.middleware("http")
