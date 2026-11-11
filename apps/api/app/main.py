@@ -20,6 +20,10 @@ from .services import neo4j_store, ratelimit
 
 configure_logging()
 logger = logging.getLogger("drishti.startup")
+if not config.REDIS_URL:
+    # Login lockout and API ceilings are then per-process: fine for one instance, but several instances
+    # would each allow the full limit. Multi-instance deployments must set DRISHTI_REDIS_URL.
+    logger.warning("DRISHTI_REDIS_URL is not set: rate-limit counters are per-process, not shared across instances")
 
 init_db()
 if neo4j_store.available():

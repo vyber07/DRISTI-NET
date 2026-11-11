@@ -9,6 +9,15 @@
   (no brute-force protection at all during a Redis outage).
 - Client IP comes from `X-Forwarded-For` only when the direct peer is a trusted proxy (`DRISHTI_TRUSTED_PROXIES`, default loopback and 172.16.0.0/12).
   Callers cannot spoof their address.
+- SECURITY (revision 2): account lockout needs failures from several DISTINCT source IPs (10; ADMIN/AUDITOR 5), so one source cannot lock
+  out an account for others. Lock lasts 15 min, doubling per repeat up to 4 h, and is audited as `ACCOUNT_LOCKED`.
+- SECURITY: concurrent guesses are reserved against every limit before the password is checked, so a ceiling cannot be exceeded by parallelism.
+- SECURITY: unknown usernames pay the same hashing cost and receive the same responses as real accounts (no enumeration by timing or body).
+- SECURITY: login body bounded (username 1–200, password 1–1024 characters); oversized input is refused before hashing.
+- Recovery: `POST /users/{id}/unlock` and `GET /users/{id}/login-status` (ADMIN). Password reset also clears locks. Operator CLI
+  `python -m apps.api.app.unlock_cli <username>` for a locked sole administrator. Startup warning when `DRISHTI_REDIS_URL` is unset.
+- Tests: `test_ratelimit.py` 36 cases (brute force, distributed attempts, enumeration, lockout abuse, recovery, proxy spoofing, concurrency,
+  audit hygiene, Redis shared state). Full API suite 265 passed, 7 skipped.
 
 # Unreleased — session 4 security fixes (branch `audit/session-4-security-fixes`, 2026-11-01)
 - SECURITY (P0): SPA fallback no longer serves files outside `apps/web/dist` (path traversal, DEF-028).

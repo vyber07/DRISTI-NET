@@ -87,6 +87,17 @@ LOGIN_THROTTLE_POLICY_BY_ROLE: dict[str, tuple[int, int]] = {
 # to stay under the per-username ceiling). Shared-NAT offices hit this together; tune via env if needed.
 LOGIN_IP_MAX_FAILURES = int(_env("LOGIN_IP_MAX_FAILURES", "30"))
 LOGIN_IP_WINDOW_S = int(_env("LOGIN_IP_WINDOW_S", str(15 * 60)))
+# Account lockout across sources. An account is locked only when failures come from this many DISTINCT
+# source IPs within LOGIN_ACCOUNT_WINDOW_S. A single source can never lock an account for other users,
+# however many guesses it makes -- that is the anti-lockout-DoS property. Lock duration escalates per repeat:
+# base * 2^(level-1), capped at max. The escalation level is remembered for LOGIN_ACCOUNT_LEVEL_TTL_S.
+LOGIN_ACCOUNT_SOURCES_BY_ROLE: dict[str, int] = {"DEFAULT": 10, "ADMIN": 5, "AUDITOR": 5}
+LOGIN_ACCOUNT_WINDOW_S = int(_env("LOGIN_ACCOUNT_WINDOW_S", str(60 * 60)))
+LOGIN_ACCOUNT_LOCK_BASE_S = int(_env("LOGIN_ACCOUNT_LOCK_BASE_S", str(15 * 60)))
+LOGIN_ACCOUNT_LOCK_MAX_S = int(_env("LOGIN_ACCOUNT_LOCK_MAX_S", str(4 * 3600)))
+# Input bounds on the login body. Oversized values are rejected before any hashing work.
+LOGIN_USERNAME_MAX_LEN = 200
+LOGIN_PASSWORD_MAX_LEN = 1024
 # General API request ceilings (requests per 60 s window) -- the DoS layer.
 # API_IP_RATE_PER_MIN: every /api/v1 request from one client IP, including unauthenticated ones.
 # API_USER_RATE_PER_MIN_BY_ROLE: authenticated requests per user, by role (checked after the token is verified).

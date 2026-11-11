@@ -85,8 +85,10 @@ class EvidenceOut(BaseModel):
 # ---------------------------------------------------------------------------
 
 class LoginIn(BaseModel):
-    username: str
-    password: str
+    # Bounds match config.LOGIN_USERNAME_MAX_LEN / LOGIN_PASSWORD_MAX_LEN. Oversized input is refused
+    # before any hashing, so it cannot be used as a CPU-exhaustion lever.
+    username: str = Field(min_length=1, max_length=200)
+    password: str = Field(min_length=1, max_length=1024)
 
 
 def _today() -> str:

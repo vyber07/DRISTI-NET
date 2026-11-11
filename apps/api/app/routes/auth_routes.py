@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from .. import config
-from ..auth import current_user, hash_password, issue_token, require_roles, verify_password
+from ..auth import current_user, hash_password, issue_token, require_roles, verify_absent_user, verify_password
 from ..db import get_db
 from ..models import CaseAssignment, User
 from ..schemas import LoginIn, PasswordResetIn, UserCreateIn, UserUpdateIn
@@ -17,37 +17,82 @@ def user_out(u: User) -> dict:
             "jurisdiction": u.jurisdiction, "active": u.active}
 
 
+LOGIN_RATE_LIMITED = "Too many failed login attempts; try again later"
+LOGIN_BAD_CREDENTIALS = "Invalid credentials"  # one message for unknown user, inactive, wrong password
+
+
 @router.post("/auth/login")
 def login(body: LoginIn, request: Request, db: Session = Depends(get_db)):
+    """Password login. Never reveals whether a username exists: unknown, inactive and wrong-password all return
+    the same 401, and a rate-limited attempt returns the same 429 whichever account it names. Passwords are never
+    written to the audit log or any counter."""
     trace = request.state.trace_id
     ip = ratelimit.client_ip(request)
-    # The account's role selects its lockout policy. Unknown usernames get the DEFAULT policy, so a probe
-    # for a non-existent name is limited exactly like a real account and reveals nothing.
+    # The role of a known account selects its policy; unknown usernames use DEFAULT (see ratelimit.user_policy).
     known = db.query(User).filter_by(username=body.username).first()
     role = known.role if known else None
 
-    retry_after = ratelimit.login_retry_after(body.username, ip, role)
     if ratelimit.degraded():
         record_audit(db, trace, None, "LOGIN_THROTTLE_DEGRADED", "USER", body.username, outcome="DEGRADED",
-                     detail={"reason": "redis unreachable; using per-process login counters", "ip": ip})
-    if retry_after:
-        record_audit(db, trace, None, "LOGIN", "USER", body.username, outcome="DENIED",
-                     detail={"reason": "rate limited", "ip": ip, "retry_after": retry_after})
-        db.commit()
-        raise HTTPException(429, "Too many failed login attempts; try again later",
-                            headers={"Retry-After": str(retry_after)})
+                     detail={"reason": "redis unreachable; using per-process login counters"})
 
-    user = db.query(User).filter_by(username=body.username, active=True).first()
-    if user is None or not verify_password(body.password, user.password_hash):
-        ratelimit.record_login_failure(body.username, ip, role)
+    # Reserve this attempt on every scope BEFORE any password hashing. A denied attempt costs no PBKDF2 work.
+    attempt = ratelimit.begin_attempt(body.username, ip, role)
+    if isinstance(attempt, ratelimit.Denied):
         record_audit(db, trace, None, "LOGIN", "USER", body.username, outcome="DENIED",
-                     detail={"reason": "bad credentials", "ip": ip})
+                     detail={"reason": "rate limited", "scope": attempt.scope, "ip": ip,
+                             "retry_after": attempt.retry_after})
         db.commit()
-        raise HTTPException(401, "Invalid credentials")
-    ratelimit.clear_login_failures(body.username)
-    record_audit(db, trace, user.user_id, "LOGIN", "USER", user.user_id, detail={"ip": ip})
-    db.commit()
+        raise HTTPException(429, LOGIN_RATE_LIMITED, headers={"Retry-After": str(max(1, attempt.retry_after))})
+
+    success = False
+    try:
+        user = db.query(User).filter_by(username=body.username, active=True).first()
+        if user is None:
+            verify_absent_user(body.password)  # same cost as a real check; timing does not reveal existence
+        else:
+            success = verify_password(body.password, user.password_hash)
+        if success:
+            record_audit(db, trace, user.user_id, "LOGIN", "USER", user.user_id, detail={"ip": ip})
+        else:
+            record_audit(db, trace, None, "LOGIN", "USER", body.username, outcome="DENIED",
+                         detail={"reason": "bad credentials", "ip": ip})
+        db.commit()
+    finally:
+        # Settle after the audit so a crash while auditing still leaves the failure counted (finish runs on error too).
+        locked = ratelimit.finish_attempt(attempt, success)
+    if locked:
+        record_audit(db, trace, None, "ACCOUNT_LOCKED", "USER", body.username, outcome="DENIED",
+                     detail={"escalation_level": locked["level"], "lock_seconds": locked["duration_s"],
+                             "distinct_sources": locked["sources"]})
+        db.commit()
+    if not success:
+        raise HTTPException(401, LOGIN_BAD_CREDENTIALS)
     return {"token": issue_token(user), "user": user_out(user)}
+
+
+@router.get("/users/{user_id}/login-status")
+def login_status(user_id: str, _: User = Depends(require_roles("ADMIN")), db: Session = Depends(get_db)):
+    """Administrator view of an account's lockout state, for deciding whether an unlock is needed."""
+    target = db.get(User, user_id)
+    if target is None:
+        raise HTTPException(404, "unknown user")
+    return ratelimit.account_status(target.username, target.role)
+
+
+@router.post("/users/{user_id}/unlock")
+def unlock_user(user_id: str, request: Request, user: User = Depends(require_roles("ADMIN")), db: Session = Depends(get_db)):
+    """Administrator unlock: clears every login lock and failure counter for the account. Audited."""
+    target = db.get(User, user_id)
+    if target is None:
+        raise HTTPException(404, "unknown user")
+    before = ratelimit.account_status(target.username, target.role)
+    ratelimit.unlock_account(target.username)
+    record_audit(db, request.state.trace_id, user.user_id, "USER_UNLOCK", "USER", target.user_id,
+                 detail={"username": target.username, "was_locked": before["locked"],
+                         "distinct_failing_sources": before["distinct_failing_sources"]})
+    db.commit()
+    return {"ok": True, "username": target.username, "was_locked": before["locked"]}
 
 
 @router.get("/auth/me")
@@ -128,6 +173,10 @@ def reset_password(user_id: str, body: PasswordResetIn, request: Request, user: 
         raise HTTPException(404, "unknown user")
     target.password_hash = hash_password(body.new_password)
     target.token_version += 1  # SEC-02: invalidate every token issued before this reset
-    record_audit(db, request.state.trace_id, user.user_id, "USER_PASSWORD_RESET", "USER", target.user_id, detail={"username": target.username})
+    # A reset is the administrator's recovery action, so it also clears any login lock or failure counters
+    # the account has accumulated (an attacker's guesses must not outlive the password they were guessing).
+    ratelimit.unlock_account(target.username)
+    record_audit(db, request.state.trace_id, user.user_id, "USER_PASSWORD_RESET", "USER", target.user_id,
+                 detail={"username": target.username, "login_lock_cleared": True})
     db.commit()
     return {"ok": True}

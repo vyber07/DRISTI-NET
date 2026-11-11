@@ -5,6 +5,7 @@ graph store or the object store directly.
 """
 from __future__ import annotations
 
+import functools
 import hashlib
 import hmac
 import os
@@ -36,6 +37,18 @@ def verify_password(password: str, stored: str) -> bool:
     salt_hex, digest_hex = stored.split("$", 1)
     candidate = hashlib.pbkdf2_hmac("sha256", password.encode(), bytes.fromhex(salt_hex), 120_000)
     return hmac.compare_digest(candidate.hex(), digest_hex)
+
+
+@functools.lru_cache(maxsize=1)
+def _dummy_hash() -> str:
+    return hash_password("dummy-password-never-matches")
+
+
+def verify_absent_user(password: str) -> bool:
+    """Spend the same hashing cost as a real verification when the username does not exist, so response
+    timing does not reveal which usernames are valid. Always returns False."""
+    verify_password(password, _dummy_hash())
+    return False
 
 
 # ------------------------------------------------------------------ tokens
