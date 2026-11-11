@@ -40,7 +40,8 @@ def verify_password(password: str, stored: str) -> bool:
 # ------------------------------------------------------------------ tokens
 def issue_token(user: User) -> str:
     now = int(time.time())
-    payload = {"sub": user.user_id, "role": user.role, "jur": user.jurisdiction, "iat": now, "exp": now + TOKEN_TTL_SECONDS}
+    payload = {"sub": user.user_id, "role": user.role, "jur": user.jurisdiction, "tv": user.token_version,
+               "iat": now, "exp": now + TOKEN_TTL_SECONDS}
     return jwt.encode(payload, config.SECRET_KEY, algorithm="HS256")
 
 
@@ -54,6 +55,11 @@ def current_user(request: Request, creds: HTTPAuthorizationCredentials | None = 
     user = db.get(User, payload["sub"])
     if user is None or not user.active:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Unknown user")
+    # SEC-02: a token issued before the account's last password reset carries a stale "tv" claim.
+    # Tokens have no other revocation mechanism, so this is what makes a reset actually take effect
+    # immediately instead of leaving every already-issued token valid until its own natural expiry.
+    if payload.get("tv") != user.token_version:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid or expired token")
     request.state.user = user
     return user
 

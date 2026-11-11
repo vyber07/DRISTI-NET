@@ -122,6 +122,7 @@ def reset_password(user_id: str, body: PasswordResetIn, request: Request, user: 
     if target is None:
         raise HTTPException(404, "unknown user")
     target.password_hash = hash_password(body.new_password)
+    target.token_version += 1  # SEC-02: invalidate every token issued before this reset
     record_audit(db, request.state.trace_id, user.user_id, "USER_PASSWORD_RESET", "USER", target.user_id, detail={"username": target.username})
     db.commit()
     return {"ok": True}

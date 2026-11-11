@@ -80,3 +80,20 @@ def test_admin_resets_password(client, admin):
     assert r.status_code == 200
     assert client.post("/api/v1/auth/login", json={"username": "forgotpw", "password": "oldpassword1"}).status_code == 401
     assert client.post("/api/v1/auth/login", json={"username": "forgotpw", "password": "newpassword1"}).status_code == 200
+
+
+def test_password_reset_invalidates_tokens_issued_before_it(client, admin):
+    """SEC-02: a reset must take effect immediately, not just at the old token's natural expiry."""
+    created = client.post("/api/v1/users", json={"username": "revoketest", "display_name": "Revoke Test",
+                                                   "role": "ANALYST", "jurisdiction": "", "password": "beforereset1"}, headers=admin).json()
+    old_token = client.post("/api/v1/auth/login", json={"username": "revoketest", "password": "beforereset1"}).json()["token"]
+    old_headers = {"Authorization": f"Bearer {old_token}"}
+    assert client.get("/api/v1/auth/me", headers=old_headers).status_code == 200
+
+    client.post(f"/api/v1/users/{created['user_id']}/reset-password", json={"new_password": "afterreset1"}, headers=admin)
+
+    # The pre-reset token must now be refused, even though it hasn't naturally expired.
+    assert client.get("/api/v1/auth/me", headers=old_headers).status_code == 401
+    # A freshly issued token (new password) works normally.
+    new_token = client.post("/api/v1/auth/login", json={"username": "revoketest", "password": "afterreset1"}).json()["token"]
+    assert client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {new_token}"}).status_code == 200

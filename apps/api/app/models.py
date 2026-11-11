@@ -51,6 +51,10 @@ class User(Base):
     jurisdiction: Mapped[str] = mapped_column(String)
     password_hash: Mapped[str] = mapped_column(String)
     active: Mapped[bool] = mapped_column(Boolean, default=True)
+    # SEC-02: bumped on every password change so tokens issued before it stop working immediately
+    # (checked against the JWT's own "tv" claim in auth.current_user), instead of staying valid
+    # until their natural TOKEN_TTL_SECONDS expiry.
+    token_version: Mapped[int] = mapped_column(Integer, default=0)
 
 
 class Case(Base):
