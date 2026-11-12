@@ -58,6 +58,10 @@ class User(Base):
     # Verified organisational office (e.g. "OFF-DDA"). Assigned by an administrator and read from this row for every
     # audit event. It is never taken from request headers, IP geolocation or the client.
     office_id: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
+    # Organisational user ID (e.g. a service or employee number), allocated by an administrator
+    # (services/org_user_ids.py, ADR-019). It is what people see; user_id above stays the immutable internal key that
+    # every foreign key references. NULL = not yet allocated. Mirrors the ACTIVE row of org_user_ids.
+    org_user_id: Mapped[str | None] = mapped_column(String, nullable=True, unique=True)
 
 
 class Case(Base):
@@ -431,3 +435,36 @@ class Notification(Base):
     request_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, index=True)
     read_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+
+
+# ----------------------------------------------------------------------------- organisational user IDs
+ORG_USER_ID_STATUSES = ("ACTIVE", "RETIRED", "VOIDED")
+# An ID in one of these states is taken for good: ACTIVE is held now, RETIRED was held and is never reused. Only a
+# VOIDED ID (assigned in error, corrected within the correction window) may be allocated again.
+_ORG_ID_TAKEN_SQL = "status IN ('ACTIVE', 'RETIRED')"
+_ORG_ID_ACTIVE_SQL = "status = 'ACTIVE'"
+
+
+class OrgUserIdAssignment(Base):
+    """Every organisational user ID ever allocated: to whom, by whom, when and why, and when, by whom and why it ended.
+
+    Rows are never deleted. The only permitted change is ending an ACTIVE row (ACTIVE -> RETIRED or VOIDED, filling
+    the ended_* columns); database triggers reject everything else. With assigned_at/ended_at this answers "who held
+    ID X on date D" for any document or audit record that quotes an organisational ID."""
+    __tablename__ = "org_user_ids"
+    __table_args__ = (
+        Index("uix_org_user_ids_taken", "org_user_id", unique=True,
+              postgresql_where=text(_ORG_ID_TAKEN_SQL), sqlite_where=text(_ORG_ID_TAKEN_SQL)),
+        Index("uix_org_user_ids_active_user", "user_id", unique=True,
+              postgresql_where=text(_ORG_ID_ACTIVE_SQL), sqlite_where=text(_ORG_ID_ACTIVE_SQL)),
+    )
+    assignment_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    org_user_id: Mapped[str] = mapped_column(String, index=True)
+    user_id: Mapped[str] = mapped_column(ForeignKey("users.user_id"), index=True)
+    status: Mapped[str] = mapped_column(String)
+    assigned_by: Mapped[str] = mapped_column(String)
+    assigned_at: Mapped[datetime] = mapped_column(DateTime)
+    assign_reason: Mapped[str] = mapped_column(Text)
+    ended_by: Mapped[str | None] = mapped_column(String, nullable=True)
+    ended_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    end_reason: Mapped[str | None] = mapped_column(Text, nullable=True)

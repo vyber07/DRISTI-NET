@@ -9,7 +9,8 @@ def test_case_lists_assigned_people_by_name(client, investigator):
     assert len(owner) == 1 and owner[0]["user_id"] == case["owner_id"]
     assert all(p["display_name"] and p["role"] for p in people)
     # Only identity fields: nothing about credentials, and only this case's members.
-    assert all(set(p) == {"user_id", "display_name", "role", "purpose", "is_owner"} for p in people)
+    # org_user_id: the organisational user ID (ADR-019), an identifier like user_id, not a credential.
+    assert all(set(p) == {"user_id", "org_user_id", "display_name", "role", "purpose", "is_owner"} for p in people)
     names = {p["display_name"] for p in people}
     assert not any("not on CASE-0001" in n for n in names), "unassigned users must not appear"
 

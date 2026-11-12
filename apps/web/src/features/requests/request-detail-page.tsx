@@ -16,7 +16,8 @@ const field = "mt-1 block w-full rounded-md border border-border-strong bg-surfa
 
 function who(p: Person | null | undefined): string {
   if (!p) return "—";
-  return p.display_name || p.username || p.user_id;
+  const name = p.display_name || p.username || p.user_id;
+  return p.org_user_id ? `${name} (${p.org_user_id})` : name;
 }
 
 const DETAIL_LABEL: Record<string, string> = {

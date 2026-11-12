@@ -61,12 +61,15 @@ ACTIONS: dict[str, tuple[str, ...] | None] = {
     "createUserRequest": ("INVESTIGATOR", "EVIDENCE_OFFICER", "REVIEWER", "ANALYST", "AUDITOR", "ADMIN"),
     "viewAllUserRequests": ("ADMIN", "AUDITOR"),
     "reviewUserRequests": ("ADMIN",),
+    # Organisational user ID history and lookup (services/org_user_ids.py): oversight, mandatory. Allocation itself is
+    # manageUsers.
+    "viewUserIdHistory": ("ADMIN", "AUDITOR"),
 }
 # Mandatory: oversight, account and policy administration, and the override system itself can neither be granted nor
 # withdrawn by an override (no self-reinforcing escalation, no locking administrators or auditors out).
 NON_OVERRIDABLE = frozenset({"globalAudit", "manageUsers", "viewMaskingPolicy", "manageMaskingPolicy", "viewOverrides",
                              "manageOverrides", "demoTamper", "manageUploadPolicy", "viewUploadMetrics", "viewDiagnostics",
-                             "viewAllUserRequests", "reviewUserRequests"})
+                             "viewAllUserRequests", "reviewUserRequests", "viewUserIdHistory"})
 OVERRIDABLE = frozenset(a for a in ACTIONS if a not in NON_OVERRIDABLE)
 # Separation of duties (masking policy): ADMIN may never gain these through an ALLOW override.
 SEPARATION_ACTIONS = frozenset({"reveal", "downloadOriginal"})

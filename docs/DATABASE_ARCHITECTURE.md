@@ -77,6 +77,18 @@ exists. Integrity comes from per-row signatures, database triggers and daily dig
 #### `users` (additional columns)
 - `active` (BOOLEAN; the earlier `is_active` name in this document was wrong), `token_version` (INTEGER, bumped on
   password reset), `office_id` (VARCHAR, verified organisational office, assigned by an administrator).
+- `org_user_id` (VARCHAR NULL, unique `uq_users_org_user_id`; migration `5bcde1234577`): the organisational user ID
+  allocated by an administrator and shown as "User ID". `user_id` stays the immutable internal key that every
+  foreign key references. NULL = not allocated. See docs/USER_ID_ALLOCATION.md and ADR-019.
+
+#### `org_user_ids` (migration `5bcde1234577`; docs/USER_ID_ALLOCATION.md)
+- `assignment_id` (integer PK), `org_user_id` (upper-cased), `user_id` (FK `users`), `status` (`ACTIVE`, `RETIRED`,
+  `VOIDED`), `assigned_by` (`user_id` or `SEED`), `assigned_at`, `assign_reason`, `ended_by`, `ended_at`, `end_reason`.
+- Partial unique index `uix_org_user_ids_taken (org_user_id) WHERE status IN ('ACTIVE','RETIRED')`: an ID that is or
+  was held is never allocated again (only a VOIDED correction frees one). `uix_org_user_ids_active_user (user_id)
+  WHERE status = 'ACTIVE'`: one current ID per user.
+- Trigger `org_user_ids_guard`: no DELETE (PostgreSQL also TRUNCATE). The only permitted UPDATE ends an ACTIVE row
+  (to RETIRED or VOIDED, with `ended_by`, `ended_at` and `end_reason` set, allocation columns unchanged).
 
 #### `user_sessions` (migration `5bcde1234572`)
 - `sid` (PK, the token's `sid` claim), `user_id` (FK), `created_at`, `expires_at`, `revoked_at` (set by logout), `ip_address`, `user_agent`.

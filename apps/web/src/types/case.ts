@@ -12,6 +12,8 @@ export interface CaseStats {
 /** A person assigned to the case, as returned by the API (`people`, added 2026-11-04). */
 export interface CasePerson {
   user_id: string;
+  /** Organisational user ID (ADR-019); null/absent = not allocated. */
+  org_user_id?: string | null;
   display_name: string;
   role: string;
   purpose: string;

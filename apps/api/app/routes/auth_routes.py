@@ -6,16 +6,17 @@ from ..auth import create_session, current_user, hash_password, issue_token, req
 from ..core import request_context
 from ..db import get_db
 from ..models import CaseAssignment, User, UserSession, utcnow
-from ..schemas import LoginIn, PasswordResetIn, UserCreateIn, UserUpdateIn
-from ..services import ratelimit
+from ..schemas import LoginIn, OrgUserIdAssignIn, OrgUserIdRetireIn, PasswordResetIn, UserCreateIn, UserUpdateIn
+from ..services import org_user_ids, ratelimit
 from ..services.audit import record_audit, record_audit_best_effort
 
 router = APIRouter(tags=["auth"])
 
 
 def user_out(u: User) -> dict:
-    return {"user_id": u.user_id, "username": u.username, "display_name": u.display_name, "role": u.role,
-            "jurisdiction": u.jurisdiction, "office_id": u.office_id, "active": u.active}
+    # user_id is the internal key (stable, used in every URL); org_user_id is the organisational ID people see.
+    return {"user_id": u.user_id, "org_user_id": u.org_user_id, "username": u.username, "display_name": u.display_name,
+            "role": u.role, "jurisdiction": u.jurisdiction, "office_id": u.office_id, "active": u.active}
 
 
 LOGIN_RATE_LIMITED = "Too many failed login attempts; try again later"
@@ -139,8 +140,11 @@ def create_user(body: UserCreateIn, request: Request, user: User = Depends(requi
                      jurisdiction=body.jurisdiction, office_id=body.office_id, password_hash=hash_password(body.password))
     db.add(new_user)
     db.flush()
+    if body.org_user_id is not None and body.org_user_id.strip():
+        org_user_ids.allocate_at_creation(db, user, new_user, body.org_user_id)  # 422/409 roll the account back too
     record_audit(db, request.state.trace_id, user.user_id, "USER_CREATE", "USER", new_user.user_id,
-                 detail={"username": new_user.username, "role": new_user.role, "office_id": new_user.office_id})
+                 detail={"username": new_user.username, "role": new_user.role, "office_id": new_user.office_id,
+                         "org_user_id": new_user.org_user_id})
     db.commit()
     return user_out(new_user)
 
@@ -207,3 +211,50 @@ def reset_password(user_id: str, body: PasswordResetIn, request: Request, user: 
                  detail={"username": target.username, "login_lock_cleared": True})
     db.commit()
     return {"ok": True}
+
+
+# ------------------------------------------------------------------ organisational user IDs (ADR-019)
+def _target(db: Session, user_id: str) -> User:
+    target = db.get(User, user_id)
+    if target is None:
+        raise HTTPException(404, "unknown user")
+    return target
+
+
+@router.put("/users/{user_id}/org-user-id")
+def assign_org_user_id(user_id: str, body: OrgUserIdAssignIn, request: Request, user: User = Depends(require_roles("ADMIN", action="manageUsers")), db: Session = Depends(get_db, scope="function")):
+    """Allocate or change a user's organisational ID. The replaced ID is retired for good (or voided, for a
+    correction inside the correction window). 409 if the ID is held, was ever held, or the user's ID changed since
+    current_org_user_id was read. Audited in the same transaction."""
+    target = _target(db, user_id)
+    result = org_user_ids.assign(db, user, target, body.org_user_id, expected=body.current_org_user_id,
+                                 reason=body.reason, correction=body.correction, trace_id=request.state.trace_id)
+    return {**result, "user": user_out(target)}
+
+
+@router.post("/users/{user_id}/org-user-id/retire")
+def retire_org_user_id(user_id: str, body: OrgUserIdRetireIn, request: Request, user: User = Depends(require_roles("ADMIN", action="manageUsers")), db: Session = Depends(get_db, scope="function")):
+    """Withdraw a user's organisational ID without replacing it. The ID can never be allocated again."""
+    target = _target(db, user_id)
+    result = org_user_ids.retire(db, user, target, expected=body.current_org_user_id, reason=body.reason,
+                                 trace_id=request.state.trace_id)
+    return {**result, "user": user_out(target)}
+
+
+@router.get("/users/{user_id}/org-user-id/history")
+def org_user_id_history(user_id: str, request: Request, user: User = Depends(require_roles("ADMIN", "AUDITOR", action="viewUserIdHistory")), db: Session = Depends(get_db, scope="function")):
+    """Every organisational ID this account has held, newest first, with who allocated and ended each and why."""
+    target = _target(db, user_id)
+    rows = org_user_ids.history_for_user(db, target)
+    record_audit_best_effort(db, request.state.trace_id, user.user_id, "USER_ID_HISTORY_VIEW", "USER", target.user_id,
+                             detail={"count": len(rows)})
+    return {"user_id": target.user_id, "org_user_id": target.org_user_id, "history": rows}
+
+
+@router.get("/org-user-ids/{org_user_id}")
+def lookup_org_user_id(org_user_id: str, request: Request, user: User = Depends(require_roles("ADMIN", "AUDITOR", action="viewUserIdHistory")), db: Session = Depends(get_db, scope="function")):
+    """Who holds or held an organisational ID, and when (for resolving an ID quoted in a document or record)."""
+    rows = org_user_ids.lookup(db, org_user_id)
+    record_audit_best_effort(db, request.state.trace_id, user.user_id, "USER_ID_LOOKUP", "USER", None,
+                             detail={"org_user_id": org_user_id.strip().upper()[:64], "found": len(rows)})
+    return {"org_user_id": org_user_id.strip().upper()[:64], "allocations": rows}

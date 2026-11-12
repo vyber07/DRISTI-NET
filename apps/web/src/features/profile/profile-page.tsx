@@ -33,7 +33,10 @@ export function ProfilePage() {
             { label: "Username", value: <span className="font-mono">{user.username}</span> },
             { label: "Role", value: roleLabel(user.role) },
             { label: "Jurisdiction", value: user.jurisdiction },
-            { label: "User ID", value: <span className="font-mono text-xs">{user.user_id}</span> },
+            { label: "User ID", value: user.org_user_id
+                ? <span className="font-mono">{user.org_user_id}</span>
+                : <span className="text-text-secondary">Not allocated yet (an administrator assigns it)</span> },
+            { label: "Internal reference", value: <span className="font-mono text-xs text-text-secondary">{user.user_id}</span> },
           ]} />
         </Section>
 

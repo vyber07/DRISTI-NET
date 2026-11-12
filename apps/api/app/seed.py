@@ -11,7 +11,7 @@ import json
 from . import config
 from .auth import hash_password
 from .db import Base, SessionLocal, engine
-from .models import Case, CaseAssignment, User
+from .models import Case, CaseAssignment, OrgUserIdAssignment, User, utcnow
 
 DEMO_USERS = [
     # username, display name, role, jurisdiction, password  (demo credentials — fictional)
@@ -24,6 +24,10 @@ DEMO_USERS = [
     ("outsider", "Investigator Nikhil (demo, District B)", "INVESTIGATOR", "Demo District B", "outsider-demo"),
     ("unassigned", "Investigator Priya (demo, not on CASE-0001)", "INVESTIGATOR", "Demo District A", "unassigned-demo"),
 ]
+# Fictional organisational user IDs, allocated only when the demo account is first created (an existing database is
+# left alone: administrators allocate IDs through PUT /users/{id}/org-user-id).
+DEMO_ORG_USER_IDS = {"investigator": "DDA-1001", "officer": "DDA-1002", "reviewer": "DDA-1003", "analyst": "DDA-1004",
+                     "auditor": "DDA-1005", "admin": "DDA-1006", "unassigned": "DDA-1007", "outsider": "DDB-2001"}
 ASSIGN = {"CASE-0001": ["investigator", "officer", "reviewer", "analyst"], "CASE-0002": ["investigator", "officer", "reviewer", "unassigned"]}
 
 
@@ -37,10 +41,17 @@ def seed() -> None:
         if u is None:
             # Verified office for demo accounts (fictional). Real deployments assign office_id through the admin API.
             office_id = {"Demo District A": "OFF-DDA"}.get(jur)
+            org_id = DEMO_ORG_USER_IDS.get(username)
+            if org_id and db.query(OrgUserIdAssignment).filter_by(org_user_id=org_id).first() is not None:
+                org_id = None  # already allocated (or retired) in this database: never reuse it
             u = User(username=username, display_name=name, role=role, jurisdiction=jur, office_id=office_id,
-                     password_hash=hash_password(pw))
+                     password_hash=hash_password(pw), org_user_id=org_id)
             db.add(u)
             db.flush()
+            if org_id:
+                db.add(OrgUserIdAssignment(org_user_id=org_id, user_id=u.user_id, status="ACTIVE", assigned_by="SEED",
+                                           assigned_at=utcnow().replace(tzinfo=None),
+                                           assign_reason="demo seed (fictional identifier)"))
         users[username] = u
 
     cases_added = []

@@ -142,7 +142,7 @@ export function CaseOverviewView() {
               {c.people.map((p) => (
                 <li key={p.user_id} className="text-sm">
                   <span className="text-text-primary">{p.display_name}</span>
-                  <span className="block text-xs text-text-secondary">{roleLabel(p.role)}{p.is_owner ? " · owner" : ""}</span>
+                  <span className="block text-xs text-text-secondary">{roleLabel(p.role)}{p.org_user_id ? <> · <span className="font-mono">{p.org_user_id}</span></> : null}{p.is_owner ? " · owner" : ""}</span>
                 </li>
               ))}
             </ul>

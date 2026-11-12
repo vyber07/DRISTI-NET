@@ -14,7 +14,10 @@ export type Role =
   | "ANALYST";
 
 export interface UserProfile {
+  /** Internal account key (USR-…). Stable; used in API paths. Not the ID people quote. */
   user_id: string;
+  /** Organisational user ID allocated by an administrator (ADR-019); null = not allocated yet. */
+  org_user_id?: string | null;
   username: string;
   display_name: string;
   role: Role;

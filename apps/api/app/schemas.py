@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from .models import ROLES
 
@@ -16,6 +16,7 @@ _ROLE_PATTERN = "^(" + "|".join(ROLES) + ")$"
 
 class CasePersonOut(BaseModel):
     user_id: str
+    org_user_id: str | None = None   # organisational user ID (services/org_user_ids.py); None = not allocated
     display_name: str
     role: str
     purpose: str
@@ -165,15 +166,38 @@ class UserCreateIn(BaseModel):
     # Verified organisational office code, e.g. "OFF-DDA". Assigned by an administrator; audit records read it from the user row.
     office_id: str | None = Field(default=None, pattern=r"^[A-Z0-9][A-Z0-9-]{1,31}$")
     password: str = Field(min_length=8, max_length=200)
+    # Organisational user ID (optional). Normalised and checked by services/org_user_ids.normalize; omitted = allocate
+    # later through PUT /users/{id}/org-user-id.
+    org_user_id: str | None = Field(default=None, max_length=64)
 
 
 class UserUpdateIn(BaseModel):
-    """Partial update — only the fields given are changed."""
+    """Partial update — only the fields given are changed. Unknown fields are refused (422), so an attempt to change
+    the organisational user ID here fails loudly instead of being ignored: that goes through its own audited route."""
+    model_config = ConfigDict(extra="forbid")
     display_name: str | None = Field(default=None, min_length=2, max_length=120, pattern=r"\S")
     role: str | None = Field(default=None, pattern=_ROLE_PATTERN)
     jurisdiction: str | None = Field(default=None, max_length=120)
     # Empty string clears the office; otherwise the same format as UserCreateIn.office_id.
     office_id: str | None = Field(default=None, pattern=r"^([A-Z0-9][A-Z0-9-]{1,31})?$")
+
+
+class OrgUserIdAssignIn(BaseModel):
+    """PUT /users/{id}/org-user-id. current_org_user_id is required (null = "I expect no ID"): the change applies only
+    if it still matches, so two administrators cannot overwrite each other's change."""
+    model_config = ConfigDict(extra="forbid")
+    org_user_id: str = Field(max_length=64)
+    current_org_user_id: str | None = Field(max_length=64)
+    reason: str = Field(max_length=500)
+    # True only to fix an ID assigned in error, within DRISHTI_ORG_USER_ID_CORRECTION_HOURS: the old ID is VOIDED
+    # (free for its rightful holder) instead of RETIRED (never reusable).
+    correction: bool = False
+
+
+class OrgUserIdRetireIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    current_org_user_id: str | None = Field(max_length=64)
+    reason: str = Field(max_length=500)
 
 
 class PasswordResetIn(BaseModel):

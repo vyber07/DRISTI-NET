@@ -51,7 +51,7 @@ and claim rows), never from the request body or headers.
 
 - **Actions that cannot be overridden at all** (neither ALLOW nor DENY): `globalAudit` (oversight), `manageUsers`,
   `viewMaskingPolicy`, `manageMaskingPolicy`, `viewOverrides`, `manageOverrides`, `demoTamper`, `manageUploadPolicy`,
-  `viewUploadMetrics`, `viewDiagnostics`, `viewAllUserRequests`, `reviewUserRequests`. Rows naming these are
+  `viewUploadMetrics`, `viewDiagnostics`, `viewAllUserRequests`, `reviewUserRequests`, `viewUserIdHistory`. Rows naming these are
   refused by the API and ignored by evaluation even if written into the table directly.
 - **Authentication**: token, active account, session and password version are checked before any override.
 - **Jurisdiction**: an ALLOW `caseAccess` grants entry without an assignment, but the user must still be in the case's jurisdiction.

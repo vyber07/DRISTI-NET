@@ -14,7 +14,7 @@ export interface ApiResponse<T> {
 export const TOKEN_KEY = 'drishti.token'
 export const USER_KEY = 'drishti.user'
 
-export type User = { user_id: string; username: string; display_name: string; role: string; jurisdiction: string; assigned_cases?: string[] }
+export type User = { user_id: string; org_user_id?: string | null; username: string; display_name: string; role: string; jurisdiction: string; assigned_cases?: string[] }
 
 /** Error codes the client sets itself; the server's own codes (BUSY, FORBIDDEN, ...) arrive in the response body. */
 export type ClientErrorCode = 'NETWORK' | 'TIMEOUT' | 'SESSION_EXPIRED'
@@ -195,6 +195,7 @@ export async function getPaged<T = any>(path: string, params: Record<string, str
 export const get = <T = any>(p: string) => api<T>(p)
 export const post = <T = any>(p: string, body?: unknown) => api<T>(p, { method: 'POST', body: body === undefined ? undefined : JSON.stringify(body) })
 export const patch = <T = any>(p: string, body?: unknown) => api<T>(p, { method: 'PATCH', body: body === undefined ? undefined : JSON.stringify(body) })
+export const put = <T = any>(p: string, body?: unknown) => api<T>(p, { method: 'PUT', body: body === undefined ? undefined : JSON.stringify(body) })
 export const postForm = <T = any>(p: string, fd: FormData) => api<T>(p, { method: 'POST', body: fd })
 
 export function currentUser(): User | null { try { const s = localStorage.getItem(USER_KEY); return s ? JSON.parse(s) : null } catch { return null } }

@@ -1,3 +1,24 @@
+# Unreleased — organisational user ID allocation (branch `worktree-auth-login-ratelimit`)
+- Administrators can allocate each account an organisational user ID (service or employee number), at creation or
+  later. It is shown as "User ID" across the app. `users.user_id` (`USR-…`) stays the immutable internal key that
+  every foreign key references; the profile now shows it as "Internal reference".
+- Rules:
+  - format: upper-cased, 3–32 characters, matching a configurable pattern; `USR-` is reserved;
+  - case-insensitive uniqueness;
+  - a replaced or retired ID is never reused;
+  - an ID assigned in error may be voided within 24 h (configurable);
+  - ADMIN only, never for their own account, reason required.
+- Concurrency: every change names the expected current ID (conditional UPDATE, 409 `ORG_USER_ID_STALE`), and unique
+  indexes stop two accounts from getting the same ID at once.
+- History: new `org_user_ids` registry, guarded by a trigger (no delete; a row may only be ended once). Signed audit
+  events `USER_ID_ASSIGN`/`CHANGE`/`CORRECT`/`RETIRE`, and `USER_CREATE` carries the ID. History and lookup endpoints
+  for ADMIN and AUDITOR (`viewUserIdHistory`, mandatory).
+- `PATCH /users/{id}` now refuses unknown fields (422) instead of ignoring them.
+- SQLite auto-upgrade now adds a unique index when it adds a unique column (SQLite cannot add a UNIQUE column).
+- Migration `5bcde1234577`. Docs: `docs/USER_ID_ALLOCATION.md`, ADR-019, database/API/override/frontend docs.
+- Tests: 29 module tests; full SQLite suite; PostgreSQL 16 158 passed, including the Alembic upgrade, model comparison
+  and downgrade; manual trigger probes; browser walkthrough 12 of 12 (`scripts/reliability/verify_org_user_ids_ui.mjs`).
+
 # Unreleased — user request management (branch `worktree-auth-login-ratelimit`)
 - New module: officers raise requests and administrators decide them. Five categories with fields defined on the
   server: case access and role change are applied automatically on completion; temporary permission, data correction

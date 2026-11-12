@@ -41,6 +41,10 @@
 | `GET` | `/users/{user_id}/login-status` | ADMIN | Lockout state of an account: `locked`, `retry_after`, `distinct_failing_sources`, `source_limit`, `escalation_level`. |
 | `POST` | `/users/{user_id}/unlock` | ADMIN | Clears every login lock and failure counter for the account. Audited (`USER_UNLOCK`). Returns `was_locked`. |
 | `POST` | `/users/{user_id}/reset-password` | ADMIN | Sets a new password, invalidates existing tokens, and also clears the account's login locks (audited). |
+| `POST` | `/users` | ADMIN | Also accepts an optional `org_user_id` (organisational user ID, docs/USER_ID_ALLOCATION.md); 422/409 roll the creation back. `PATCH /users/{id}` refuses unknown fields, including `org_user_id`. |
+| `PUT` | `/users/{user_id}/org-user-id` | ADMIN, not for their own account | `{org_user_id, current_org_user_id, reason, correction?}`. Allocate or change; the old ID is retired (never reused) or, for a correction within the window, voided. 409 `ORG_USER_ID_IN_USE` / `ORG_USER_ID_RETIRED` / `ORG_USER_ID_STALE` / `ORG_USER_ID_CONFLICT` / `ORG_USER_ID_UNCHANGED`; 403 `SELF_CHANGE_FORBIDDEN`. Audited. |
+| `POST` | `/users/{user_id}/org-user-id/retire` | ADMIN, not for their own account | `{current_org_user_id, reason}`. Withdraws the ID; it can never be reused. Audited (`USER_ID_RETIRE`). |
+| `GET` | `/users/{user_id}/org-user-id/history` · `/org-user-ids/{org_user_id}` | ADMIN, AUDITOR | Allocation history of an account; who holds or held an ID, and when. Audited. |
 
 #### Login and rate limits
 

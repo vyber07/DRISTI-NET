@@ -277,8 +277,9 @@ def _person(u: User | None, uid: str | None) -> dict | None:
     if not uid:
         return None
     if u is None:
-        return {"user_id": uid, "username": None, "display_name": None, "role": None}
-    return {"user_id": u.user_id, "username": u.username, "display_name": u.display_name, "role": u.role}
+        return {"user_id": uid, "org_user_id": None, "username": None, "display_name": None, "role": None}
+    return {"user_id": u.user_id, "org_user_id": u.org_user_id, "username": u.username, "display_name": u.display_name,
+            "role": u.role}
 
 
 def request_out(db: Session, row: UserRequest, viewer: User, *, with_history: bool = False) -> dict:

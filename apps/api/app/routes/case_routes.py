@@ -19,7 +19,7 @@ def case_out(c: Case, db: Session) -> dict:
             "assigned": [a.user_id for a in c.assignments],
             # Display names for the people already listed in `assigned`, so the UI can show who is on the case instead of
             # raw user IDs. Only users assigned to this case; never credentials. (Frontend redesign, 2026-11-04.)
-            "people": [{"user_id": a.user_id, "display_name": u.display_name, "role": u.role, "purpose": a.purpose,
+            "people": [{"user_id": a.user_id, "org_user_id": u.org_user_id, "display_name": u.display_name, "role": u.role, "purpose": a.purpose,
                         "is_owner": a.user_id == c.owner_id}
                        for a in c.assignments if (u := db.get(User, a.user_id)) is not None],
             "evidence_count": db.query(Evidence).filter_by(case_id=c.case_id).count(),

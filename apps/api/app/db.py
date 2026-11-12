@@ -61,6 +61,7 @@ def init_db() -> None:
         _install_audit_immutability_sqlite()
         install_override_history_immutability()
         install_user_request_history_immutability()
+        install_org_user_id_registry_guard()
         _ensure_masking_policy_defaults()
 
 
@@ -87,6 +88,43 @@ def install_audit_immutability() -> None:
         _install_audit_immutability_sqlite()
     install_override_history_immutability()
     install_user_request_history_immutability()
+    install_org_user_id_registry_guard()
+
+
+# The only permitted change to an org_user_ids row: ending an ACTIVE allocation (status RETIRED or VOIDED, ended_* set),
+# with every allocation column unchanged. PostgreSQL production gets the same trigger from migration 5bcde1234577.
+_ORG_ID_UPDATE_OK = ("OLD.status = 'ACTIVE' AND NEW.status IN ('RETIRED', 'VOIDED') "
+                     "AND NEW.assignment_id = OLD.assignment_id AND NEW.org_user_id = OLD.org_user_id "
+                     "AND NEW.user_id = OLD.user_id AND NEW.assigned_by = OLD.assigned_by "
+                     "AND NEW.assigned_at = OLD.assigned_at AND NEW.assign_reason = OLD.assign_reason "
+                     "AND NEW.ended_by IS NOT NULL AND NEW.ended_at IS NOT NULL AND NEW.end_reason IS NOT NULL")
+
+
+def install_org_user_id_registry_guard() -> None:
+    """org_user_ids is the allocation history of organisational user IDs: rows are never deleted and only ever change
+    by being ended once. That is what makes "never reuse a retired ID" hold even against direct SQL."""
+    from sqlalchemy import text
+
+    table = "org_user_ids"
+    msg = "org_user_ids: only ending an ACTIVE allocation is permitted; rows are never deleted"
+    with engine.begin() as conn:
+        if engine.dialect.name == "postgresql":
+            conn.execute(text(
+                "CREATE OR REPLACE FUNCTION org_user_ids_guard() RETURNS trigger AS $$ BEGIN "
+                "IF TG_OP IN ('DELETE', 'TRUNCATE') THEN RAISE EXCEPTION '" + msg + "'; END IF; "
+                "IF " + _ORG_ID_UPDATE_OK + " THEN RETURN NEW; END IF; "
+                "RAISE EXCEPTION '" + msg + "'; END; $$ LANGUAGE plpgsql"))
+            conn.execute(text(f"DROP TRIGGER IF EXISTS {table}_guard ON {table}"))
+            conn.execute(text(f"CREATE TRIGGER {table}_guard BEFORE UPDATE OR DELETE ON {table} "
+                              "FOR EACH ROW EXECUTE FUNCTION org_user_ids_guard()"))
+            conn.execute(text(f"DROP TRIGGER IF EXISTS {table}_no_truncate ON {table}"))
+            conn.execute(text(f"CREATE TRIGGER {table}_no_truncate BEFORE TRUNCATE ON {table} "
+                              "FOR EACH STATEMENT EXECUTE FUNCTION org_user_ids_guard()"))
+        else:
+            conn.execute(text(f"CREATE TRIGGER IF NOT EXISTS {table}_guard_update BEFORE UPDATE ON {table} "
+                              f"WHEN NOT ({_ORG_ID_UPDATE_OK}) BEGIN SELECT RAISE(ABORT, '{msg}'); END"))
+            conn.execute(text(f"CREATE TRIGGER IF NOT EXISTS {table}_no_delete BEFORE DELETE ON {table} "
+                              f"BEGIN SELECT RAISE(ABORT, '{msg}'); END"))
 
 
 def install_override_history_immutability() -> None:
@@ -193,4 +231,9 @@ def _sqlite_add_missing_columns() -> None:
                     ddl += f" DEFAULT '{col.server_default.arg}'"
                 conn.execute(text(ddl))
                 log.warning("SQLite schema upgrade: added %s.%s", table.name, col.name)
+                if col.unique:
+                    # SQLite cannot ADD a UNIQUE column; a unique index gives the same guarantee (NULLs stay distinct).
+                    conn.execute(text(f'CREATE UNIQUE INDEX IF NOT EXISTS "uq_{table.name}_{col.name}" '
+                                      f'ON "{table.name}" ("{col.name}")'))
+                    log.warning("SQLite schema upgrade: added unique index on %s.%s", table.name, col.name)
 

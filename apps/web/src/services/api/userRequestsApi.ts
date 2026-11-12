@@ -5,7 +5,7 @@ export type RequestStatus = "DRAFT" | "PENDING" | "UNDER_REVIEW" | "APPROVED" | 
 export type RequestPriority = "LOW" | "NORMAL" | "HIGH" | "URGENT";
 export type RequestAction = "edit" | "submit" | "cancel" | "claim" | "release" | "approve" | "reject" | "complete";
 
-export interface Person { user_id: string; username: string | null; display_name: string | null; role: string | null }
+export interface Person { user_id: string; org_user_id?: string | null; username: string | null; display_name: string | null; role: string | null }
 
 export interface CategoryField {
   name: string; label: string; kind: "text" | "choice" | "case" | "integer"; required: boolean;

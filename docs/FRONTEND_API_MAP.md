@@ -32,6 +32,16 @@ This file maps the required alignment between frontend features, API service fil
 | **Reports** | `reportApi.ts` | generateReport | `POST /api/v1/cases/{case_id}/report` | 🔴 False success | Send `ReportIn`, handle download response |
 | **Reports** | `reportApi.ts` | getCourtPdf | `POST /api/v1/cases/{case_id}/report/court-pdf` | 🔴 Missing body | Fix payload (`CourtPdfIn`) and download |
 
+## Organisational user IDs (branch `worktree-auth-login-ratelimit`, 2026-11-12; docs/USER_ID_ALLOCATION.md)
+
+| Feature Domain | Frontend Service | Action | Real FastAPI Route | Status | Page |
+| --- | --- | --- | --- | --- | --- |
+| **Users** | `usersApi.ts` | createUser (optional `org_user_id`) | `POST /api/v1/users` | 🟢 Wired | Users → Create user |
+| **Users** | `usersApi.ts` | assignOrgUserId | `PUT /api/v1/users/{id}/org-user-id` | 🟢 Wired | Users → User ID dialog (allocate, change, correction) |
+| **Users** | `usersApi.ts` | retireOrgUserId | `POST /api/v1/users/{id}/org-user-id/retire` | 🟢 Wired | Users → User ID dialog (Retire) |
+| **Users** | `usersApi.ts` | getOrgUserIdHistory | `GET /api/v1/users/{id}/org-user-id/history` | 🟢 Wired | Users → User ID dialog (history) |
+| **Account** | `authStore` | `org_user_id` from `/auth/me` | `GET /api/v1/auth/me` | 🟢 Wired | Profile: "User ID" + "Internal reference" |
+
 ## User requests and notifications (branch `worktree-auth-login-ratelimit`, 2026-11-12; docs/USER_REQUESTS.md)
 
 | Feature Domain | Frontend Service | Action | Real FastAPI Route | Status | Page |

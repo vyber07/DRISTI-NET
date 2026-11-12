@@ -74,6 +74,13 @@ UPLOAD_EXTRACTABLE_MAX_MB = int(_env("UPLOAD_EXTRACTABLE_MAX_MB", "512"))
 UPLOAD_MIN_FREE_MB = int(_env("UPLOAD_MIN_FREE_MB", "2048"))           # refuse uploads that would leave less disk free
 UPLOAD_MAX_CONCURRENT = int(_env("UPLOAD_MAX_CONCURRENT", "4"))        # simultaneous uploads per API process
 UPLOAD_STALE_STAGING_HOURS = int(_env("UPLOAD_STALE_STAGING_HOURS", "6"))
+
+# Organisational user IDs (services/org_user_ids.py, ADR-019). The pattern is applied to the upper-cased ID; the
+# default allows 3-32 characters of A-Z, 0-9 and single inner hyphens (e.g. "DL-04217"). The "USR-" prefix is
+# always refused: it is the internal user_id namespace. CORRECTION_HOURS is how long after allocation an ID assigned
+# in error may be voided (and so freed for its rightful holder) instead of retired; 0 turns corrections off.
+ORG_USER_ID_PATTERN = _env("ORG_USER_ID_PATTERN", r"^[A-Z0-9](?:-?[A-Z0-9]){2,31}$")
+ORG_USER_ID_CORRECTION_HOURS = int(_env("ORG_USER_ID_CORRECTION_HOURS", "24"))
 # The malware scanner's own stream limit (clamd StreamMaxLength; ClamAV's default is 25 MB). Larger files are not sent
 # to the scanner: they stay quarantined as SCAN_FAILED with an explicit message until both limits are raised.
 SCAN_MAX_MB = int(_env("SCAN_MAX_MB", "25"))
