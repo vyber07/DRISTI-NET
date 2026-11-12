@@ -99,5 +99,13 @@ rows. Store the digests for the affected period off-host before downgrading, and
 - Full API suite on SQLite: 299 passed, 7 skipped. On PostgreSQL 16 (disposable container): 301 passed, 5 skipped.
 - Migration test on PostgreSQL 16 (fresh database built from the chain): 2 passed.
 - Trigger check on PostgreSQL 16: UPDATE, DELETE and TRUNCATE refused; the signed row still verifies.
+- Isolated end-to-end run (uvicorn on 127.0.0.1:8011, disposable PostgreSQL 16 with the migrated and seeded schema, scratch
+  Redis, `DRISHTI_TRUSTED_PROXIES` limited to loopback): `scripts/audit_e2e_check.py`, 24 of 24 checks passed. It covers
+  the login record, the trusted-proxy IP, sanitised user agent, server request ID, UTC and local time, session and
+  office, password absence, role denials, the case trail without network fields, search digests, logout and rejection
+  (with session ID), signature verification (39 of 39), the digest endpoint, the CSV export, and the Redis-backed
+  lockout. The script refuses the live demo host.
+- Found and fixed during that run: the token-rejection audit row had no session ID, because the session was attached to
+  the request context only after success. It is now attached once the session is confirmed to belong to the user.
 - **Not verified:** the live Compose stack, which still runs the previous image; the migration on the live database;
   and performance under load.

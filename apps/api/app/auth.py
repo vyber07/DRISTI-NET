@@ -101,6 +101,10 @@ def current_user(request: Request, creds: HTTPAuthorizationCredentials | None = 
     # Server-side session: revoked by logout, expired, or absent (tokens issued before sessions existed have no sid).
     sid = payload.get("sid")
     session = db.get(UserSession, sid) if sid else None
+    if session is not None and session.user_id == user.user_id:
+        # The session is confirmed to belong to this user, so refusals below can name it in the audit trail.
+        # An unknown or mismatched sid is never recorded.
+        request_context.set_actor(user, sid)
     if session is None or session.user_id != user.user_id:
         _reject(request, db, user, "no such session")
     if session.revoked_at is not None:
