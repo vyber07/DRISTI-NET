@@ -20,6 +20,7 @@
 | `GET` | `/upload-policies` | Authenticated | Accepted types, current per-category limits, scanner limit. |
 | `PUT` | `/upload-policies/{category}` | ADMIN | `{max_mb, enabled, reason}`; bounded by the hard and extractable ceilings; audited (`UPLOAD_POLICY_UPDATE`). |
 | `GET` | `/upload-policies/metrics` | ADMIN, AUDITOR | Rejections by code, accepted volume, concurrency, disk and staging state, 24-hour audit counts. |
+| `GET` | `/diagnostics` | ADMIN, AUDITOR | Uptime, request outcomes, slow requests, recent server errors with request IDs, DB pool and worker-thread usage, database/Redis/storage checks (audited; ADR-017, docs/TROUBLESHOOTING.md). |
 | `GET` | `/auth/me/permissions?case_id=` | Authenticated | The caller's effective capabilities (role + overrides), each with its source. Drives the UI only. |
 | `GET` | `/permission-overrides?status=` | ADMIN, AUDITOR | Overrides filtered by effective status (all, active, pending, scheduled, expired, revoked, rejected). Audited. |
 | `GET` | `/permission-overrides/meta` | ADMIN, AUDITOR | Overridable and mandatory actions, resource types, maximum duration, precedence. |

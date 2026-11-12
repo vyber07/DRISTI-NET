@@ -1,4 +1,4 @@
-import { Component, type ReactNode } from "react";
+import { Component, useEffect, useRef, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { AlertCircle, ChevronRight, Inbox, Lock, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -156,6 +156,15 @@ export function EmptyState({ title, children, action, icon: Icon = Inbox }: {
 export function ErrorState({ title = "Could not load this information", message, trace, onRetry }: {
   title?: string; message?: string; trace?: string; onRetry?: () => void;
 }) {
+  // A load that failed while the network was down is retried as soon as the browser is back online, instead of
+  // leaving the officer on an error panel after the connection has recovered (docs/TROUBLESHOOTING.md).
+  const retry = useRef(onRetry);
+  retry.current = onRetry;
+  useEffect(() => {
+    const again = () => retry.current?.();
+    window.addEventListener("online", again);
+    return () => window.removeEventListener("online", again);
+  }, []);
   return (
     <div role="alert" className="rounded-lg border border-critical-red/40 bg-critical-red/5 px-5 py-4">
       <div className="flex items-start gap-3">
@@ -163,7 +172,7 @@ export function ErrorState({ title = "Could not load this information", message,
         <div className="min-w-0 space-y-1">
           <p className="text-sm font-semibold text-text-primary">{title}</p>
           {message && <p className="text-sm text-text-secondary break-words">{message}</p>}
-          {trace && <p className="text-xs text-text-secondary">Trace ID: <span className="font-mono">{trace}</span></p>}
+          {trace && <p className="text-xs text-text-secondary">Request ID: <span className="font-mono select-all">{trace}</span></p>}
           {onRetry && (
             <Button variant="secondary" size="sm" onClick={onRetry} className="mt-2 gap-1.5">
               <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" /> Try again

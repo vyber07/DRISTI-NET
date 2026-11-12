@@ -81,7 +81,7 @@ def meta(user: User = Depends(require_roles("ADMIN", "AUDITOR", action="viewOver
 def list_overrides(request: Request, status: str = Query("all", pattern="^(all|active|pending|scheduled|expired|revoked|rejected)$"),
                    subject: str | None = Query(None, max_length=64), case_id: str | None = Query(None, max_length=64),
                    action: str | None = Query(None, max_length=40),
-                   user: User = Depends(require_roles("ADMIN", "AUDITOR", action="viewOverrides")), db: Session = Depends(get_db)):
+                   user: User = Depends(require_roles("ADMIN", "AUDITOR", action="viewOverrides")), db: Session = Depends(get_db, scope="function")):
     q = db.query(PermissionOverride)
     if subject:
         q = q.filter(PermissionOverride.subject == subject)
@@ -99,7 +99,7 @@ def list_overrides(request: Request, status: str = Query("all", pattern="^(all|a
 
 @router.get("/permission-overrides/{override_id}")
 def get_override(override_id: str, request: Request, user: User = Depends(require_roles("ADMIN", "AUDITOR", action="viewOverrides")),
-                 db: Session = Depends(get_db)):
+                 db: Session = Depends(get_db, scope="function")):
     o = db.get(PermissionOverride, override_id)
     if o is None:
         raise HTTPException(404, "unknown override")
@@ -114,7 +114,7 @@ def get_override(override_id: str, request: Request, user: User = Depends(requir
 
 @router.post("/permission-overrides", status_code=201)
 def create_override(body: OverrideIn, request: Request, user: User = Depends(require_roles("ADMIN", action="manageOverrides")),
-                    db: Session = Depends(get_db)):
+                    db: Session = Depends(get_db, scope="function")):
     return _run(db, request, user, "CREATE", None, lambda: overrides.create(
         db, user, effect=body.effect, action=body.action, subject_type=body.subject_type, subject=body.subject,
         reason=body.reason, starts_at=body.starts_at, expires_at=body.expires_at, case_id=body.case_id,
@@ -123,28 +123,28 @@ def create_override(body: OverrideIn, request: Request, user: User = Depends(req
 
 @router.post("/permission-overrides/{override_id}/approve")
 def approve_override(override_id: str, body: NoteIn, request: Request,
-                     user: User = Depends(require_roles("ADMIN", action="manageOverrides")), db: Session = Depends(get_db)):
+                     user: User = Depends(require_roles("ADMIN", action="manageOverrides")), db: Session = Depends(get_db, scope="function")):
     return _run(db, request, user, "APPROVE", override_id,
                 lambda: overrides.approve(db, user, override_id, body.note, request.state.trace_id))
 
 
 @router.post("/permission-overrides/{override_id}/reject")
 def reject_override(override_id: str, body: ReasonIn, request: Request,
-                    user: User = Depends(require_roles("ADMIN", action="manageOverrides")), db: Session = Depends(get_db)):
+                    user: User = Depends(require_roles("ADMIN", action="manageOverrides")), db: Session = Depends(get_db, scope="function")):
     return _run(db, request, user, "REJECT", override_id,
                 lambda: overrides.reject(db, user, override_id, body.reason, request.state.trace_id))
 
 
 @router.post("/permission-overrides/{override_id}/revoke")
 def revoke_override(override_id: str, body: ReasonIn, request: Request,
-                    user: User = Depends(require_roles("ADMIN", action="manageOverrides")), db: Session = Depends(get_db)):
+                    user: User = Depends(require_roles("ADMIN", action="manageOverrides")), db: Session = Depends(get_db, scope="function")):
     return _run(db, request, user, "REVOKE", override_id,
                 lambda: overrides.revoke(db, user, override_id, body.reason, request.state.trace_id))
 
 
 @router.get("/auth/me/permissions")
 def my_permissions(case_id: str | None = Query(None, max_length=64), user: User = Depends(current_user),
-                   db: Session = Depends(get_db)):
+                   db: Session = Depends(get_db, scope="function")):
     """The caller's own effective capabilities, overrides included, optionally for one case. The frontend uses this
     to decide which controls to show; the server still decides every request itself."""
     return {"role": user.role, "case_id": case_id, "capabilities": overrides.effective_capabilities(db, user, case_id)}

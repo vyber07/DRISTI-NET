@@ -29,7 +29,7 @@ def case_out(c: Case, db: Session) -> dict:
 @router.get("/cases", response_model=list[CaseOut])
 def list_cases(response: Response, q: str | None = Query(None, max_length=200), awaiting_review: bool = False,
                limit: int | None = Query(None, ge=1, le=MAX_LIMIT), offset: int = Query(0, ge=0),
-               user: User = Depends(current_user), db: Session = Depends(get_db)):
+               user: User = Depends(current_user), db: Session = Depends(get_db, scope="function")):
     """Only cases the user is assigned to (ADMIN/AUDITOR see all). Optional search/paging; X-Total-Count = matches."""
     record_read(db, None, user.user_id, "CASE_LIST", search=q,  # request ID comes from the request context
                 detail={"awaiting_review": awaiting_review, "limit": limit, "offset": offset})
@@ -45,7 +45,7 @@ def list_cases(response: Response, q: str | None = Query(None, max_length=200), 
 
 
 @router.post("/cases", status_code=201, response_model=CaseOut)
-def create_case(body: CaseIn, request: Request, user: User = Depends(require_roles("INVESTIGATOR", "ADMIN", action="createCase")), db: Session = Depends(get_db)):
+def create_case(body: CaseIn, request: Request, user: User = Depends(require_roles("INVESTIGATOR", "ADMIN", action="createCase")), db: Session = Depends(get_db, scope="function")):
     if db.get(Case, body.case_id):
         raise HTTPException(409, "case_id already exists")
     if body.jurisdiction != user.jurisdiction and user.role != "ADMIN":
@@ -59,7 +59,7 @@ def create_case(body: CaseIn, request: Request, user: User = Depends(require_rol
 
 
 @router.get("/cases/{case_id}", response_model=CaseOut)
-def get_case(case_id: str, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db)):
+def get_case(case_id: str, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db, scope="function")):
     c = authorize_case(db, user, case_id, request)
     record_audit(db, request.state.trace_id, user.user_id, "CASE_VIEW", "CASE", case_id, case_id)
     db.commit()
@@ -67,7 +67,7 @@ def get_case(case_id: str, request: Request, user: User = Depends(current_user),
 
 
 @router.post("/cases/{case_id}/assign", response_model=CaseOut)
-def assign(case_id: str, body: AssignIn, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db)):
+def assign(case_id: str, body: AssignIn, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db, scope="function")):
     c = authorize_case(db, user, case_id, request, action="CASE_ASSIGN")
     if user.role != "ADMIN" and c.owner_id != user.user_id:
         raise HTTPException(403, "only the case owner or an ADMIN may assign users")

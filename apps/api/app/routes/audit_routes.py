@@ -94,7 +94,7 @@ _EXAMPLE_ROW = AuditEvent(audit_id="", trace_id="", action="", outcome="", detai
 def all_audit(request: Request, limit: int = Query(200, ge=1, le=1000), action: str | None = None,
               outcome: str | None = None, actor_id: str | None = None,
               start: str | None = None, end: str | None = None,
-              user: User = Depends(require_roles("AUDITOR", "ADMIN", action="globalAudit")), db: Session = Depends(get_db)):
+              user: User = Depends(require_roles("AUDITOR", "ADMIN", action="globalAudit")), db: Session = Depends(get_db, scope="function")):
     q = db.query(AuditEvent)
     if action:
         q = q.filter(AuditEvent.action == action)
@@ -113,7 +113,7 @@ def all_audit(request: Request, limit: int = Query(200, ge=1, le=1000), action: 
 
 @router.get("/cases/{case_id}/audit")
 def case_audit(case_id: str, request: Request, limit: int = Query(200, ge=1, le=1000),
-               user: User = Depends(current_user), db: Session = Depends(get_db)):
+               user: User = Depends(current_user), db: Session = Depends(get_db, scope="function")):
     """Case-scoped trail. Investigators assigned to the case get the events without IP, user agent or session data,
     because network and session details about colleagues are not needed for case work."""
     authorize_case(db, user, case_id, request, action="AUDIT_VIEW")
@@ -129,7 +129,7 @@ def case_audit(case_id: str, request: Request, limit: int = Query(200, ge=1, le=
 @router.get("/audit/export")
 def export_audit(request: Request, format: str = Query("csv", pattern="^(csv|json)$"),
                  start: str | None = None, end: str | None = None, limit: int = Query(10000, ge=1, le=50000),
-                 user: User = Depends(require_roles("AUDITOR", "ADMIN", action="globalAudit")), db: Session = Depends(get_db)):
+                 user: User = Depends(require_roles("AUDITOR", "ADMIN", action="globalAudit")), db: Session = Depends(get_db, scope="function")):
     """Export a time window. The export is itself an audited EXPORT (fail-closed). Timestamps are UTC, with a local
     display column. Exports contain network fields: treat them as restricted."""
     rows = _window(db.query(AuditEvent), _parse_day(start, "start"), _parse_day(end, "end")) \
@@ -152,7 +152,7 @@ def export_audit(request: Request, format: str = Query("csv", pattern="^(csv|jso
 
 @router.get("/audit/verify")
 def verify_audit(request: Request, start: str | None = None, end: str | None = None,
-                 user: User = Depends(require_roles("AUDITOR", "ADMIN", action="globalAudit")), db: Session = Depends(get_db)):
+                 user: User = Depends(require_roles("AUDITOR", "ADMIN", action="globalAudit")), db: Session = Depends(get_db, scope="function")):
     """Recomputes every signature in the window. Reports counts and the IDs of any row that fails."""
     result = verify_range(db, _parse_day(start, "start"), _parse_day(end, "end"))
     record_audit(db, request.state.trace_id, user.user_id, "AUDIT_VERIFY", "AUDIT", None,
@@ -164,7 +164,7 @@ def verify_audit(request: Request, start: str | None = None, end: str | None = N
 
 @router.get("/audit/digest")
 def audit_digest(request: Request, day: str = Query(..., pattern=r"^\d{4}-\d{2}-\d{2}$"),
-                 user: User = Depends(require_roles("AUDITOR", "ADMIN", action="globalAudit")), db: Session = Depends(get_db)):
+                 user: User = Depends(require_roles("AUDITOR", "ADMIN", action="globalAudit")), db: Session = Depends(get_db, scope="function")):
     """SHA-256 over one UTC day's signatures. Store each day's digest off-host; a later mismatch shows removed or
     altered rows (docs/AUDIT_LOG_POLICY.md section 5)."""
     start = datetime.datetime.strptime(day, "%Y-%m-%d")

@@ -86,7 +86,7 @@ def _reject(request: Request, db: Session, user: User | None, reason: str) -> No
     raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Invalid or expired token")
 
 
-def current_user(request: Request, creds: HTTPAuthorizationCredentials | None = Depends(bearer), db: Session = Depends(get_db)) -> User:
+def current_user(request: Request, creds: HTTPAuthorizationCredentials | None = Depends(bearer), db: Session = Depends(get_db, scope="function")) -> User:
     if creds is None:
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Authentication required")
     try:
@@ -126,7 +126,19 @@ def current_user(request: Request, creds: HTTPAuthorizationCredentials | None = 
     request.state.user = user
     # Audit context: the actor, session and office come from this database row, not from the request.
     request_context.set_actor(user, sid)
+    release_connection(db)
     return user
+
+
+def release_connection(db: Session) -> None:
+    """End the dependency's read transaction so its connection goes back to the pool before the endpoint runs.
+
+    Root cause of the 'Failed to fetch' / 30-second-hang / 500 incidents under load (docs/TROUBLESHOOTING.md): FastAPI
+    runs this dependency and the endpoint on separate worker threads. The connection checked out here was held while
+    the request queued for a second thread, and under ~50 concurrent users every worker thread ended up waiting for a
+    connection held by a queued request -- a deadlock broken only by the 30 s pool timeout (then HTTP 500). Objects
+    stay usable afterwards (expire_on_commit=False); there are no pending writes here (refusals commit their own audit)."""
+    db.commit()
 
 
 # ------------------------------------------------------------------ policy checks
@@ -134,7 +146,7 @@ def require_roles(*roles: str, action: str):
     """Role gate for one named action (services/overrides.ACTIONS). The role list is the baseline; active permission
     overrides for this user, their role, the request's case and resource may then deny or allow it (deny wins).
     Mandatory actions (overrides.NON_OVERRIDABLE) are decided by role alone."""
-    def _dep(request: Request, user: User = Depends(current_user), db: Session = Depends(get_db)) -> User:
+    def _dep(request: Request, user: User = Depends(current_user), db: Session = Depends(get_db, scope="function")) -> User:
         baseline = user.role in roles or user.role == "ADMIN"
         case_id, resource = overrides.scope_from_path(db, request.path_params)
         decision = overrides.evaluate(db, user, action, baseline=baseline, case_id=case_id, resource=resource)
@@ -152,7 +164,7 @@ def require_roles(*roles: str, action: str):
                                 if by_override else f"Role {user.role} may not perform this action")
         if decision.source == "override_allow":
             overrides.record_use(db, user, decision, action, case_id if case_id and db.get(Case, case_id) else None)
-            db.commit()
+        release_connection(db)  # same reason as in current_user: never hold a connection across the thread hand-off
         return user
     return _dep
 

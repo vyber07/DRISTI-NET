@@ -12,7 +12,7 @@ router = APIRouter(tags=["demo"])
 
 
 @router.post("/demo/tamper/{evidence_id}")
-def tamper(evidence_id: str, request: Request, user: User = Depends(require_roles("ADMIN", action="demoTamper")), db: Session = Depends(get_db)):
+def tamper(evidence_id: str, request: Request, user: User = Depends(require_roles("ADMIN", action="demoTamper")), db: Session = Depends(get_db, scope="function")):
     """Append one byte to the stored object so /verify reports a hash mismatch. Demo only; audited."""
     ev = db.get(Evidence, evidence_id)
     if ev is None:

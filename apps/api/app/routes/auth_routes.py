@@ -23,7 +23,7 @@ LOGIN_BAD_CREDENTIALS = "Invalid credentials"  # one message for unknown user, i
 
 
 @router.post("/auth/login")
-def login(body: LoginIn, request: Request, db: Session = Depends(get_db)):
+def login(body: LoginIn, request: Request, db: Session = Depends(get_db, scope="function")):
     """Password login. Never reveals whether a username exists: unknown, inactive and wrong-password all return
     the same 401, and a rate-limited attempt returns the same 429 whichever account it names. Passwords are never
     written to the audit log or any counter."""
@@ -77,7 +77,7 @@ def login(body: LoginIn, request: Request, db: Session = Depends(get_db)):
 
 
 @router.get("/users/{user_id}/login-status")
-def login_status(user_id: str, request: Request, user: User = Depends(require_roles("ADMIN", action="manageUsers")), db: Session = Depends(get_db)):
+def login_status(user_id: str, request: Request, user: User = Depends(require_roles("ADMIN", action="manageUsers")), db: Session = Depends(get_db, scope="function")):
     """Administrator view of an account's lockout state, for deciding whether an unlock is needed. Audited (fail-closed)."""
     target = db.get(User, user_id)
     if target is None:
@@ -90,7 +90,7 @@ def login_status(user_id: str, request: Request, user: User = Depends(require_ro
 
 
 @router.post("/auth/logout")
-def logout(request: Request, user: User = Depends(current_user), db: Session = Depends(get_db)):
+def logout(request: Request, user: User = Depends(current_user), db: Session = Depends(get_db, scope="function")):
     """Revokes the caller's session. The token stops working on its next use; other sessions of the same user are
     unaffected. Audited (LOGOUT). Audited before the revocation commits, so a failed audit leaves the session live."""
     sid = request_context.current().session_id if request_context.current() else None
@@ -104,7 +104,7 @@ def logout(request: Request, user: User = Depends(current_user), db: Session = D
 
 
 @router.post("/users/{user_id}/unlock")
-def unlock_user(user_id: str, request: Request, user: User = Depends(require_roles("ADMIN", action="manageUsers")), db: Session = Depends(get_db)):
+def unlock_user(user_id: str, request: Request, user: User = Depends(require_roles("ADMIN", action="manageUsers")), db: Session = Depends(get_db, scope="function")):
     """Administrator unlock: clears every login lock and failure counter for the account. Audited."""
     target = db.get(User, user_id)
     if target is None:
@@ -119,20 +119,20 @@ def unlock_user(user_id: str, request: Request, user: User = Depends(require_rol
 
 
 @router.get("/auth/me")
-def me(user: User = Depends(current_user), db: Session = Depends(get_db)):
+def me(user: User = Depends(current_user), db: Session = Depends(get_db, scope="function")):
     cases = [a.case_id for a in db.query(CaseAssignment).filter_by(user_id=user.user_id).all()]
     return {**user_out(user), "assigned_cases": cases}
 
 
 @router.get("/users")
-def list_users(request: Request, user: User = Depends(require_roles("ADMIN", "AUDITOR", "INVESTIGATOR", action="viewUsers")), db: Session = Depends(get_db)):
+def list_users(request: Request, user: User = Depends(require_roles("ADMIN", "AUDITOR", "INVESTIGATOR", action="viewUsers")), db: Session = Depends(get_db, scope="function")):
     rows = db.query(User).order_by(User.username).all()
     record_audit_best_effort(db, request.state.trace_id, user.user_id, "USER_LIST", "USER", None, detail={"count": len(rows)})
     return [user_out(u) for u in rows]
 
 
 @router.post("/users", status_code=201)
-def create_user(body: UserCreateIn, request: Request, user: User = Depends(require_roles("ADMIN", action="manageUsers")), db: Session = Depends(get_db)):
+def create_user(body: UserCreateIn, request: Request, user: User = Depends(require_roles("ADMIN", action="manageUsers")), db: Session = Depends(get_db, scope="function")):
     if db.query(User).filter_by(username=body.username).first() is not None:
         raise HTTPException(409, f"username {body.username!r} already exists")
     new_user = User(username=body.username, display_name=body.display_name, role=body.role,
@@ -146,7 +146,7 @@ def create_user(body: UserCreateIn, request: Request, user: User = Depends(requi
 
 
 @router.patch("/users/{user_id}")
-def update_user(user_id: str, body: UserUpdateIn, request: Request, user: User = Depends(require_roles("ADMIN", action="manageUsers")), db: Session = Depends(get_db)):
+def update_user(user_id: str, body: UserUpdateIn, request: Request, user: User = Depends(require_roles("ADMIN", action="manageUsers")), db: Session = Depends(get_db, scope="function")):
     """Role, jurisdiction and display name -- a user's role is the unit of permission in this app
     (apps/web/src/lib/permissions.ts mirrors the same role -> capability table the backend enforces),
     so changing it here is how an admin manages what another user may do."""
@@ -169,7 +169,7 @@ def update_user(user_id: str, body: UserUpdateIn, request: Request, user: User =
 
 
 @router.post("/users/{user_id}/deactivate")
-def deactivate_user(user_id: str, request: Request, user: User = Depends(require_roles("ADMIN", action="manageUsers")), db: Session = Depends(get_db)):
+def deactivate_user(user_id: str, request: Request, user: User = Depends(require_roles("ADMIN", action="manageUsers")), db: Session = Depends(get_db, scope="function")):
     if user_id == user.user_id:
         # Prevents an admin from locking themselves out; the only way back in would be direct DB access.
         raise HTTPException(400, "cannot deactivate your own account")
@@ -183,7 +183,7 @@ def deactivate_user(user_id: str, request: Request, user: User = Depends(require
 
 
 @router.post("/users/{user_id}/reactivate")
-def reactivate_user(user_id: str, request: Request, user: User = Depends(require_roles("ADMIN", action="manageUsers")), db: Session = Depends(get_db)):
+def reactivate_user(user_id: str, request: Request, user: User = Depends(require_roles("ADMIN", action="manageUsers")), db: Session = Depends(get_db, scope="function")):
     target = db.get(User, user_id)
     if target is None:
         raise HTTPException(404, "unknown user")
@@ -194,7 +194,7 @@ def reactivate_user(user_id: str, request: Request, user: User = Depends(require
 
 
 @router.post("/users/{user_id}/reset-password")
-def reset_password(user_id: str, body: PasswordResetIn, request: Request, user: User = Depends(require_roles("ADMIN", action="manageUsers")), db: Session = Depends(get_db)):
+def reset_password(user_id: str, body: PasswordResetIn, request: Request, user: User = Depends(require_roles("ADMIN", action="manageUsers")), db: Session = Depends(get_db, scope="function")):
     target = db.get(User, user_id)
     if target is None:
         raise HTTPException(404, "unknown user")

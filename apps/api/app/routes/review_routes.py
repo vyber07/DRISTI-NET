@@ -61,7 +61,7 @@ def candidate_out(db: Session, m: MatchCandidate, detailed: bool = True) -> dict
 @router.get("/cases/{case_id}/candidates")
 def list_candidates(case_id: str, request: Request, response: Response, state: str | None = None,
                     q: str | None = Query(None, max_length=200), limit: int | None = Query(None, ge=1, le=MAX_LIMIT),
-                    offset: int = Query(0, ge=0), user: User = Depends(current_user), db: Session = Depends(get_db)):
+                    offset: int = Query(0, ge=0), user: User = Depends(current_user), db: Session = Depends(get_db, scope="function")):
     """Optional name search and paging; X-Total-Count = matches. The search never matches masked kinds (phone,
     account): matching their raw labels would reveal whether a hidden number exists in the case."""
     authorize_case(db, user, case_id, request, action="REVIEW_QUEUE")
@@ -82,7 +82,7 @@ def list_candidates(case_id: str, request: Request, response: Response, state: s
 
 
 @router.get("/cases/{case_id}/candidates/summary")
-def candidates_summary(case_id: str, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db)):
+def candidates_summary(case_id: str, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db, scope="function")):
     """Counts by review state for any case member (GET /stats is limited to roles that may decide)."""
     authorize_case(db, user, case_id, request, action="REVIEW_QUEUE")
     record_read(db, None, user.user_id, "CANDIDATE_SUMMARY", case_id=case_id)
@@ -91,7 +91,7 @@ def candidates_summary(case_id: str, request: Request, user: User = Depends(curr
 
 
 @router.get("/candidates/{candidate_id}")
-def get_candidate(candidate_id: str, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db)):
+def get_candidate(candidate_id: str, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db, scope="function")):
     m = db.get(MatchCandidate, candidate_id)
     if m is None:
         raise HTTPException(404, "unknown candidate")
@@ -102,7 +102,7 @@ def get_candidate(candidate_id: str, request: Request, user: User = Depends(curr
 
 
 @router.post("/candidates/{candidate_id}/decision")
-def decide(candidate_id: str, body: DecisionIn, request: Request, user: User = Depends(require_roles("REVIEWER", "INVESTIGATOR", "ADMIN", action="decide")), db: Session = Depends(get_db)):
+def decide(candidate_id: str, body: DecisionIn, request: Request, user: User = Depends(require_roles("REVIEWER", "INVESTIGATOR", "ADMIN", action="decide")), db: Session = Depends(get_db, scope="function")):
     """Human decision on an identity-match candidate. APPROVE is the only path to a merged node in the projection."""
     m = db.get(MatchCandidate, candidate_id)
     if m is None:
@@ -128,7 +128,7 @@ def decide(candidate_id: str, body: DecisionIn, request: Request, user: User = D
 
 
 @router.post("/candidates/{candidate_id}/assign")
-def assign_candidate(candidate_id: str, request: Request, user: User = Depends(require_roles("REVIEWER", "INVESTIGATOR", "ADMIN", action="decide")), db: Session = Depends(get_db)):
+def assign_candidate(candidate_id: str, request: Request, user: User = Depends(require_roles("REVIEWER", "INVESTIGATOR", "ADMIN", action="decide")), db: Session = Depends(get_db, scope="function")):
     """Assign a candidate to the current user."""
     m = db.get(MatchCandidate, candidate_id)
     if m is None:
@@ -144,7 +144,7 @@ def assign_candidate(candidate_id: str, request: Request, user: User = Depends(r
     return candidate_out(db, m)  # DEF-032: was candidate_out(m) -> TypeError -> HTTP 500 after the commit
 
 @router.get("/cases/{case_id}/stats")
-def hitl_stats(case_id: str, request: Request, user: User = Depends(require_roles("REVIEWER", "INVESTIGATOR", "ADMIN", action="decide")), db: Session = Depends(get_db)):
+def hitl_stats(case_id: str, request: Request, user: User = Depends(require_roles("REVIEWER", "INVESTIGATOR", "ADMIN", action="decide")), db: Session = Depends(get_db, scope="function")):
     """Returns HITL statistics for a case."""
     authorize_case(db, user, case_id, request, action="HITL_STATS")  # DEF-031
     record_read(db, None, user.user_id, "HITL_STATS_VIEW", case_id=case_id)
@@ -168,7 +168,7 @@ def hitl_stats(case_id: str, request: Request, user: User = Depends(require_role
     }
 
 @router.post("/claims/{claim_id}/decision")
-def decide_claim(claim_id: str, body: DecisionIn, request: Request, user: User = Depends(require_roles("REVIEWER", "INVESTIGATOR", "ADMIN", action="decide")), db: Session = Depends(get_db)):
+def decide_claim(claim_id: str, body: DecisionIn, request: Request, user: User = Depends(require_roles("REVIEWER", "INVESTIGATOR", "ADMIN", action="decide")), db: Session = Depends(get_db, scope="function")):
     """Decisions on individual claims (e.g. resolving or flagging a contradiction, marking a claim STALE)."""
     c = db.get(Claim, claim_id)
     if c is None:
@@ -190,7 +190,7 @@ def decide_claim(claim_id: str, body: DecisionIn, request: Request, user: User =
 
 
 @router.get("/cases/{case_id}/reviews")
-def list_reviews(case_id: str, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db)):
+def list_reviews(case_id: str, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db, scope="function")):
     authorize_case(db, user, case_id, request)
     record_read(db, None, user.user_id, "REVIEW_LIST", case_id=case_id)
     return [{"review_id": r.review_id, "target_kind": r.target_kind, "target_id": r.target_id, "decision": r.decision, "reason": mask_text(r.reason),
@@ -199,7 +199,7 @@ def list_reviews(case_id: str, request: Request, user: User = Depends(current_us
 
 
 @router.get("/cases/{case_id}/contradictions")
-def contradictions(case_id: str, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db)):
+def contradictions(case_id: str, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db, scope="function")):
     authorize_case(db, user, case_id, request)
     record_read(db, None, user.user_id, "CONTRADICTION_LIST", case_id=case_id)
     return [claim_out(c, db) for c in db.query(Claim).filter_by(case_id=case_id, state="CONTRADICTORY").all()]

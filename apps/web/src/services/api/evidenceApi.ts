@@ -1,4 +1,4 @@
-import { api, get, getPaged, post, ApiError, TOKEN_KEY, type ApiResponse, type Paged } from "./real_client";
+import { api, get, getPaged, post, request, type ApiResponse, type Paged } from "./real_client";
 import type { EvidenceItem, EvidenceFilter } from "@/types/evidence";
 import type { ContextResponse } from "@/types/entity";
 
@@ -100,19 +100,9 @@ export async function revealEvidenceContext(evidenceId: string, reason: string, 
 export const RAW_DOWNLOAD_ROLES = ["INVESTIGATOR", "REVIEWER"];
 
 export async function downloadEvidence(evidenceId: string, fallbackName: string, reason: string): Promise<void> {
-  const headers: Record<string, string> = { "Content-Type": "application/json" };
-  try {
-    const t = localStorage.getItem(TOKEN_KEY);
-    if (t) headers.Authorization = `Bearer ${t}`;
-  } catch { /* storage unavailable: request goes unauthenticated and the server answers 401 */ }
-  const base = import.meta.env.VITE_API_BASE_URL || "/api/v1";
-  // POST so the audited reason travels in the body, never in a URL or access log (DEF-101)
-  const res = await fetch(`${base}/evidence/${encodeURIComponent(evidenceId)}/download`, { method: "POST", headers, body: JSON.stringify({ reason }) });
-  if (!res.ok) {
-    let detail = res.statusText;
-    try { const j = await res.json(); if (typeof j.detail === "string") detail = j.detail; } catch { /* non-JSON error body */ }
-    throw new ApiError(res.status, detail, res.headers.get("X-Trace-Id") || undefined);
-  }
+  // POST so the audited reason travels in the body, never in a URL or access log (DEF-101). Sent through the shared
+  // client: session expiry, network failures and the request ID are handled as for every other call; never retried.
+  const res = await request(`/evidence/${encodeURIComponent(evidenceId)}/download`, { method: "POST", body: JSON.stringify({ reason }) });
   const blob = await res.blob();
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");

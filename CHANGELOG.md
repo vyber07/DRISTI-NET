@@ -1,3 +1,29 @@
+# Unreleased — "Failed to fetch" and page failures (branch `worktree-auth-login-ratelimit`)
+- Root cause, under load: the auth dependency held a database connection while the request waited for a second worker
+  thread. At about 50 concurrent users every thread waited for a connection, so each request hung 30 s and then failed
+  with 500. Fixed:
+  - the auth dependencies release the connection before the endpoint runs, and sessions close when the endpoint returns;
+  - the pool is sized to the thread pool (20 + 30, timeout 10 s, pre-ping, recycle);
+  - a saturated pool answers 503 `BUSY` with `Retry-After`.
+  Measured on PostgreSQL: 50 users went from p50 30.6 s with 12 × 500 to p50 2.2 s with no errors.
+- Root cause, after the HTTPS switch: tabs open on `http://65.0.102.181` got a cross-origin 301 on API calls, which the
+  browser blocks as "Failed to fetch". Recommended host-nginx change (not applied): `infrastructure/nginx/canonical-origin.conf`.
+  It answers API calls on the old address with a same-origin 421 `ORIGIN_MOVED`, which the client follows.
+- One error envelope for every error: `{detail, code, request_id}`, with internals never exposed. Unhandled errors are a JSON 500.
+- Web client:
+  - plain messages instead of "Failed to fetch";
+  - a 30 s read timeout;
+  - GET/HEAD retried on network errors, timeouts, 502, 503 and 504; writes never retried;
+  - the request ID shown in error panels, and a correlation ID sent with each request;
+  - no error flashes during the session-expiry redirect;
+  - an offline banner, and error panels that reload their data when the connection returns.
+- Operations:
+  - a structured request and slow-request log;
+  - `GET /api/v1/diagnostics` (ADMIN and AUDITOR, audited);
+  - `index.html` served `no-cache`, hashed assets `immutable`, `HEAD` allowed.
+- Docs: `docs/TROUBLESHOOTING.md`, ADR-017, `docs/audit/FAILED_TO_FETCH_TEST_RECORD_2026-11-12.md`.
+- Tests: SQLite 453 passed, PostgreSQL 455 passed, browser verification 8 of 8.
+
 # Unreleased — upload limits and file validation (branch `worktree-auth-login-ratelimit`)
 - Seven evidence categories with configurable limits: documents 25 MB, structured 25 MB, archives 100 MB, images 50 MB,
   audio 500 MB, video/CCTV 20 GB, forensic images and captures 50 GB. Images, audio, video and forensic files are new.

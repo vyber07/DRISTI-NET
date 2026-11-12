@@ -61,7 +61,7 @@ def claim_out(c: Claim, db: Session) -> dict:
 @router.get("/cases/{case_id}/graph")
 def graph(case_id: str, request: Request, center: str | None = None, hops: int = 1, max_nodes: int = 100, offset: int = 0,
           t_from: str | None = None, t_to: str | None = None, include_candidates: bool = True,
-          user: User = Depends(current_user), db: Session = Depends(get_db)):
+          user: User = Depends(current_user), db: Session = Depends(get_db, scope="function")):
     """Bounded projection. hops ≤ GRAPH_MAX_HOPS and max_nodes ≤ GRAPH_MAX_NODES are enforced server-side.
     `offset` pages through the node listing when `center` is unset — a centered hop-bounded traversal has
     no natural total order to page through (see bounded_subgraph's docstring), so `offset` is accepted
@@ -103,7 +103,7 @@ def graph(case_id: str, request: Request, center: str | None = None, hops: int =
 
 
 @router.get("/cases/{case_id}/locations")
-def locations(case_id: str, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db)):
+def locations(case_id: str, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db, scope="function")):
     """LOCATION entities that appear in this case's approved claims, for the map view (docs/status.md
     Role 2 backlog item). Bounded to config.GRAPH_MAX_NODES, the same server-side cap the graph endpoint
     itself uses — a map view is a different projection of the same claim data, not an unbounded query.
@@ -134,7 +134,7 @@ def locations(case_id: str, request: Request, user: User = Depends(current_user)
 
 
 @router.get("/cases/{case_id}/analysis")
-def analysis(case_id: str, request: Request, t_from: str | None = None, t_to: str | None = None, user: User = Depends(current_user), db: Session = Depends(get_db)):
+def analysis(case_id: str, request: Request, t_from: str | None = None, t_to: str | None = None, user: User = Depends(current_user), db: Session = Depends(get_db, scope="function")):
     authorize_case(db, user, case_id, request, action="ANALYSIS_VIEW")
     G = graph_svc.build_projection(db, case_id, _t(t_from), _t(t_to))
     res = graph_svc.analyze(G)
@@ -157,7 +157,7 @@ def analysis(case_id: str, request: Request, t_from: str | None = None, t_to: st
 
 @router.get("/cases/{case_id}/timeline")
 def timeline(case_id: str, request: Request, t_from: str | None = None, t_to: str | None = None, entity_id: str | None = None,
-             limit: int = 500, user: User = Depends(current_user), db: Session = Depends(get_db)):
+             limit: int = 500, user: User = Depends(current_user), db: Session = Depends(get_db, scope="function")):
     authorize_case(db, user, case_id, request, action="TIMELINE_VIEW")
     q = db.query(Claim).filter(Claim.case_id == case_id, Claim.kind == "RELATIONSHIP", Claim.observed_time.isnot(None), Claim.state.in_(["ALLOWED", "APPROVE"]))
     if entity_id:
@@ -187,7 +187,7 @@ def timeline(case_id: str, request: Request, t_from: str | None = None, t_to: st
 
 
 @router.get("/cases/{case_id}/edge")
-def edge_detail(case_id: str, request: Request, source: str, target: str, rel_type: str, limit: int = 50, user: User = Depends(current_user), db: Session = Depends(get_db)):
+def edge_detail(case_id: str, request: Request, source: str, target: str, rel_type: str, limit: int = 50, user: User = Depends(current_user), db: Session = Depends(get_db, scope="function")):
     """Evidence drawer: every claim (with provenance) behind an aggregated graph edge — merged nodes included."""
     authorize_case(db, user, case_id, request, action="EDGE_VIEW")
     merges = graph_svc.approved_merges(db, case_id)
@@ -202,7 +202,7 @@ def edge_detail(case_id: str, request: Request, source: str, target: str, rel_ty
 
 
 @router.get("/claims/{claim_id}")
-def get_claim(claim_id: str, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db)):
+def get_claim(claim_id: str, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db, scope="function")):
     c = db.get(Claim, claim_id)
     if c is None:
         raise HTTPException(404, "unknown claim")
@@ -213,7 +213,7 @@ def get_claim(claim_id: str, request: Request, user: User = Depends(current_user
 
 
 @router.get("/entities/{entity_id}")
-def get_entity(entity_id: str, request: Request, case_id: str, user: User = Depends(current_user), db: Session = Depends(get_db)):
+def get_entity(entity_id: str, request: Request, case_id: str, user: User = Depends(current_user), db: Session = Depends(get_db, scope="function")):
     """Entity card incl. cross-case appearances — other cases are only named if the user may access them."""
     authorize_case(db, user, case_id, request, action="ENTITY_VIEW")
     e = db.get(Entity, entity_id)
@@ -246,7 +246,7 @@ def get_entity(entity_id: str, request: Request, case_id: str, user: User = Depe
 
 
 @router.post("/entities/{entity_id}/reveal")
-def reveal(entity_id: str, body: RevealIn, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db)):
+def reveal(entity_id: str, body: RevealIn, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db, scope="function")):
     """Authorized unmasking of a PHONE or ACCOUNT entity label. Requires a reason; allowed only by the masking policy
     for that kind AND an assignment to the case; every attempt writes an UNMASK audit event."""
     e = _entity_in_case_or_403(db, user, entity_id, body.case_id, request, body.reason)
@@ -261,7 +261,7 @@ def reveal(entity_id: str, body: RevealIn, request: Request, user: User = Depend
 
 @router.post("/entities/{entity_id}/attributes/reveal")
 def reveal_attribute(entity_id: str, body: AttributeRevealIn, request: Request, user: User = Depends(current_user),
-                     db: Session = Depends(get_db)):
+                     db: Session = Depends(get_db, scope="function")):
     """Authorized unmasking of ONE personal attribute (address, dob, phone, account) of an entity in one case.
     Policy kind: PII_ATTRIBUTE for address/dob, PHONE or ACCOUNT for those keys."""
     e = _entity_in_case_or_403(db, user, entity_id, body.case_id, request, body.reason)

@@ -21,6 +21,22 @@
 
 ## 2. Standard API Error Response
 
+**Since ADR-017 (2026-11-12, branch `worktree-auth-login-ratelimit`):** every error response, including HTTP
+exceptions, 422 validation errors, pool timeouts, database outages and unhandled errors, has these top-level fields:
+
+```json
+{ "detail": "The service is busy. Please try again in a few seconds.", "code": "BUSY",
+  "request_id": "REQ-…", "trace_id": "REQ-…" }
+```
+
+- `detail`: a message, or for 422 the list of `{loc, msg, type}`.
+- `code`: stable. Values include `NOT_FOUND`, `FORBIDDEN`, `UNAUTHENTICATED`, `INVALID_REQUEST`, `CONFLICT`,
+  `RATE_LIMITED`, `BUSY` (503, `Retry-After: 5`), `DB_UNAVAILABLE` (503, `Retry-After: 10`), `INTERNAL` (500), or
+  a domain code.
+- `request_id`: equal to the `X-Request-Id` header.
+- Domain exceptions additionally keep the nested `error` object shown below.
+- The web client shows `detail` and the request ID, and retries reads on 502, 503 and 504.
+
 ```json
 {
   "error": {

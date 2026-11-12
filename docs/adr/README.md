@@ -19,6 +19,7 @@ verification history behind ADR-003/004/005/009/017.
 | [009](009-temporal-decay.md) | Temporal relevance decay: exponential half-life, never rewrites history | Accepted |
 | [010](010-integrity-mechanism.md) | Evidence integrity: SHA-256 manifest, not a hash chain or blockchain | Accepted |
 | [011](011-deployment-model.md) | Deployment: Docker Compose, not Kubernetes | Accepted |
+| [017](017-request-reliability.md) | Request reliability: auth dependencies release their DB connection, pool sized to the thread pool, one error envelope with request ID, retryable 503s, client retry/offline recovery, same-origin 421 for a moved origin | Accepted (not yet deployed) |
 | [016](016-upload-policy.md) | Streaming uploads, per-category configurable limits, signature validation, store-only media and forensic evidence | Accepted (not yet deployed) |
 | [015](015-permission-overrides.md) | Scoped, time-boxed ALLOW/DENY permission overrides with two-admin approval; deny wins; mandatory restrictions | Accepted (not yet deployed) |
 | [014](014-masking-policy.md) | Masking policy table, one reveal check, ADMIN separated from reveal, field-level masking of personal attributes | Accepted (not yet deployed) |

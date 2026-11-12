@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import logging
+import time
 import uuid
 from pathlib import Path
 
@@ -9,20 +10,28 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
+from sqlalchemy.exc import OperationalError
+from sqlalchemy.exc import TimeoutError as SATimeoutError
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from . import config
-from .core import request_context
+from .core import diagnostics, request_context
 from .core.exceptions import DristiBaseError
 from .core.logging import configure_logging
 from .db import engine, init_db
 # Import integrity service before init_db so LedgerAnchor is registered with Base.metadata
 from .services import integrity as _integrity_svc  # noqa: F401 (side-effect: table registration)
 from .routes import (audit_routes, auth_routes, case_routes, demo_routes, evidence_routes, graph_routes, integrity_routes,
-                     masking_routes, override_routes, report_routes, review_routes, upload_policy_routes)
+                     diagnostics_routes, masking_routes, override_routes, report_routes, review_routes, upload_policy_routes)
 from .services import neo4j_store, ratelimit
 
 configure_logging()
 logger = logging.getLogger("drishti.startup")
+access_log = logging.getLogger("drishti.http")
+if config.DB_POOL_SIZE + config.DB_MAX_OVERFLOW < config.THREADPOOL_SIZE:
+    logger.warning("database pool (%d) is smaller than the worker-thread pool (%d): requests can deadlock waiting for "
+                   "connections under load; raise DRISHTI_DB_POOL_SIZE/DRISHTI_DB_MAX_OVERFLOW",
+                   config.DB_POOL_SIZE + config.DB_MAX_OVERFLOW, config.THREADPOOL_SIZE)
 if not config.REDIS_URL:
     # Login lockout and API ceilings are then per-process: fine for one instance, but several instances
     # would each allow the full limit. Multi-instance deployments must set DRISHTI_REDIS_URL.
@@ -50,6 +59,14 @@ if neo4j_store.available():
 
 app = FastAPI(title="DRISHTI-NET prototype API", version="0.1.0",
               description="Evidence-linked relationship discovery for authorized human review. Synthetic data only. The system proposes; the investigator decides.")
+
+
+@app.on_event("startup")
+async def _size_threadpool() -> None:
+    """Pin the worker-thread pool to THREADPOOL_SIZE so it matches the database pool sizing (config.py)."""
+    from anyio.to_thread import current_default_thread_limiter
+
+    current_default_thread_limiter().total_tokens = config.THREADPOOL_SIZE
 
 
 # DoS layer, per client IP: every /api/v1 request, authenticated or not, counts against one ceiling.
@@ -83,7 +100,14 @@ async def trace_middleware(request: Request, call_next):
         path=request.url.path,
     ))
     request.state.trace_id = ctx.request_id
-    response = await call_next(request)
+    started = time.perf_counter()
+    try:
+        response = await call_next(request)
+    except Exception:
+        # Unhandled errors are turned into a JSON 500 by unhandled_error() below; record the timing here too.
+        _log_request(request, 500, started, ctx.request_id)
+        raise
+    _log_request(request, response.status_code, started, ctx.request_id)
     response.headers["X-Trace-Id"] = ctx.request_id
     response.headers["X-Request-Id"] = ctx.request_id
     response.headers["X-Content-Type-Options"] = "nosniff"
@@ -94,20 +118,73 @@ async def trace_middleware(request: Request, call_next):
     return response
 
 
+def _log_request(request: Request, status_code: int, started: float, request_id: str) -> None:
+    """One structured line per request (method, path, status, duration, request ID); slow ones at WARNING."""
+    duration_ms = (time.perf_counter() - started) * 1000
+    path = request.url.path
+    diagnostics.record(request.method, path, status_code, duration_ms, request_id, config.SLOW_REQUEST_MS)
+    if path.startswith("/api/"):
+        level = logging.WARNING if (status_code >= 500 or duration_ms >= config.SLOW_REQUEST_MS) else logging.INFO
+        access_log.log(level, "%s %s -> %s in %.0f ms", request.method, path, status_code, duration_ms,
+                       extra={"trace_id": request_id, "action": "HTTP", "outcome": status_code, "resource": path})
+
+
+def error_body(request: Request, status_code: int, detail, code: str, **extra) -> JSONResponse:
+    """The one error envelope every handler uses: {detail, code, request_id}. `detail` keeps its earlier meaning (a
+    message, or the 422 list), so existing clients still read it; `code` is stable for programs; `request_id` matches
+    the X-Request-Id header and the audit and log records (docs/TROUBLESHOOTING.md)."""
+    rid = getattr(request.state, "trace_id", None)
+    headers = extra.pop("headers", None) or {}
+    if rid:
+        headers.setdefault("X-Request-Id", rid)
+        headers.setdefault("X-Trace-Id", rid)
+    return JSONResponse(status_code=status_code, headers=headers,
+                        content={"detail": detail, "code": code, "request_id": rid, "trace_id": rid, **extra})
+
+
+_HTTP_CODES = {400: "BAD_REQUEST", 401: "UNAUTHENTICATED", 403: "FORBIDDEN", 404: "NOT_FOUND", 405: "METHOD_NOT_ALLOWED",
+               409: "CONFLICT", 411: "LENGTH_REQUIRED", 413: "TOO_LARGE", 415: "UNSUPPORTED_MEDIA_TYPE", 422: "INVALID_REQUEST",
+               429: "RATE_LIMITED", 503: "UNAVAILABLE", 507: "INSUFFICIENT_STORAGE"}
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_error(request: Request, exc: StarletteHTTPException):
+    return error_body(request, exc.status_code, exc.detail, _HTTP_CODES.get(exc.status_code, f"HTTP_{exc.status_code}"),
+                      headers=dict(exc.headers or {}))
+
+
 @app.exception_handler(DristiBaseError)
 async def domain_error_handler(request: Request, exc: DristiBaseError):
-    """Translate domain exceptions to standard API error responses.
+    """Domain exceptions (docs/engineering/ERROR_HANDLING_STANDARD.md). The nested "error" object is kept for existing
+    clients; detail/code/request_id give it the same top-level shape as every other error."""
+    rid = getattr(request.state, "trace_id", None)
+    return error_body(request, exc.http_status, exc.safe_message(), exc.code,
+                      error={"code": exc.code, "message": exc.safe_message(), "trace_id": rid, "details": exc.detail})
 
-    Services raise DristiBaseError subclasses; this handler converts them to the
-    consistent {"error": {"code": ..., "message": ..., "trace_id": ...}} format
-    (see docs/engineering/ERROR_HANDLING_STANDARD.md).
-    """
-    trace_id = getattr(request.state, "trace_id", None)
-    return JSONResponse(
-        status_code=exc.http_status,
-        content={"error": {"code": exc.code, "message": exc.safe_message(), "trace_id": trace_id,
-                            "details": exc.detail}},
-    )
+
+@app.exception_handler(SATimeoutError)
+async def pool_timeout(request: Request, exc: SATimeoutError):
+    """No database connection became free within DB_POOL_TIMEOUT_S: the service is saturated. A retryable 503 with
+    Retry-After, instead of the earlier 30 s hang and HTTP 500."""
+    diagnostics.note_error_code("DB_POOL_TIMEOUT")
+    logger.warning("database pool exhausted on %s %s", request.method, request.url.path)
+    return error_body(request, 503, "The service is busy. Please try again in a few seconds.", "BUSY", headers={"Retry-After": "5"})
+
+
+@app.exception_handler(OperationalError)
+async def database_unavailable(request: Request, exc: OperationalError):
+    diagnostics.note_error_code("DB_UNAVAILABLE")
+    logger.error("database unavailable on %s %s: %s", request.method, request.url.path, type(exc.orig).__name__ if exc.orig else "")
+    return error_body(request, 503, "The database is temporarily unavailable. Please try again shortly.", "DB_UNAVAILABLE",
+                      headers={"Retry-After": "10"})
+
+
+@app.exception_handler(Exception)
+async def unhandled_error(request: Request, exc: Exception):
+    """Anything unexpected: a JSON 500 with the request ID (never a stack trace or internal message)."""
+    diagnostics.note_error_code("INTERNAL")
+    logger.exception("unhandled error on %s %s (request %s)", request.method, request.url.path, getattr(request.state, "trace_id", "-"))
+    return error_body(request, 500, "An unexpected error occurred. Quote the request ID if you report it.", "INTERNAL")
 
 
 @app.exception_handler(RequestValidationError)
@@ -116,7 +193,7 @@ async def validation_error(request: Request, exc: RequestValidationError):
     over-long login password straight back in the response body. Location, message and type are enough to fix a
     request; the value itself is never needed and may be a password, token or personal identifier."""
     errors = [{"loc": list(e.get("loc", ())), "msg": e.get("msg", ""), "type": e.get("type", "")} for e in exc.errors()]
-    return JSONResponse(status_code=422, content={"detail": errors, "trace_id": getattr(request.state, "trace_id", None)})
+    return error_body(request, 422, errors, "INVALID_REQUEST")
 
 
 @app.exception_handler(ValueError)
@@ -129,7 +206,7 @@ async def value_error(request: Request, exc: ValueError):
     # and visible server-side, not just silently echoed. Any new ValueError raise site must keep its
     # message safe to show an API caller -- never include a path, a stack detail, or a secret.
     logger.warning("ValueError on %s %s: %s", request.method, request.url.path, exc)
-    return JSONResponse(status_code=409, content={"detail": str(exc), "trace_id": request.state.trace_id})
+    return error_body(request, 409, str(exc), "CONFLICT")
 
 
 @app.get("/api/v1/health")
@@ -156,7 +233,7 @@ def ready():
 
 
 routers = [auth_routes, case_routes, evidence_routes, review_routes, graph_routes, audit_routes, report_routes, integrity_routes,
-           masking_routes, override_routes, upload_policy_routes]
+           masking_routes, override_routes, upload_policy_routes, diagnostics_routes]
 if config.DATABASE_URL.startswith("sqlite"):
     routers.append(demo_routes)
 
@@ -183,14 +260,29 @@ def safe_dist_file(dist: Path, path: str) -> Path | None:
     return target
 
 
-if config.WEB_DIST.exists():
-    app.mount("/assets", StaticFiles(directory=config.WEB_DIST / "assets"), name="assets")
+class ImmutableAssets(StaticFiles):
+    """Hashed build assets never change under the same name, so they may be cached for a year."""
 
-    @app.get("/{path:path}", include_in_schema=False)
+    def file_response(self, *args, **kwargs):
+        response = super().file_response(*args, **kwargs)
+        response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        return response
+
+
+# The app shell must be revalidated on every load: without Cache-Control a browser may reuse a heuristically cached
+# index.html that names JS files removed by a later deploy (a blank page). Not reproduced in testing, so this is
+# hardening, not a confirmed cause (docs/TROUBLESHOOTING.md).
+_SHELL_HEADERS = {"Cache-Control": "no-cache"}
+
+if config.WEB_DIST.exists():
+    app.mount("/assets", ImmutableAssets(directory=config.WEB_DIST / "assets"), name="assets")
+
+    @app.api_route("/{path:path}", methods=["GET", "HEAD"], include_in_schema=False)
     def spa(path: str):
+        # HEAD is accepted so uptime monitors can probe the site (it returned 405 before).
         if path.startswith("api/"):  # unknown API paths must 404, never fall through to the app shell
             raise HTTPException(404, "not found")
         target = safe_dist_file(config.WEB_DIST, path)
         if target is not None:
-            return FileResponse(target)
-        return FileResponse(config.WEB_DIST / "index.html")
+            return FileResponse(target, headers=None if target.name != "index.html" else _SHELL_HEADERS)
+        return FileResponse(config.WEB_DIST / "index.html", headers=_SHELL_HEADERS)

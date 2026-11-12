@@ -114,7 +114,7 @@ def evidence_out(ev: Evidence, db: Session | None = None) -> dict:
 @router.post("/cases/{case_id}/evidence", status_code=201, response_model=EvidenceOut)
 async def upload(case_id: str, request: Request, file: UploadFile = File(...), source_label: str = Form("synthetic"),
                  process: bool = Form(True),
-                 user: User = Depends(require_roles("EVIDENCE_OFFICER", "INVESTIGATOR", "ADMIN", action="upload")), db: Session = Depends(get_db)):
+                 user: User = Depends(require_roles("EVIDENCE_OFFICER", "INVESTIGATOR", "ADMIN", action="upload")), db: Session = Depends(get_db, scope="function")):
     """Multipart upload: stage → validate → UPLOADED → HASHED → QUARANTINED (→ optional immediate processing).
     Capped at the smaller of MAX_UPLOAD_MB and the category limit. Large evidence uses POST .../evidence/stream."""
     case = authorize_case(db, user, case_id, request, action="EVIDENCE_UPLOAD")
@@ -141,7 +141,7 @@ async def upload(case_id: str, request: Request, file: UploadFile = File(...), s
 async def upload_stream(case_id: str, request: Request, filename: str = Query(..., max_length=120),
                         source_label: str = Query("manual upload", max_length=120), process: bool = Query(True),
                         user: User = Depends(require_roles("EVIDENCE_OFFICER", "INVESTIGATOR", "ADMIN", action="upload")),
-                        db: Session = Depends(get_db)):
+                        db: Session = Depends(get_db, scope="function")):
     """Streaming upload for evidence of any size the policy allows (CCTV, disk images). The raw request body is the
     file (Content-Type application/octet-stream). Content-Length is required and checked against the category limit
     before a byte is read; bytes go straight to staging while being hashed, so memory use is constant. Roles, case
@@ -176,7 +176,7 @@ async def upload_stream(case_id: str, request: Request, filename: str = Query(..
 @router.get("/cases/{case_id}/evidence", response_model=list[EvidenceOut])
 def list_evidence(case_id: str, request: Request, response: FastAPIResponse, q: str | None = Query(None, max_length=200),
                   status: str | None = Query(None, max_length=40), limit: int | None = Query(None, ge=1, le=MAX_LIMIT),
-                  offset: int = Query(0, ge=0), user: User = Depends(current_user), db: Session = Depends(get_db)):
+                  offset: int = Query(0, ge=0), user: User = Depends(current_user), db: Session = Depends(get_db, scope="function")):
     """Optional search (file name, evidence id, start of SHA-256), status filter and paging; X-Total-Count = matches."""
     authorize_case(db, user, case_id, request)
     record_read(db, None, user.user_id, "EVIDENCE_LIST", case_id=case_id, search=q,
@@ -192,7 +192,7 @@ def list_evidence(case_id: str, request: Request, response: FastAPIResponse, q: 
 
 
 @router.get("/cases/{case_id}/evidence/summary")
-def evidence_summary(case_id: str, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db)):
+def evidence_summary(case_id: str, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db, scope="function")):
     """Counts by status for the whole case (filters and the overview need them without loading every row)."""
     authorize_case(db, user, case_id, request)
     record_read(db, None, user.user_id, "EVIDENCE_SUMMARY", case_id=case_id)
@@ -209,7 +209,7 @@ def _get_ev(db: Session, user: User, evidence_id: str, request: Request, action=
 
 
 @router.get("/evidence/{evidence_id}", response_model=EvidenceOut)
-def get_evidence(evidence_id: str, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db)):
+def get_evidence(evidence_id: str, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db, scope="function")):
     ev = _get_ev(db, user, evidence_id, request)
     record_audit(db, request.state.trace_id, user.user_id, "EVIDENCE_VIEW", "EVIDENCE", evidence_id, ev.case_id)
     db.commit()
@@ -217,7 +217,7 @@ def get_evidence(evidence_id: str, request: Request, user: User = Depends(curren
 
 
 @router.post("/evidence/{evidence_id}/process", response_model=EvidenceOut)
-def process(evidence_id: str, request: Request, user: User = Depends(require_roles("EVIDENCE_OFFICER", "INVESTIGATOR", "ADMIN", action="upload")), db: Session = Depends(get_db)):
+def process(evidence_id: str, request: Request, user: User = Depends(require_roles("EVIDENCE_OFFICER", "INVESTIGATOR", "ADMIN", action="upload")), db: Session = Depends(get_db, scope="function")):
     ev = _get_ev(db, user, evidence_id, request, action="EVIDENCE_PROCESS")
     if ev.status not in ("QUARANTINED", "SCAN_FAILED", "SCAN_TIMEOUT", "SCANNER_UNAVAILABLE", "ACCEPTED", "EXTRACTION_FAILED", "EXTRACTED",
                          "MALWARE_SCANNING", "PROCESSING", "ENTITY_CANDIDATES"):  # in-between states: DEF-098 lease reclaim
@@ -228,7 +228,7 @@ def process(evidence_id: str, request: Request, user: User = Depends(require_rol
 
 
 @router.get("/evidence/{evidence_id}/verify")
-def verify(evidence_id: str, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db)):
+def verify(evidence_id: str, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db, scope="function")):
     """Recompute the stored file's SHA-256 and compare with the manifest."""
     ev = _get_ev(db, user, evidence_id, request, action="EVIDENCE_VERIFY")
     if not storage.exists(ev.storage_path):
@@ -250,7 +250,7 @@ def verify(evidence_id: str, request: Request, user: User = Depends(current_user
 @router.get("/evidence/{evidence_id}/context")
 def context(evidence_id: str, request: Request, row: int | None = None, page: int | None = None, line: int | None = None,
             json_path: str | None = None, window: int = Query(2, ge=0, le=10),
-            user: User = Depends(current_user), db: Session = Depends(get_db)):
+            user: User = Depends(current_user), db: Session = Depends(get_db, scope="function")):
     """Return the source lines around a locator (masked by default) so a graph edge can be traced to its origin."""
     ev = _authorize_evidence_read(db, user, evidence_id, request, action="EVIDENCE_CONTEXT")
     data = storage.read_bytes(ev.storage_path)
@@ -262,7 +262,7 @@ def context(evidence_id: str, request: Request, row: int | None = None, page: in
 
 
 @router.post("/evidence/{evidence_id}/context/reveal")
-def context_reveal(evidence_id: str, body: ContextRevealIn, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db)):
+def context_reveal(evidence_id: str, body: ContextRevealIn, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db, scope="function")):
     """Authorized unmasking of evidence context. Requires a reason; allowed only by the EVIDENCE_CONTEXT masking policy
     AND an assignment to the evidence's case; every attempt writes an UNMASK audit event."""
     ev = _authorize_evidence_read(db, user, evidence_id, request, action="UNMASK")
@@ -279,7 +279,7 @@ def context_reveal(evidence_id: str, body: ContextRevealIn, request: Request, us
 
 @router.post("/evidence/{evidence_id}/download")
 def download(evidence_id: str, body: DownloadIn, request: Request, user: User = Depends(current_user),
-             db: Session = Depends(get_db)):
+             db: Session = Depends(get_db, scope="function")):
     """Raw (unmasked) original bytes. DEF-101: only with a reason written to the audit log; POST so the reason never
     appears in URLs or access logs. Who may download is the RAW_FILE masking policy (default INVESTIGATOR, REVIEWER),
     plus an assignment to the case. ADMIN cannot hold this permission (separation of duties), so the earlier ADMIN
@@ -296,7 +296,7 @@ def download(evidence_id: str, body: DownloadIn, request: Request, user: User = 
 
 
 @router.get("/evidence/{evidence_id}/claims")
-def evidence_claims(evidence_id: str, request: Request, limit: int = 100, user: User = Depends(current_user), db: Session = Depends(get_db)):
+def evidence_claims(evidence_id: str, request: Request, limit: int = 100, user: User = Depends(current_user), db: Session = Depends(get_db, scope="function")):
     ev = _get_ev(db, user, evidence_id, request)
     claims = db.query(Claim).filter_by(evidence_id=ev.evidence_id).order_by(Claim.created_at).limit(min(limit, 500)).all()
     record_audit(db, request.state.trace_id, user.user_id, "EVIDENCE_CLAIMS_VIEW", "EVIDENCE", evidence_id, ev.case_id, detail={"count": len(claims)})

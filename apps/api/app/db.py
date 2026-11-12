@@ -7,7 +7,13 @@ from . import config
 
 config.STORAGE_ROOT.mkdir(parents=True, exist_ok=True)
 connect_args = {"check_same_thread": False} if config.DATABASE_URL.startswith("sqlite") else {}
-engine = create_engine(config.DATABASE_URL, connect_args=connect_args, future=True)
+engine = create_engine(
+    config.DATABASE_URL, connect_args=connect_args, future=True,
+    # Sized to the worker-thread count (config.THREADPOOL_SIZE); see the comment there. pre_ping replaces a connection
+    # the server has closed (database restart, idle timeout) instead of failing the request that drew it.
+    pool_size=config.DB_POOL_SIZE, max_overflow=config.DB_MAX_OVERFLOW, pool_timeout=config.DB_POOL_TIMEOUT_S,
+    pool_recycle=config.DB_POOL_RECYCLE_S, pool_pre_ping=True,
+)
 
 if config.DATABASE_URL.startswith("sqlite"):
     @event.listens_for(engine, "connect")
@@ -33,7 +39,10 @@ class Base(DeclarativeBase):
     pass
 
 
-def get_db():
+async def get_db():
+    """One session per request. Async on purpose: FastAPI runs a sync generator's cleanup on the worker-thread pool,
+    so under load the close() that returns the connection could itself wait for a thread while every thread waited
+    for a connection. Here the close runs on the event loop and needs no thread."""
     db = SessionLocal()
     try:
         yield db

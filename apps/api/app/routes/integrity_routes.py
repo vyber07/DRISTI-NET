@@ -81,7 +81,7 @@ def create_anchor(
     case_id: str,
     request: Request,
     user: User = Depends(require_roles("INVESTIGATOR", "REVIEWER", "ANALYST", "ADMIN", action="createAnchor")),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
 ):
     """Compute the Merkle root over all accepted evidence SHA-256 hashes and record it.
     Optionally submits to a Besu ledger if DRISHTI_BESU_ENDPOINT and DRISHTI_BESU_SIGNING_KEY
@@ -118,7 +118,7 @@ def list_anchors(
     case_id: str,
     request: Request,
     user: User = Depends(require_roles("INVESTIGATOR", "REVIEWER", "ANALYST", "ADMIN", "AUDITOR", action="listAnchors")),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
 ):
     authorize_case(db, user, case_id, request, action="INTEGRITY_VIEW")
     record_read(db, None, user.user_id, "ANCHOR_LIST", case_id=case_id)
@@ -137,7 +137,7 @@ def merkle_proof(
     leaf_sha256: str,
     request: Request,
     user: User = Depends(require_roles("INVESTIGATOR", "REVIEWER", "ANALYST", "ADMIN", "AUDITOR", action="listAnchors")),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
 ):
     """Return the Merkle inclusion proof for a specific evidence SHA-256 hash.
     The proof can be verified offline with integrity.MerkleProof.verify().
@@ -175,7 +175,7 @@ def export_court_pdf(
     body: CourtPdfIn,
     request: Request,
     user: User = Depends(require_roles("INVESTIGATOR", "REVIEWER", "ANALYST", "ADMIN", action="report")),
-    db: Session = Depends(get_db),
+    db: Session = Depends(get_db, scope="function"),
 ):
     """Generate an integrity-reference evidence dossier PDF with BSA s.63(4)(c) reference fields.
 

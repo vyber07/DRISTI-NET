@@ -27,6 +27,17 @@ S3_ACCESS_KEY = _env("S3_ACCESS_KEY", "drishti")
 S3_SECRET_KEY = _env("S3_SECRET_KEY", "drishti-minio-demo")
 S3_REGION = _env("S3_REGION", "us-east-1")
 DATABASE_URL = _env("DATABASE_URL", f"sqlite:///{STORAGE_ROOT / 'drishti.db'}")
+# Request concurrency and the database pool (docs/TROUBLESHOOTING.md, "pool exhaustion"). Sync endpoints and dependencies
+# run on THREADPOOL_SIZE worker threads. The pool (DB_POOL_SIZE + DB_MAX_OVERFLOW) must be at least that large, so a
+# running thread never waits for a connection held by a request that is itself waiting for a thread. Before this, the
+# defaults (5 + 10 connections, 40 threads, 30 s wait) deadlocked under ~50 concurrent users: every request waited 30 s
+# and then failed with 500. Mind PostgreSQL's max_connections (default 100) across the API and worker processes.
+THREADPOOL_SIZE = int(_env("THREADPOOL_SIZE", "40"))
+DB_POOL_SIZE = int(_env("DB_POOL_SIZE", "20"))
+DB_MAX_OVERFLOW = int(_env("DB_MAX_OVERFLOW", "30"))     # 50 total: the 40 threads plus async endpoints
+DB_POOL_TIMEOUT_S = int(_env("DB_POOL_TIMEOUT_S", "10"))   # then 503 + Retry-After, never a 30 s hang
+DB_POOL_RECYCLE_S = int(_env("DB_POOL_RECYCLE_S", "1800"))
+SLOW_REQUEST_MS = int(_env("SLOW_REQUEST_MS", "2000"))      # logged at WARNING by the request-log middleware
 SECRET_KEY = _env("SECRET_KEY", "change-me-demo-only-minimum-32-chars-for-dev-jwt")
 
 import json

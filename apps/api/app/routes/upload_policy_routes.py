@@ -28,7 +28,7 @@ class UploadPolicyIn(BaseModel):
 
 
 @router.get("/upload-policies")
-def list_policies(user: User = Depends(current_user), db: Session = Depends(get_db)):
+def list_policies(user: User = Depends(current_user), db: Session = Depends(get_db, scope="function")):
     return {"policies": list(upload_policy.effective_policies(db).values()),
             "multipart_max_mb": config.MAX_UPLOAD_MB, "hard_max_mb": config.UPLOAD_HARD_MAX_MB,
             "scanner_max_mb": config.SCAN_MAX_MB,
@@ -37,7 +37,7 @@ def list_policies(user: User = Depends(current_user), db: Session = Depends(get_
 
 @router.put("/upload-policies/{category}")
 def update_policy(category: str, body: UploadPolicyIn, request: Request,
-                  user: User = Depends(require_roles("ADMIN", action="manageUploadPolicy")), db: Session = Depends(get_db)):
+                  user: User = Depends(require_roles("ADMIN", action="manageUploadPolicy")), db: Session = Depends(get_db, scope="function")):
     try:
         upload_policy.update_policy(db, user, category, body.max_mb, body.enabled, body.reason, request.state.trace_id)
     except LookupError:
@@ -54,7 +54,7 @@ def update_policy(category: str, body: UploadPolicyIn, request: Request,
 
 @router.get("/upload-policies/metrics")
 def metrics(request: Request, user: User = Depends(require_roles("ADMIN", "AUDITOR", action="viewUploadMetrics")),
-            db: Session = Depends(get_db)):
+            db: Session = Depends(get_db, scope="function")):
     """In-process counters since this API process started, plus durable counts from the audit log (all processes)."""
     since = datetime.datetime.utcnow() - datetime.timedelta(hours=24)
     rows = (db.query(AuditEvent.failure_reason, func.count())

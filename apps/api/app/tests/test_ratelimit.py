@@ -57,6 +57,11 @@ def per_test_ip(monkeypatch):
     monkeypatch.setattr(ratelimit, "client_ip", fake)
 
 
+def _body(resp):
+    """The response body without the per-request identifiers, which are meant to differ on every request."""
+    return {k: v for k, v in resp.json().items() if k not in ("request_id", "trace_id")}
+
+
 def _login(client, username, password, ip="198.51.100.10", headers=None):
     h = {"X-Test-IP": ip, **(headers or {})}
     return client.post("/api/v1/auth/login", json={"username": username, "password": password}, headers=h)
@@ -223,7 +228,7 @@ def test_unknown_and_wrong_password_responses_are_identical(client, per_test_ip)
     known = _login(client, "reviewer", "wrong-password", ip="198.51.100.220")
     unknown = _login(client, "no-such-person", "wrong-password", ip="198.51.100.221")
     assert known.status_code == unknown.status_code == 401
-    assert known.json() == unknown.json()
+    assert _body(known) == _body(unknown)
 
 
 def test_locked_responses_are_identical_for_known_and_unknown(client, per_test_ip):
@@ -234,7 +239,7 @@ def test_locked_responses_are_identical_for_known_and_unknown(client, per_test_i
         _login(client, "nobody-here", "x", ip=f"203.0.113.{120 + i}")
     unknown = _login(client, "nobody-here", "x", ip="198.51.100.231")
     assert known.status_code == unknown.status_code == 429
-    assert known.json() == unknown.json()
+    assert _body(known) == _body(unknown)
 
 
 def test_inactive_account_gives_the_same_answer_as_wrong_password(client, per_test_ip):
@@ -247,7 +252,7 @@ def test_inactive_account_gives_the_same_answer_as_wrong_password(client, per_te
     inactive = _login(client, "enum-dormant", "dormant-pass-1", ip="198.51.100.240")
     wrong = _login(client, "reviewer", "wrong-password", ip="198.51.100.241")
     assert inactive.status_code == wrong.status_code == 401
-    assert inactive.json() == wrong.json()
+    assert _body(inactive) == _body(wrong)
 
 
 def test_unknown_username_pays_the_same_hashing_cost(client, per_test_ip, monkeypatch):
