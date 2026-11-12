@@ -1,3 +1,22 @@
+# Unreleased — upload limits and file validation (branch `worktree-auth-login-ratelimit`)
+- Seven evidence categories with configurable limits: documents 25 MB, structured 25 MB, archives 100 MB, images 50 MB,
+  audio 500 MB, video/CCTV 20 GB, forensic images and captures 50 GB. Images, audio, video and forensic files are new.
+  They are stored, hashed, scanned and integrity-checked, and their content is never parsed.
+- New streaming route `POST /cases/{id}/evidence/stream`: constant memory, SHA-256 computed as bytes arrive, limit enforced on
+  Content-Length and byte by byte. The web app now uploads through it. The multipart route keeps its 25 MB cap.
+- Magic-byte signature checks for every type that has one; executable or script content refused; client MIME types not trusted.
+- No partial evidence: staging file removed on any failure, stored object discarded if the commit fails, stale staging
+  cleaned at startup. Concurrent identical uploads give one row.
+- Resource guards: 429 when too many uploads are in progress, 507 below the free-disk floor. Scan, S3 hash and S3 download stream.
+- Files above the scanner's stream limit stay quarantined with an explicit message (raise clamd `StreamMaxLength` and `DRISHTI_SCAN_MAX_MB`).
+- Administrator policy: `GET/PUT /upload-policies`, monitoring `GET /upload-policies/metrics` (migration `5bcde1234575`).
+- Fixed: a control character (NUL) in a rejected file name made the audit write fail on PostgreSQL and returned a 409 with a database message.
+  Audit target IDs are now sanitised.
+- Gateway: the nginx config has a dedicated streaming location (50 GB, buffering off). Other API routes stay at 30 MB.
+  The live host's nginx is separate and not changed.
+- Docs: `docs/UPLOAD_POLICY.md`, ADR-016. Tests: 41 upload tests; SQLite 441 passed; PostgreSQL 16 disposable container
+  443 passed; live isolated checks 11 of 11 (`scripts/upload_live_check.py`).
+
 # Unreleased — permission overrides (branch `worktree-auth-login-ratelimit`)
 - Administrator-controlled, time-boxed ALLOW/DENY overrides of named actions for a user or a role, optionally scoped to
   a case and/or a resource (`permission_overrides`, migration `5bcde1234574`). Deny wins. Mandatory restrictions

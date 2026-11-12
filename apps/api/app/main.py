@@ -18,7 +18,7 @@ from .db import engine, init_db
 # Import integrity service before init_db so LedgerAnchor is registered with Base.metadata
 from .services import integrity as _integrity_svc  # noqa: F401 (side-effect: table registration)
 from .routes import (audit_routes, auth_routes, case_routes, demo_routes, evidence_routes, graph_routes, integrity_routes,
-                     masking_routes, override_routes, report_routes, review_routes)
+                     masking_routes, override_routes, report_routes, review_routes, upload_policy_routes)
 from .services import neo4j_store, ratelimit
 
 configure_logging()
@@ -29,6 +29,11 @@ if not config.REDIS_URL:
     logger.warning("DRISHTI_REDIS_URL is not set: rate-limit counters are per-process, not shared across instances")
 
 init_db()
+try:
+    from .services.upload_policy import cleanup_stale_staging
+    cleanup_stale_staging()  # staging files left by a process that died mid-upload
+except OSError as exc:
+    logger.warning("could not clean the upload staging area: %s", exc)
 if neo4j_store.available():
     try:
         neo4j_store.apply_constraints()
@@ -151,7 +156,7 @@ def ready():
 
 
 routers = [auth_routes, case_routes, evidence_routes, review_routes, graph_routes, audit_routes, report_routes, integrity_routes,
-           masking_routes, override_routes]
+           masking_routes, override_routes, upload_policy_routes]
 if config.DATABASE_URL.startswith("sqlite"):
     routers.append(demo_routes)
 

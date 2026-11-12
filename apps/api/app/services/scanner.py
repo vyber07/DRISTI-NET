@@ -32,7 +32,12 @@ class ScanOutcome:
 
 
 def _scan_clamav_tcp(path: Path) -> ScanOutcome:
-    timeout = config.SCAN_TIMEOUT_S
+    # Base timeout plus a per-gigabyte allowance, so a large CCTV file is not cut off by a timeout sized for documents.
+    try:
+        size_gb = path.stat().st_size / (1024 ** 3)
+    except OSError:
+        size_gb = 0
+    timeout = config.SCAN_TIMEOUT_S + int(size_gb * config.SCAN_TIMEOUT_PER_GB_S)
     try:
         with socket.create_connection((config.CLAMAV_HOST, config.CLAMAV_PORT), timeout=timeout) as s:
             s.sendall(b"zINSTREAM\x00")
@@ -68,12 +73,19 @@ def _scan_clamav_tcp(path: Path) -> ScanOutcome:
 
 
 def _scan_testgate(path: Path) -> ScanOutcome:
+    # Streamed with an overlap the length of the signature, so large files are never read into memory and a
+    # signature split across two chunks is still found.
+    overlap = len(EICAR_SIGNATURE) - 1
+    tail = b""
     try:
-        data = path.read_bytes()
+        with open(path, "rb") as fh:
+            for chunk in iter(lambda: fh.read(1 << 20), b""):
+                window = tail + chunk
+                if EICAR_SIGNATURE in window:
+                    return ScanOutcome("INFECTED", "testgate", "EICAR test signature found")
+                tail = window[-overlap:]
     except OSError as exc:
         return ScanOutcome("SCAN_FAILED", "testgate", str(exc))
-    if EICAR_SIGNATURE in data:
-        return ScanOutcome("INFECTED", "testgate", "EICAR test signature found")
     return ScanOutcome("CLEAN", "testgate", "no test signature present (testgate is NOT a real antivirus)")
 
 

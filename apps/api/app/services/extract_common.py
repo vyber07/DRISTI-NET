@@ -82,16 +82,19 @@ def _check_archive(data: bytes) -> str:
     return ""
 
 
-def validate_upload(filename: str, data: bytes) -> ValidationResult:
+def validate_upload(filename: str, data: bytes, max_bytes: int | None = None) -> ValidationResult:
+    """Content checks for documents, structured data and archives. `max_bytes` defaults to the multipart route's
+    MAX_UPLOAD_MB; the upload policy passes the category limit it already enforced while staging."""
     ext = Path(filename).suffix.lower()
+    limit = max_bytes if max_bytes is not None else config.MAX_UPLOAD_MB * 1024 * 1024
     if not _SAFE_NAME.match(filename) or ".." in filename or "/" in filename:
         return ValidationResult(False, "unknown", ext, "unsafe file name")
     if ext not in config.ALLOWED_EXTENSIONS:
         return ValidationResult(False, "unknown", ext, f"unsupported format {ext!r}; allowed: {sorted(config.ALLOWED_EXTENSIONS)}")
     if len(data) == 0:
         return ValidationResult(False, "unknown", ext, "empty file")
-    if len(data) > config.MAX_UPLOAD_MB * 1024 * 1024:
-        return ValidationResult(False, "unknown", ext, f"file exceeds {config.MAX_UPLOAD_MB} MB")
+    if len(data) > limit:
+        return ValidationResult(False, "unknown", ext, f"file exceeds {limit // (1024 * 1024)} MB")
     if ext in MAGIC:
         magic, mime = MAGIC[ext]
         if not data.startswith(magic):

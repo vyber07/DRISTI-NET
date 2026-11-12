@@ -2,7 +2,9 @@ from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Reques
 from fastapi.responses import Response
 from fastapi import Response as FastAPIResponse
 from sqlalchemy import func
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
+from starlette.requests import ClientDisconnect
 
 from .. import config
 from ..auth import authorize_case, current_user, require_roles
@@ -12,7 +14,7 @@ from ..schemas import ContextRevealIn, DownloadIn, EvidenceOut
 
 from ..services import extract as extract_svc
 from ..services import pipeline, storage
-from ..services import masking_policy
+from ..services import masking_policy, upload_policy
 from ..services.audit import record_audit, record_read
 from ..services.evidence_service import build_context_window, mark_object_missing
 from ..services.masking import mask_text
@@ -22,22 +24,76 @@ from .listing import MAX_LIMIT, like_pattern, page
 router = APIRouter(tags=["evidence"])
 
 
-async def _read_bounded(file: UploadFile, max_bytes: int) -> bytes:
-    """Read the upload in chunks, aborting as soon as it exceeds max_bytes instead of after
-    buffering the whole thing (SEC-10): a client could otherwise force the server to hold an
-    arbitrarily large body in memory before validate_upload()'s own size check ever runs.
-    """
-    chunks: list[bytes] = []
-    total = 0
-    while True:
-        chunk = await file.read(1 << 20)
-        if not chunk:
-            break
-        total += len(chunk)
-        if total > max_bytes:
-            raise HTTPException(413, f"upload exceeds {max_bytes // (1024 * 1024)} MB")
-        chunks.append(chunk)
-    return b"".join(chunks)
+def _reject(db: Session, trace: str, user: User, case_id: str, filename: str | None, exc: upload_policy.UploadRejected,
+            size_hint: int | None = None):
+    """Audit and report a refused upload. The message is the uploader-facing reason; the code feeds monitoring."""
+    upload_policy.note_rejection(exc.code, case_id=case_id)
+    record_audit(db, trace, user.user_id, "EVIDENCE_UPLOAD", "FILE", (filename or "")[:120], case_id, outcome="DENIED",
+                 detail={"reason": exc.message, "code": exc.code, **({"declared_bytes": size_hint} if size_hint else {})})
+    db.commit()
+    headers = {"Retry-After": "30"} if exc.status == 429 else None
+    raise HTTPException(exc.status, f"upload rejected: {exc.message}", headers=headers)
+
+
+def _ingest(db: Session, request: Request, user: User, case, st: "upload_policy.Staged", source_label: str, process: bool) -> dict:
+    """Shared tail of both upload routes, for a staged and validated file: duplicate check on the SHA-256, evidence row,
+    move into quarantine (no read into memory), audit, commit. On any failure the staging file and any stored
+    object are removed, so no partial evidence survives. Quarantine, scanning and promotion are unchanged."""
+    trace = request.state.trace_id
+    case_id = case.case_id
+    try:
+        prior = db.query(Evidence).filter_by(case_id=case_id, sha256=st.sha256).first()
+        if prior:
+            record_audit(db, trace, user.user_id, "EVIDENCE_UPLOAD_DUPLICATE", "EVIDENCE", prior.evidence_id, case_id,
+                         detail={"sha256": st.sha256, "size": st.size})
+            db.commit()  # DEF-045
+            return evidence_out(prior, db)
+        ev = Evidence(case_id=case_id, version=1, filename=st.filename, extension=st.ext, detected_type=st.mime,
+                      size_bytes=st.size, sha256=st.sha256, status="UPLOADED", storage_path="pending", source_label=source_label,
+                      record_type=st.record_type, uploaded_by=user.user_id,
+                      # Snapshot of the case's own governance fields at the moment of acceptance (docs/context.md §9.2).
+                      classification=case.classification, jurisdiction=case.jurisdiction, purpose=case.purpose,
+                      access_class=case.sensitivity, authority_reference=case.authority_reference)
+        db.add(ev)
+        try:
+            db.flush()
+        except IntegrityError as exc:  # a concurrent upload of the same file won the race
+            if "uix_evidence_case_sha" not in str(exc) and "UNIQUE constraint failed: evidence.case_id, evidence.sha256" not in str(exc):
+                raise
+            db.rollback()
+            prior = db.query(Evidence).filter_by(case_id=case_id, sha256=st.sha256).first()
+            record_audit(db, trace, user.user_id, "EVIDENCE_UPLOAD_DUPLICATE", "EVIDENCE", prior.evidence_id, case_id,
+                         detail={"sha256": st.sha256, "size": st.size, "concurrent": True})
+            db.commit()  # DEF-045
+            return evidence_out(prior, db)
+        ev.status = "HASHED"
+        try:
+            ev.storage_path = storage.store_quarantine_file(case_id, ev.evidence_id, st.filename, st.path)
+        except Exception as exc:  # DEF-044: object store unreachable -> no row, controlled 503
+            db.rollback()
+            upload_policy.note_rejection("STORAGE_UNAVAILABLE", case_id=case_id)
+            record_audit(db, trace, user.user_id, "EVIDENCE_UPLOAD", "FILE", st.filename, case_id, outcome="ERROR",
+                         detail={"reason": "evidence storage unavailable", "code": "STORAGE_UNAVAILABLE", "error": type(exc).__name__})
+            db.commit()
+            raise HTTPException(503, "evidence storage is unavailable; the upload was not accepted")
+        ev.status = "QUARANTINED"
+        record_audit(db, trace, user.user_id, "EVIDENCE_UPLOAD", "EVIDENCE", ev.evidence_id, case_id,
+                     detail={"filename": st.filename, "sha256": st.sha256, "size": st.size, "category": st.category,
+                             "detected_type": st.mime, "duplicate_of": None})
+        try:
+            db.commit()
+        except Exception:
+            db.rollback()
+            storage.discard_uncommitted(ev.storage_path)  # the row never existed, so neither may the object
+            raise
+        upload_policy.METRICS.accepted += 1
+        upload_policy.METRICS.accepted_bytes += st.size
+    finally:
+        st.path.unlink(missing_ok=True)  # moved already on success; removes it on every failure path
+    if process:
+        pipeline.process_evidence(db, ev.evidence_id, trace, user.user_id)
+        db.refresh(ev)
+    return evidence_out(ev, db)
 
 
 def evidence_out(ev: Evidence, db: Session | None = None) -> dict:
@@ -59,58 +115,62 @@ def evidence_out(ev: Evidence, db: Session | None = None) -> dict:
 async def upload(case_id: str, request: Request, file: UploadFile = File(...), source_label: str = Form("synthetic"),
                  process: bool = Form(True),
                  user: User = Depends(require_roles("EVIDENCE_OFFICER", "INVESTIGATOR", "ADMIN", action="upload")), db: Session = Depends(get_db)):
-    """Upload → validate → UPLOADED → HASHED → QUARANTINED (→ optional immediate processing)."""
+    """Multipart upload: stage → validate → UPLOADED → HASHED → QUARANTINED (→ optional immediate processing).
+    Capped at the smaller of MAX_UPLOAD_MB and the category limit. Large evidence uses POST .../evidence/stream."""
     case = authorize_case(db, user, case_id, request, action="EVIDENCE_UPLOAD")
     trace = request.state.trace_id
-    data = await _read_bounded(file, config.MAX_UPLOAD_MB * 1024 * 1024)
-    v = extract_svc.validate_upload(file.filename or "", data)
-    if not v.ok:
-        record_audit(db, trace, user.user_id, "EVIDENCE_UPLOAD", "FILE", file.filename, case_id, outcome="DENIED", detail={"reason": v.reason})
-        db.commit()
-        raise HTTPException(422, f"upload rejected: {v.reason}")
-    sha = storage.sha256_bytes(data)
-    prior = db.query(Evidence).filter_by(case_id=case_id, sha256=sha).first()
-    if prior:
-        record_audit(db, trace, user.user_id, "EVIDENCE_UPLOAD_DUPLICATE", "EVIDENCE", prior.evidence_id, case_id)
-        db.commit()  # DEF-045: the audit row was never committed
-        return evidence_out(prior, db)
-    version = 1
-    ev = Evidence(case_id=case_id, version=version, filename=file.filename, extension=v.extension, detected_type=v.detected_type,
-                  size_bytes=len(data), sha256=sha, status="UPLOADED", storage_path="pending", source_label=source_label,
-                  record_type=extract_svc.detect_record_type(file.filename, data, v.extension), uploaded_by=user.user_id,
-                  # Snapshot of the case's own governance fields at the moment of acceptance (docs/context.md
-                  # §9.2) -- fixed here, not looked up live later, so a later change to the case's own
-                  # classification never rewrites what this evidence item was actually collected under.
-                  classification=case.classification, jurisdiction=case.jurisdiction, purpose=case.purpose,
-                  access_class=case.sensitivity, authority_reference=case.authority_reference)
-    db.add(ev)
+    filename = file.filename or ""
     try:
-        db.flush()
-    except __import__("sqlalchemy.exc").exc.IntegrityError as exc:
-        if "uix_evidence_case_sha" not in str(exc) and "UNIQUE constraint failed: evidence.case_id, evidence.sha256" not in str(exc):
-            raise
-        db.rollback()
-        prior = db.query(Evidence).filter_by(case_id=case_id, sha256=sha).first()
-        record_audit(db, trace, user.user_id, "EVIDENCE_UPLOAD_DUPLICATE", "EVIDENCE", prior.evidence_id, case_id)
-        db.commit()  # DEF-045
-        return evidence_out(prior, db)
-    ev.status = "HASHED"
+        with upload_policy.upload_slot():
+            policies = upload_policy.effective_policies(db)
+            ext, category, pol = upload_policy.classify(filename, policies)
+            upload_policy.check_capacity(None)
+            limit = min(pol["max_bytes"], config.MAX_UPLOAD_MB * 1024 * 1024)
+            st = await upload_policy.stage(upload_policy.iter_upload_file(file), filename, ext, category, limit)
+            try:
+                upload_policy.validate_staged(st)
+            except upload_policy.UploadRejected:
+                st.path.unlink(missing_ok=True)
+                raise
+            return _ingest(db, request, user, case, st, source_label, process)
+    except upload_policy.UploadRejected as exc:
+        _reject(db, trace, user, case_id, filename, exc)
+
+
+@router.post("/cases/{case_id}/evidence/stream", status_code=201, response_model=EvidenceOut)
+async def upload_stream(case_id: str, request: Request, filename: str = Query(..., max_length=120),
+                        source_label: str = Query("manual upload", max_length=120), process: bool = Query(True),
+                        user: User = Depends(require_roles("EVIDENCE_OFFICER", "INVESTIGATOR", "ADMIN", action="upload")),
+                        db: Session = Depends(get_db)):
+    """Streaming upload for evidence of any size the policy allows (CCTV, disk images). The raw request body is the
+    file (Content-Type application/octet-stream). Content-Length is required and checked against the category limit
+    before a byte is read; bytes go straight to staging while being hashed, so memory use is constant. Roles, case
+    access, file-name, signature and content checks are the same as the multipart route."""
+    case = authorize_case(db, user, case_id, request, action="EVIDENCE_UPLOAD")
+    trace = request.state.trace_id
+    length_header = request.headers.get("content-length")
     try:
-        ev.storage_path = storage.write_quarantine(case_id, ev.evidence_id, file.filename, data)
-    except Exception as exc:  # DEF-044: object store unreachable -> no row, controlled 503 (was an unhandled 500)
-        db.rollback()
-        record_audit(db, trace, user.user_id, "EVIDENCE_UPLOAD", "FILE", file.filename, case_id, outcome="ERROR",
-                     detail={"reason": "evidence storage unavailable", "error": type(exc).__name__})
-        db.commit()
-        raise HTTPException(503, "evidence storage is unavailable; the upload was not accepted")
-    ev.status = "QUARANTINED"
-    record_audit(db, trace, user.user_id, "EVIDENCE_UPLOAD", "EVIDENCE", ev.evidence_id, case_id,
-                 detail={"filename": file.filename, "sha256": sha, "size": len(data), "duplicate_of": prior.evidence_id if prior else None})
-    db.commit()
-    if process:
-        pipeline.process_evidence(db, ev.evidence_id, trace, user.user_id)
-        db.refresh(ev)
-    return evidence_out(ev, db)
+        if not length_header or not length_header.isdigit():
+            raise upload_policy.UploadRejected(411, "LENGTH_REQUIRED", "Content-Length is required for streaming uploads")
+        declared = int(length_header)
+        with upload_policy.upload_slot():
+            policies = upload_policy.effective_policies(db)
+            ext, category, pol = upload_policy.classify(filename, policies)
+            if declared > pol["max_bytes"]:
+                raise upload_policy.UploadRejected(413, "TOO_LARGE", f"file exceeds the {category.lower()} limit of {pol['max_mb']} MB")
+            upload_policy.check_capacity(declared)
+            try:
+                st = await upload_policy.stage(request.stream(), filename, ext, category, pol["max_bytes"], expected_length=declared)
+            except ClientDisconnect:
+                raise upload_policy.UploadRejected(400, "INTERRUPTED", "upload was interrupted; nothing was stored")
+            try:
+                upload_policy.validate_staged(st)
+            except upload_policy.UploadRejected:
+                st.path.unlink(missing_ok=True)
+                raise
+            return _ingest(db, request, user, case, st, source_label, process)
+    except upload_policy.UploadRejected as exc:
+        _reject(db, trace, user, case_id, filename, exc, size_hint=int(length_header) if length_header and length_header.isdigit() else None)
 
 
 @router.get("/cases/{case_id}/evidence", response_model=list[EvidenceOut])

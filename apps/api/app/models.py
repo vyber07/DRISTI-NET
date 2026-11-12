@@ -340,6 +340,18 @@ class PermissionOverrideEvent(Base):
     snapshot: Mapped[dict] = mapped_column(JSON, default=dict)
 
 
+class UploadPolicy(Base):
+    """Administrator-set upload limit for one evidence category (services/upload_policy.py). A missing row falls back
+    to the environment default for that category; no row can exceed config.UPLOAD_HARD_MAX_MB."""
+    __tablename__ = "upload_policies"
+    category: Mapped[str] = mapped_column(String, primary_key=True)
+    max_mb: Mapped[int] = mapped_column(Integer)
+    enabled: Mapped[bool] = mapped_column(Boolean, default=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime)
+    updated_by: Mapped[str | None] = mapped_column(String, nullable=True)
+    reason: Mapped[str | None] = mapped_column(String, nullable=True)
+
+
 class Snapshot(Base):
     __tablename__ = "snapshots"
     snapshot_id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: new_id("SNP"))

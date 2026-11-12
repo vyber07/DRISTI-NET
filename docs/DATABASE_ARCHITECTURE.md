@@ -93,6 +93,11 @@ exists. Integrity comes from per-row signatures, database triggers and daily dig
 - `created_by`, `created_at`, `approved_by`, `approved_at`, `decided_reason`, `revoked_by`, `revoked_at`, `revoke_reason`.
 - Rows are never deleted. Indexes on `action`, `subject`, `case_id`, `status`.
 
+#### `upload_policies` (migration `5bcde1234575`; docs/UPLOAD_POLICY.md)
+- `category` (PK: `DOCUMENT`, `STRUCTURED`, `ARCHIVE`, `IMAGE`, `AUDIO`, `VIDEO`, `FORENSIC`), `max_mb`, `enabled`,
+  `updated_at`, `updated_by`, `reason`. Empty until an administrator sets a limit; a missing row means the environment default.
+- `evidence.record_type` gains `image`, `audio`, `video`, `forensic` for stored-only evidence (no claims extracted).
+
 #### `permission_override_events` (append-only)
 - `event_id` (PK), `override_id` (indexed), `event` (`CREATED`, `APPROVED`, `REJECTED`, `REVOKED`), `actor_id`, `at`,
   `reason`, `snapshot` (JSON: the override after the change). Triggers refuse UPDATE and DELETE (PostgreSQL also TRUNCATE).

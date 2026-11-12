@@ -137,6 +137,36 @@ def write_quarantine(case_id: str, evidence_id: str, filename: str, data: bytes)
     return rel
 
 
+def store_quarantine_file(case_id: str, evidence_id: str, filename: str, src: Path) -> str:
+    """Move a fully staged, hashed upload into quarantine without reading it into memory. Local backend: atomic
+    rename when staging and storage share a filesystem (they do by default: staging lives under STORAGE_ROOT).
+    S3 backend: multipart upload from the file, then the staged copy is removed."""
+    rel = f"quarantine/{case_id}/{evidence_id}/{filename}"
+    if _using_s3():
+        _client().upload_file(str(src), config.S3_BUCKET, rel)
+        src.unlink(missing_ok=True)
+    else:
+        dst = _abs(rel)
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        try:
+            src.replace(dst)
+        except OSError:  # different filesystem
+            shutil.move(str(src), str(dst))
+    return rel
+
+
+def discard_uncommitted(rel: str) -> None:
+    """Remove an object whose database row was never committed (a failed upload). Never used on committed evidence:
+    the evidence lifecycle does not delete or overwrite stored objects."""
+    try:
+        if _using_s3():
+            _client().delete_object(Bucket=config.S3_BUCKET, Key=rel)
+        else:
+            _abs(rel).unlink(missing_ok=True)
+    except Exception:  # best effort; an orphan is reported by the caller's log, never silently accepted as evidence
+        pass
+
+
 def promote_to_accepted(rel: str) -> str:
     """Move a CLEAN file out of quarantine. The file bytes are unchanged; only the key/path changes."""
     new_rel = rel.replace("quarantine/", "accepted/", 1)
@@ -152,8 +182,16 @@ def exists(rel: str) -> bool:
     return (_s3_exists if _using_s3() else _local_exists)(rel)
 
 
+def _s3_sha256(rel: str) -> str:
+    h = hashlib.sha256()
+    body = _client().get_object(Bucket=config.S3_BUCKET, Key=rel)["Body"]
+    for chunk in body.iter_chunks(chunk_size=1 << 20):  # streamed: large evidence is never held in memory
+        h.update(chunk)
+    return h.hexdigest()
+
+
 def verify_hash(rel: str, expected_sha256: str) -> tuple[bool, str]:
-    actual = sha256_bytes(read_bytes(rel)) if _using_s3() else sha256_file(_abs(rel))
+    actual = _s3_sha256(rel) if _using_s3() else sha256_file(_abs(rel))
     return actual == expected_sha256, actual
 
 
@@ -174,8 +212,8 @@ def local_copy(rel: str):
         return
     suffix = Path(rel).suffix
     with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-        tmp.write(_s3_read(rel))
         tmp_path = Path(tmp.name)
+    _client().download_file(config.S3_BUCKET, rel, str(tmp_path))  # streamed to disk, not through memory
     try:
         yield tmp_path
     finally:

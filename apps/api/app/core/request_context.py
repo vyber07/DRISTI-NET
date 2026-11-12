@@ -95,6 +95,14 @@ def sanitize_correlation(raw: str | None) -> str | None:
     return None
 
 
+def sanitize_identifier(raw: str | None, max_len: int = 200) -> str | None:
+    """Target IDs can carry caller-supplied text (a rejected file name). Control characters are removed and the value
+    is truncated: PostgreSQL refuses NUL in text, which used to make the audit write itself fail."""
+    if raw is None:
+        return None
+    return _CONTROL_RE.sub("", str(raw))[:max_len]
+
+
 def sanitize_failure_reason(raw: str | None) -> str | None:
     if not raw:
         return None

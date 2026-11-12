@@ -29,7 +29,9 @@ async function send(path: string, init: RequestInit = {}): Promise<Response> {
   const headers: Record<string, string> = { ...(init.headers as Record<string, string> || {}) }
   const t = token()
   if (t) headers.Authorization = `Bearer ${t}`
-  if (init.body && !(init.body instanceof FormData)) headers['Content-Type'] = 'application/json'
+  // JSON only for string bodies the caller did not label. A raw file body (Blob/File) keeps its own Content-Type,
+  // and FormData sets its own multipart boundary.
+  if (typeof init.body === 'string' && !headers['Content-Type']) headers['Content-Type'] = 'application/json'
   const res = await fetch(`${import.meta.env.VITE_API_BASE_URL || "/api/v1"}${path}`, { ...init, headers })
   const trace = res.headers.get('X-Trace-Id') || undefined
   if (res.status === 401 && t && !path.startsWith('/auth/')) {

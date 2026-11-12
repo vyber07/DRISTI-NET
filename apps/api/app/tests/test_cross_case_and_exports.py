@@ -145,7 +145,7 @@ def test_storage_outage_on_upload_is_controlled_and_leaves_no_row(client, office
 
     def down(*a, **k):
         raise ConnectionError("simulated object-store outage")
-    monkeypatch.setattr(storage, "write_quarantine", down)
+    monkeypatch.setattr(storage, "store_quarantine_file", down)  # uploads now move a staged file into quarantine
     before = len(client.get("/api/v1/cases/CASE-0002/evidence", headers=officer).json())
     r = client.post("/api/v1/cases/CASE-0002/evidence", headers=officer,
                     files={"file": ("outage.csv", b"name,phone\nOutage Probe,9000000009\n")})

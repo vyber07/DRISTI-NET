@@ -53,11 +53,13 @@ ACTIONS: dict[str, tuple[str, ...] | None] = {
     "viewOverrides": ("ADMIN", "AUDITOR"),
     "manageOverrides": ("ADMIN",),
     "demoTamper": ("ADMIN",),
+    "manageUploadPolicy": ("ADMIN",),
+    "viewUploadMetrics": ("ADMIN", "AUDITOR"),
 }
 # Mandatory: oversight, account and policy administration, and the override system itself can neither be granted nor
 # withdrawn by an override (no self-reinforcing escalation, no locking administrators or auditors out).
 NON_OVERRIDABLE = frozenset({"globalAudit", "manageUsers", "viewMaskingPolicy", "manageMaskingPolicy", "viewOverrides",
-                             "manageOverrides", "demoTamper"})
+                             "manageOverrides", "demoTamper", "manageUploadPolicy", "viewUploadMetrics"})
 OVERRIDABLE = frozenset(a for a in ACTIONS if a not in NON_OVERRIDABLE)
 # Separation of duties (masking policy): ADMIN may never gain these through an ALLOW override.
 SEPARATION_ACTIONS = frozenset({"reveal", "downloadOriginal"})

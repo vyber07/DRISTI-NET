@@ -6,7 +6,10 @@ import { StatusBadge, evidenceStatusInfo } from "@/components/ui/status-badge";
 import { ReasonDialog } from "@/components/ui/reason-dialog";
 import { CaseTabBody, EmptyState, ErrorState, LoadingState, Pager, Section } from "@/components/layout/page";
 import { useDebounced } from "@/lib/use-debounced";
-import { downloadEvidence, getEvidenceById, getEvidenceSummary, searchEvidence, uploadEvidence } from "@/services/api/evidenceApi";
+import {
+  type UploadCategoryPolicy, checkUploadAgainstPolicy, downloadEvidence, getEvidenceById, getEvidenceSummary, getUploadPolicies,
+  searchEvidence, uploadEvidence,
+} from "@/services/api/evidenceApi";
 import { useProvenanceStore } from "@/stores/provenanceStore";
 import { useAuthStore } from "@/stores/authStore";
 import { can, deniedReason } from "@/lib/permissions";
@@ -15,7 +18,8 @@ import { useCase } from "../case-context";
 import { EvidenceDetailDrawer } from "./evidence-detail-drawer";
 import { formatBytes, formatDateTime, NOT_PROCESSED } from "./evidence-format";
 
-const ACCEPT = ".csv,.json,.pdf,.txt,.zip"; // config.ALLOWED_EXTENSIONS
+// Fallback until the server's upload policy (GET /upload-policies) has loaded; the server decides either way.
+const ACCEPT = ".csv,.json,.pdf,.txt,.zip";
 const PAGE_SIZE = 25;
 
 /**
@@ -173,9 +177,14 @@ function UploadPanel({ caseId, onUploaded }: { caseId: string; onUploaded: () =>
   const [label, setLabel] = useState("manual upload");
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
+  const [policies, setPolicies] = useState<UploadCategoryPolicy[] | null>(null);
+  useEffect(() => { getUploadPolicies().then((r) => setPolicies(r.policies)).catch(() => setPolicies(null)); }, []);
+  const accept = policies ? policies.filter((p) => p.enabled).flatMap((p) => p.extensions).join(",") : ACCEPT;
 
   const submit = async () => {
     if (!file) return;
+    const problem = policies ? checkUploadAgainstPolicy(file, policies) : null;
+    if (problem) { setResult({ ok: false, text: `Not uploaded: ${problem}` }); return; }
     setBusy(true); setResult(null);
     try {
       const body = (await uploadEvidence(caseId, file, label.trim() || "manual upload")).data;
@@ -192,12 +201,19 @@ function UploadPanel({ caseId, onUploaded }: { caseId: string; onUploaded: () =>
   };
 
   return (
-    <Section title="Upload evidence" description="Accepted: CSV, JSON, PDF, TXT, ZIP. Files are hashed, held in quarantine and scanned for malware before anything is extracted.">
+    <Section title="Upload evidence" description="Files are hashed, held in quarantine and scanned for malware before anything is extracted. Media and forensic files are stored and integrity-checked; their content is not extracted.">
+      {policies && (
+        <ul className="mb-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-text-secondary" aria-label="Accepted file types and size limits" data-testid="upload-limits">
+          {policies.filter((p) => p.enabled).map((p) => (
+            <li key={p.category}>{p.description}: {p.extensions.join(", ")} — up to {p.max_mb >= 1024 ? `${(p.max_mb / 1024).toLocaleString()} GB` : `${p.max_mb} MB`}</li>
+          ))}
+        </ul>
+      )}
       <div className="flex flex-wrap items-end gap-3">
         <div>
           <span className="text-xs font-medium text-text-secondary" id={`${fileId}-l`}>File</span>
           <div className="mt-1 flex items-center gap-2">
-            <input ref={fileRef} id={fileId} type="file" accept={ACCEPT} className="sr-only" aria-labelledby={`${fileId}-l`}
+            <input ref={fileRef} id={fileId} type="file" accept={accept} className="sr-only" aria-labelledby={`${fileId}-l`}
               onChange={(e) => { setFile(e.target.files?.[0] || null); setResult(null); }} />
             <Button type="button" variant="secondary" size="md" onClick={() => fileRef.current?.click()}>Choose file…</Button>
             <span className="text-sm text-text-primary max-w-[16rem] truncate" aria-live="polite">{file ? `${file.name} (${formatBytes(file.size)})` : <span className="text-text-secondary">No file chosen</span>}</span>
@@ -212,7 +228,7 @@ function UploadPanel({ caseId, onUploaded }: { caseId: string; onUploaded: () =>
           <Upload className="h-4 w-4" aria-hidden="true" /> {busy ? "Uploading and scanning…" : "Upload"}
         </Button>
       </div>
-      {result && <p role="status" className={`mt-3 text-sm ${result.ok ? "text-verified-emerald" : "text-critical-red"}`}>{result.text}</p>}
+      {result && <p role="status" data-testid="upload-result" className={`mt-3 text-sm ${result.ok ? "text-verified-emerald" : "text-critical-red"}`}>{result.text}</p>}
     </Section>
   );
 }

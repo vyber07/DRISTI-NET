@@ -44,7 +44,29 @@ SCAN_TIMEOUT_S = int(_env("SCAN_TIMEOUT_S", "120"))
 # DEF-098: a RUNNING job untouched for longer than this is treated as abandoned (its process died) and may be
 # reclaimed. Must exceed the slowest legitimate stage (scan timeout, large extraction).
 JOB_LEASE_S = int(_env("JOB_LEASE_S", "900"))
-MAX_UPLOAD_MB = int(_env("MAX_UPLOAD_MB", "25"))
+MAX_UPLOAD_MB = int(_env("MAX_UPLOAD_MB", "25"))  # overall cap of the multipart form route (POST /cases/{id}/evidence)
+# Upload policy (services/upload_policy.py, docs/UPLOAD_POLICY.md). Per-category defaults in MB; administrators change
+# them at runtime (PUT /upload-policies/{category}) within the ceilings below. Large evidence (CCTV, disk images) uses
+# the streaming route POST /cases/{id}/evidence/stream, whose gateway limit must equal UPLOAD_HARD_MAX_MB.
+UPLOAD_DEFAULT_LIMITS_MB: dict[str, int] = {
+    "DOCUMENT": int(_env("UPLOAD_MAX_DOCUMENT_MB", "25")),
+    "STRUCTURED": int(_env("UPLOAD_MAX_STRUCTURED_MB", "25")),
+    "ARCHIVE": int(_env("UPLOAD_MAX_ARCHIVE_MB", "100")),
+    "IMAGE": int(_env("UPLOAD_MAX_IMAGE_MB", "50")),
+    "AUDIO": int(_env("UPLOAD_MAX_AUDIO_MB", "500")),
+    "VIDEO": int(_env("UPLOAD_MAX_VIDEO_MB", str(20 * 1024))),
+    "FORENSIC": int(_env("UPLOAD_MAX_FORENSIC_MB", str(50 * 1024))),
+}
+UPLOAD_HARD_MAX_MB = int(_env("UPLOAD_HARD_MAX_MB", str(50 * 1024)))   # no policy may exceed this (gateway limit)
+# Categories whose content is parsed in memory (documents, structured data, archives) cannot be raised past this.
+UPLOAD_EXTRACTABLE_MAX_MB = int(_env("UPLOAD_EXTRACTABLE_MAX_MB", "512"))
+UPLOAD_MIN_FREE_MB = int(_env("UPLOAD_MIN_FREE_MB", "2048"))           # refuse uploads that would leave less disk free
+UPLOAD_MAX_CONCURRENT = int(_env("UPLOAD_MAX_CONCURRENT", "4"))        # simultaneous uploads per API process
+UPLOAD_STALE_STAGING_HOURS = int(_env("UPLOAD_STALE_STAGING_HOURS", "6"))
+# The malware scanner's own stream limit (clamd StreamMaxLength; ClamAV's default is 25 MB). Larger files are not sent
+# to the scanner: they stay quarantined as SCAN_FAILED with an explicit message until both limits are raised.
+SCAN_MAX_MB = int(_env("SCAN_MAX_MB", "25"))
+SCAN_TIMEOUT_PER_GB_S = int(_env("SCAN_TIMEOUT_PER_GB_S", "120"))
 GRAPH_MAX_HOPS = int(_env("GRAPH_MAX_HOPS", "2"))
 GRAPH_MAX_NODES = int(_env("GRAPH_MAX_NODES", "150"))
 SUPERNODE_DEGREE = int(_env("SUPERNODE_DEGREE", "12"))

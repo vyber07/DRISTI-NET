@@ -133,7 +133,7 @@ def record_audit(db: Session, trace_id: str | None, actor_id: str | None, action
     effective_trace = ctx.request_id if ctx is not None else (trace_id or request_context.new_request_id())
     raw_detail = detail or {}
     ev = AuditEvent(trace_id=effective_trace, actor_id=actor_id, action=action, target_kind=target_kind,
-                    target_id=target_id, case_id=case_id, outcome=outcome,
+                    target_id=request_context.sanitize_identifier(target_id), case_id=case_id, outcome=outcome,
                     detail=request_context.sanitize_detail(raw_detail))
     ev.audit_id = new_id("AUD")
     ev.created_at = utcnow()

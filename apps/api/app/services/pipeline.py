@@ -18,8 +18,9 @@ from ..models import BLOCKED_STATES, Evidence, Job, MatchCandidate
 
 class IntegrityMismatch(RuntimeError):
     pass
+from .. import config
 from . import extract as extract_svc
-from . import resolution, scanner, storage
+from . import resolution, scanner, storage, upload_policy
 from . import kafka_bus
 from .audit import record_audit
 
@@ -60,9 +61,18 @@ def run_scan(db: Session, ev: Evidence, trace_id: str, actor_id: str | None) -> 
     job = _job(db, ev, "SCAN", trace_id)
     ev.status = "MALWARE_SCANNING"
     db.commit()
+    scan_limit = config.SCAN_MAX_MB * 1024 * 1024
     try:
-        with storage.local_copy(ev.storage_path) as local_path:
-            outcome = scanner.scan_file(local_path)
+        if ev.size_bytes and ev.size_bytes > scan_limit:
+            # The scanner would refuse the stream (clamd StreamMaxLength) and the file would look like a scan error.
+            # Say so plainly instead: the evidence is kept, hashed and quarantined; it is not promoted unscanned.
+            outcome = scanner.ScanOutcome(
+                "SCAN_FAILED", "policy",
+                f"file is {ev.size_bytes // (1024 * 1024)} MB, above the scanner limit of {config.SCAN_MAX_MB} MB; raise clamd "
+                f"StreamMaxLength and DRISHTI_SCAN_MAX_MB, then reprocess. The file stays in quarantine until scanned.")
+        else:
+            with storage.local_copy(ev.storage_path) as local_path:
+                outcome = scanner.scan_file(local_path)
     except Exception as exc:
         # DEF-083: a storage error here escaped and left the item in MALWARE_SCANNING with a RUNNING job, which
         # /process rejects -- stuck for good. Record it as a failed scan: still quarantined, never clean, retryable.
@@ -102,11 +112,17 @@ def run_extract(db: Session, ev: Evidence, trace_id: str, actor_id: str | None) 
     ev.status = "PROCESSING"
     db.commit()
     try:
-        ok, actual = storage.verify_hash(ev.storage_path, ev.sha256)
+        ok, actual = storage.verify_hash(ev.storage_path, ev.sha256)  # streamed for every backend
         if not ok:
             raise IntegrityMismatch(f"hash mismatch before extraction: manifest {ev.sha256[:12]}… actual {actual[:12]}…")
-        data = storage.read_bytes(ev.storage_path)
-        stats = extract_svc.extract(db, ev, data)
+        if ev.record_type in upload_policy.BINARY_RECORD_TYPES:
+            # Media and forensic evidence: stored, hashed, scanned and integrity-checked, but its content is never
+            # loaded or parsed here (a multi-gigabyte video must not be read into memory).
+            stats = extract_svc.ExtractionStats(warnings=[f"{ev.record_type} evidence is stored and integrity-checked; "
+                                                          "no content extraction for this type"])
+        else:
+            data = storage.read_bytes(ev.storage_path)
+            stats = extract_svc.extract(db, ev, data)
         job.metrics = stats.__dict__
         job.status = "SUCCEEDED"
         ev.status = "EXTRACTED"

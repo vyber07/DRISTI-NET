@@ -16,6 +16,10 @@
 |--------|------|--------|-------------|
 | `POST` | `/auth/login` | Public | Authenticates officer credentials. Rate-limited per account, per source IP and per account across sources; see *Login and rate limits* below. Body is bounded (username 1–200, password 1–1024 characters, else 422). |
 | `GET` | `/auth/me` | Authenticated | Returns current officer profile, designation, role, office and jurisdiction. Subject to the per-user API ceiling. |
+| `POST` | `/cases/{id}/evidence/stream?filename=&source_label=&process=` | upload (EVIDENCE_OFFICER, INVESTIGATOR, ADMIN) + case access | Streaming upload: raw body, `Content-Length` required, per-category limit up to 50 GB. Same validation and quarantine flow as the multipart route. Errors: see `docs/UPLOAD_POLICY.md` §6. |
+| `GET` | `/upload-policies` | Authenticated | Accepted types, current per-category limits, scanner limit. |
+| `PUT` | `/upload-policies/{category}` | ADMIN | `{max_mb, enabled, reason}`; bounded by the hard and extractable ceilings; audited (`UPLOAD_POLICY_UPDATE`). |
+| `GET` | `/upload-policies/metrics` | ADMIN, AUDITOR | Rejections by code, accepted volume, concurrency, disk and staging state, 24-hour audit counts. |
 | `GET` | `/auth/me/permissions?case_id=` | Authenticated | The caller's effective capabilities (role + overrides), each with its source. Drives the UI only. |
 | `GET` | `/permission-overrides?status=` | ADMIN, AUDITOR | Overrides filtered by effective status (all, active, pending, scheduled, expired, revoked, rejected). Audited. |
 | `GET` | `/permission-overrides/meta` | ADMIN, AUDITOR | Overridable and mandatory actions, resource types, maximum duration, precedence. |
