@@ -50,6 +50,20 @@ def init_db() -> None:
         Base.metadata.create_all(engine)
         _sqlite_add_missing_columns()
         _install_audit_immutability_sqlite()
+        _ensure_masking_policy_defaults()
+
+
+def _ensure_masking_policy_defaults() -> None:
+    """Default reveal rules for a SQLite database (PostgreSQL gets them from migration 5bcde1234573). Adds only
+    missing kinds, so an administrator's changes survive restarts."""
+    from .services.masking_policy import ensure_default_policies
+
+    session = SessionLocal()
+    try:
+        ensure_default_policies(session)
+        session.commit()
+    finally:
+        session.close()
 
 
 def install_audit_immutability() -> None:

@@ -11,7 +11,8 @@ from ..models import SENSITIVE_KINDS, Claim, Entity, MatchCandidate, Review, Use
 from ..schemas import DecisionIn
 from ..services import pipeline
 from ..services.audit import record_audit, record_read
-from ..services.masking import case_attributes, mask_block_key, mask_label, mask_text
+from ..services.masking import (case_attributes, case_pii_values_cached, mask_attribute, mask_attributes, mask_block_key,
+                                mask_label, mask_text, redact_structure)
 from ..services.resolution import _profile
 
 router = APIRouter(tags=["review"])
@@ -21,18 +22,28 @@ def entity_summary(db: Session, ent: Entity, case_id: str) -> dict:
     prof = _profile(db, case_id, ent)
     case_attrs = case_attributes(ent.attributes, case_id)
     return {"entity_id": ent.entity_id, "kind": ent.kind, "label": mask_label(ent.kind, ent.label),
-            "attributes": {k: v for k, v in case_attrs.items() if k in ("dob", "address", "person_id", "source_document", "mention_of")},
+            "attributes": mask_attributes({k: v for k, v in case_attrs.items() if k in ("dob", "address", "person_id", "source_document", "mention_of")}),
             "names": sorted(prof["names"]), "aliases": sorted(prof["aliases"]),
             "phones": [mask_label("PHONE", p) for p in sorted(prof["phones"])], "accounts": [mask_label("ACCOUNT", a) for a in sorted(prof["accounts"])],
-            "orgs": sorted(prof["orgs"]), "dob": sorted(prof["dob"]), "address": sorted(prof["address"]), "evidence_ids": sorted(prof["evidence"])}
+            "orgs": sorted(prof["orgs"]),
+            # Field-level masking: a reviewer compares candidates on the masked forms (birth year, presence of an
+            # address); the raw values come only from the audited attribute-reveal endpoint.
+            "dob": sorted({mask_attribute("dob", d) for d in prof["dob"]}),
+            "address": sorted({mask_attribute("address", a) for a in prof["address"]}),
+            "evidence_ids": sorted(prof["evidence"])}
 
 
 def candidate_out(db: Session, m: MatchCandidate, detailed: bool = True) -> dict:
     left, right = db.get(Entity, m.left_entity_id), db.get(Entity, m.right_entity_id)
     reviews = db.query(Review).filter_by(target_kind="MATCH", target_id=m.candidate_id).order_by(Review.created_at).all()
+    known_pii = case_pii_values_cached(db, m.case_id)
     d = {"candidate_id": m.candidate_id, "case_id": m.case_id, "state": m.state, "confidence": m.confidence, "matcher_version": m.matcher_version,
-         "block_key": mask_block_key(m.block_key), "positive_signals": m.positive_signals, "counter_evidence": m.counter_evidence, "conflicts": m.conflicts,
-         "missing": m.missing, "evidence_ids": m.evidence_ids, "created_at": m.created_at.isoformat(),
+         # Matcher output quotes the compared values (e.g. both dates of birth): masked like any other output.
+         "block_key": mask_block_key(m.block_key),
+         "positive_signals": redact_structure(m.positive_signals, known_pii),
+         "counter_evidence": redact_structure(m.counter_evidence, known_pii),
+         "conflicts": redact_structure(m.conflicts, known_pii),
+         "missing": redact_structure(m.missing, known_pii), "evidence_ids": m.evidence_ids, "created_at": m.created_at.isoformat(),
          "assigned_to": m.assigned_to, "assigned_at": m.assigned_at,
          "left": {"entity_id": left.entity_id, "label": mask_label(left.kind, left.label), "kind": left.kind},
          "right": {"entity_id": right.entity_id, "label": mask_label(right.kind, right.label), "kind": right.kind},

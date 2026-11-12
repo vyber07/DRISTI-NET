@@ -57,6 +57,8 @@ def seed() -> None:
         for uname in assignees:
             if not db.query(CaseAssignment).filter_by(case_id=c["case_id"], user_id=users[uname].user_id).first():
                 db.add(CaseAssignment(case_id=c["case_id"], user_id=users[uname].user_id))
+    from .services.masking_policy import ensure_default_policies
+    ensure_default_policies(db)  # adds missing kinds only; never overwrites an administrator's change
     db.commit()
     print("seeded cases:", len(cases_added))
 

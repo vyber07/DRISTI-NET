@@ -1,3 +1,20 @@
+# Unreleased — masking policy and sensitive-field authorization (branch `worktree-auth-login-ratelimit`)
+- SECURITY: personal attributes (address, date of birth) were returned raw to every role on candidates, graph nodes,
+  claims, evidence claims and matcher signals. They are now masked on every default output; one attribute can be
+  revealed with `POST /entities/{id}/attributes/reveal` (reason, policy, case assignment, audited).
+- SECURITY: new `masking_policies` table and `GET/PUT /masking-policies` (view: ADMIN, AUDITOR; change: ADMIN, reason
+  required, audited with before and after). One reveal check for entity labels, attributes, evidence context and raw
+  downloads. A missing policy row denies (fail closed).
+- SECURITY (behaviour change): ADMIN can no longer reveal values or download raw files, including quarantined files.
+  ADMIN can never be placed in a reveal list (separation of duties). Defaults: INVESTIGATOR and REVIEWER.
+- SECURITY: 422 validation errors no longer echo the rejected input (an over-long login password was returned in the body).
+  `/api/*` responses are `Cache-Control: no-store`.
+- Removed the unused `unmasked` switch from claim output. The frontend reveal and download controls no longer offer ADMIN.
+- Raw-download denials are now audited as `UNMASK`/DENIED on the evidence (previously route-level `ACCESS_DENIED`).
+- Migration `5bcde1234573` (PostgreSQL: fresh build, downgrade, re-upgrade verified). Docs: `docs/MASKING_AUTHORIZATION.md`, ADR-014.
+- Tests: leak sweeps over 8 roles (phones, accounts, addresses, dates of birth, with a positive control), 44 authorization
+  tests, and error-echo tests. SQLite suite 353 passed; PostgreSQL 16 disposable container all passing.
+
 # Unreleased — audit logging (branch `worktree-auth-login-ratelimit`)
 - SECURITY: audit records now carry actor username and role, verified office, the case's resource office, session ID,
   client IP (trusted-proxy aware), sanitised user agent, server request ID, validated correlation ID, and failure reason.

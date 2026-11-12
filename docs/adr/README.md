@@ -19,6 +19,7 @@ verification history behind ADR-003/004/005/009/017.
 | [009](009-temporal-decay.md) | Temporal relevance decay: exponential half-life, never rewrites history | Accepted |
 | [010](010-integrity-mechanism.md) | Evidence integrity: SHA-256 manifest, not a hash chain or blockchain | Accepted |
 | [011](011-deployment-model.md) | Deployment: Docker Compose, not Kubernetes | Accepted |
+| [014](014-masking-policy.md) | Masking policy table, one reveal check, ADMIN separated from reveal, field-level masking of personal attributes | Accepted (not yet deployed) |
 | [013](013-audit-logging.md) | Audit logging: server-side context, append-only database storage, signed rows, daily digests, criticality-based failure handling | Accepted (not yet deployed) |
 | [012](012-rate-limiting.md) | Layered rate limiting: role-based login lockout, per-IP spraying limit, API ceilings; memory fallback when Redis is down (partly supersedes ADR-005) | Accepted (not yet live-verified) |
 

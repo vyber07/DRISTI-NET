@@ -6,10 +6,12 @@ from sqlalchemy.orm import Session
 from ..auth import authorize_case, current_user
 from ..db import get_db
 from ..models import CaseAssignment, Claim, Entity, Evidence, Provenance, Review, User
-from ..schemas import RevealIn
+from ..schemas import AttributeRevealIn, RevealIn
 from ..services import graph as graph_svc
 from ..services.audit import record_audit
-from ..services.masking import case_attributes, mask_label, mask_node, mask_text
+from ..services import masking_policy
+from ..services.masking import (SENSITIVE_ATTRIBUTE_KEYS, case_attributes, case_pii_values_cached, mask_attribute,
+                                mask_attributes, mask_label, mask_node, mask_text, redact_known_values)
 
 router = APIRouter(tags=["graph"])
 
@@ -25,13 +27,22 @@ def _t(s: str | None) -> datetime | None:
     return t
 
 
-def claim_out(c: Claim, db: Session, unmasked: bool = False) -> dict:
+def claim_out(c: Claim, db: Session) -> dict:
+    """A claim, always masked. There is deliberately no unmasked variant: raw values leave the API only through the
+    explicit, policy-checked, audited reveal endpoints (services/masking_policy.py)."""
     src, tgt = db.get(Entity, c.source_entity_id), db.get(Entity, c.target_entity_id) if c.target_entity_id else None
     provs = db.query(Provenance).filter_by(claim_id=c.claim_id).all()
     ev = db.get(Evidence, c.evidence_id)
     reviews = db.query(Review).filter_by(target_kind="CLAIM", target_id=c.claim_id).order_by(Review.created_at).all()
-    lab = (lambda k, v: v) if unmasked else mask_label
-    txt = (lambda v: v) if unmasked else mask_text
+    known_pii = case_pii_values_cached(db, c.case_id)
+    lab = mask_label
+
+    def txt(value):
+        # Attribute claims (address, dob, phone, account) get the field-level mask; any free text has phone/account
+        # patterns masked and this case's known personal values redacted.
+        if value is not None and c.attribute in SENSITIVE_ATTRIBUTE_KEYS:
+            return mask_attribute(c.attribute, value)
+        return redact_known_values(mask_text(value), known_pii)
     return {"claim_id": c.claim_id, "case_id": c.case_id, "kind": c.kind, "rel_type": c.rel_type, "attribute": c.attribute,
             "source": {"entity_id": src.entity_id, "kind": src.kind, "label": lab(src.kind, src.label)},
             "target": {"entity_id": tgt.entity_id, "kind": tgt.kind, "label": lab(tgt.kind, tgt.label)} if tgt else None,
@@ -40,7 +51,9 @@ def claim_out(c: Claim, db: Session, unmasked: bool = False) -> dict:
             "confidence": c.confidence, "missingness": c.missingness, "state": c.state, "flags": c.flags, "weight": c.weight,
             "evidence": {"evidence_id": ev.evidence_id, "filename": ev.filename, "sha256": ev.sha256, "status": ev.status, "version": ev.version, "record_type": ev.record_type,
                         "jurisdiction": ev.jurisdiction, "access_class": ev.access_class, "authority_reference": ev.authority_reference},
-            "provenance": [{"provenance_id": p.provenance_id, "locator": p.locator, "snippet": txt(p.snippet), "method": p.method, "method_version": p.method_version} for p in provs],
+            "provenance": [{"provenance_id": p.provenance_id, "locator": p.locator,
+                            "snippet": redact_known_values(mask_text(p.snippet), known_pii),
+                            "method": p.method, "method_version": p.method_version} for p in provs],
             "reviews": [{"review_id": r.review_id, "decision": r.decision, "reason": mask_text(r.reason), "reviewer_id": r.reviewer_id, "created_at": r.created_at.isoformat()} for r in reviews],
             "access_class": src.access_class}
 
@@ -223,7 +236,7 @@ def get_entity(entity_id: str, request: Request, case_id: str, user: User = Depe
     record_audit(db, request.state.trace_id, user.user_id, "ENTITY_VIEW", "ENTITY", entity_id, case_id)
     db.commit()
     return {"entity_id": e.entity_id, "kind": e.kind, "label": mask_label(e.kind, e.label), "masked": e.kind in ("PHONE", "ACCOUNT"),
-            "attributes": {k: v for k, v in case_attrs.items()}, "access_class": e.access_class,
+            "attributes": mask_attributes(case_attrs), "access_class": e.access_class,
             # SEC-13: total_cases (= len(visible_cases) + restricted_case_count + 1) was dropped --
             # it was a redundant aggregate, unused by the frontend (apps/web/src/types/entity.ts),
             # that disclosed this entity's total cross-case linkage volume beyond what the two
@@ -234,23 +247,45 @@ def get_entity(entity_id: str, request: Request, case_id: str, user: User = Depe
 
 @router.post("/entities/{entity_id}/reveal")
 def reveal(entity_id: str, body: RevealIn, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db)):
-    """Authorized unmasking. Requires a reason, is role-gated, and always writes an UNMASK audit event."""
-    authorize_case(db, user, body.case_id, request, action="UNMASK")
-    if user.role not in ("INVESTIGATOR", "REVIEWER", "ADMIN"):
-        record_audit(db, request.state.trace_id, user.user_id, "UNMASK", "ENTITY", entity_id, body.case_id, outcome="DENIED", detail={"reason": body.reason, "why": "role not permitted"})
-        db.commit()
-        raise HTTPException(403, f"role {user.role} may not reveal masked values")
-    e = db.get(Entity, entity_id)
-    if e is None:
-        raise HTTPException(404, "unknown entity")
-    case_claims = db.query(Claim).filter(
-        Claim.case_id == body.case_id,
-        (Claim.source_entity_id == entity_id) | (Claim.target_entity_id == entity_id)
-    ).first()
-    if not case_claims:
-        record_audit(db, request.state.trace_id, user.user_id, "UNMASK", "ENTITY", entity_id, body.case_id, outcome="DENIED", detail={"reason": body.reason, "why": "entity not in case"})
-        db.commit()
-        raise HTTPException(403, "entity does not belong to this case")
-    aud = record_audit(db, request.state.trace_id, user.user_id, "UNMASK", "ENTITY", entity_id, body.case_id, detail={"reason": body.reason, "kind": e.kind})
+    """Authorized unmasking of a PHONE or ACCOUNT entity label. Requires a reason; allowed only by the masking policy
+    for that kind AND an assignment to the case; every attempt writes an UNMASK audit event."""
+    e = _entity_in_case_or_403(db, user, entity_id, body.case_id, request, body.reason)
+    if e.kind not in ("PHONE", "ACCOUNT"):
+        raise HTTPException(400, "this entity's label is not masked")
+    masking_policy.authorize_reveal(db, user, e.kind, body.case_id, request, "ENTITY", entity_id, body.reason)
+    aud = record_audit(db, request.state.trace_id, user.user_id, "UNMASK", "ENTITY", entity_id, body.case_id,
+                       detail={"reason": body.reason, "masked_kind": e.kind})
     db.commit()
     return {"entity_id": entity_id, "kind": e.kind, "value": e.label, "audit_id": aud.audit_id, "reason": body.reason}
+
+
+@router.post("/entities/{entity_id}/attributes/reveal")
+def reveal_attribute(entity_id: str, body: AttributeRevealIn, request: Request, user: User = Depends(current_user),
+                     db: Session = Depends(get_db)):
+    """Authorized unmasking of ONE personal attribute (address, dob, phone, account) of an entity in one case.
+    Policy kind: PII_ATTRIBUTE for address/dob, PHONE or ACCOUNT for those keys."""
+    e = _entity_in_case_or_403(db, user, entity_id, body.case_id, request, body.reason)
+    kind = {"address": "PII_ATTRIBUTE", "dob": "PII_ATTRIBUTE", "phone": "PHONE", "account": "ACCOUNT"}[body.key]
+    masking_policy.authorize_reveal(db, user, kind, body.case_id, request, "ENTITY_ATTRIBUTE", f"{entity_id}:{body.key}", body.reason)
+    attrs = case_attributes(e.attributes, body.case_id)
+    if body.key not in attrs:
+        raise HTTPException(404, "the entity has no such attribute in this case")
+    aud = record_audit(db, request.state.trace_id, user.user_id, "UNMASK", "ENTITY_ATTRIBUTE", f"{entity_id}:{body.key}",
+                       body.case_id, detail={"reason": body.reason, "masked_kind": kind, "attribute": body.key})
+    db.commit()
+    return {"entity_id": entity_id, "attribute": body.key, "value": attrs[body.key], "audit_id": aud.audit_id}
+
+
+def _entity_in_case_or_403(db: Session, user: User, entity_id: str, case_id: str, request: Request, reason: str) -> Entity:
+    """Case access (audited by authorize_case), entity existence, and the entity's membership of that case. Unknown
+    and out-of-case entities give the same 403, so an entity id from another case reveals nothing (IDOR)."""
+    authorize_case(db, user, case_id, request, action="UNMASK")
+    e = db.get(Entity, entity_id)
+    in_case = e is not None and db.query(Claim.claim_id).filter(
+        Claim.case_id == case_id, (Claim.source_entity_id == entity_id) | (Claim.target_entity_id == entity_id)).first()
+    if not in_case:
+        record_audit(db, request.state.trace_id, user.user_id, "UNMASK", "ENTITY", entity_id, case_id, outcome="DENIED",
+                     detail={"reason": "entity not in case", "stated_reason": reason})
+        db.commit()
+        raise HTTPException(403, "entity does not belong to this case")
+    return e

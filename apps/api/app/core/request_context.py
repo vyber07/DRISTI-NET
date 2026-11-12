@@ -20,7 +20,7 @@ import contextvars
 import hashlib
 import re
 import secrets
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 CORRELATION_RE = re.compile(r"^[A-Za-z0-9._:-]{8,64}$")
 _CONTROL_RE = re.compile(r"[\x00-\x1f\x7f-\x9f]")
@@ -49,6 +49,9 @@ class RequestContext:
     role: str | None = None
     office_id: str | None = None
     session_id: str | None = None
+    # Per-request memo for expensive lookups (e.g. a case's raw personal values for snippet redaction). Lives and
+    # dies with the request; never shared between requests or users.
+    cache: dict = field(default_factory=dict)
 
 
 _current: contextvars.ContextVar[RequestContext | None] = contextvars.ContextVar("drishti_request_context", default=None)

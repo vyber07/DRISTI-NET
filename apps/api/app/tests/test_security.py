@@ -382,8 +382,10 @@ def test_raw_download_requires_unmask_role_and_an_audited_reason(client, ingeste
     assert r.status_code == 200 and r.content.startswith(b"vehicle_id")  # success path: the exact original bytes
     rows = [a for a in client.get("/api/v1/audit?action=EVIDENCE_DOWNLOAD&limit=500", headers=auditor).json() if a["target_id"] == ev]
     assert rows and rows[0]["detail"].get("reason") == "compare with registry extract", rows[:1]
-    denials = client.get("/api/v1/audit?action=ACCESS_DENIED&limit=1000", headers=auditor).json()
-    assert any(f"/evidence/{ev}/download" in (a.get("target_id") or "") for a in denials)
+    # The refusal is decided by the RAW_FILE masking policy and audited as UNMASK/DENIED on the evidence itself
+    # (earlier it was a route-level ACCESS_DENIED from require_roles).
+    denials = client.get("/api/v1/audit?action=UNMASK&outcome=DENIED&limit=1000", headers=auditor).json()
+    assert any(a.get("target_id") == ev and a["detail"].get("masked_kind") == "RAW_FILE" for a in denials)
 
 
 def test_seed_cli_refuses_the_public_default_key(tmp_path):

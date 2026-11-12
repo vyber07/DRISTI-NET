@@ -3,7 +3,10 @@
  *
  * This is a UI convenience only: it decides whether a control is shown or explained as unavailable. The backend
  * authorizes every request itself, so a wrong entry here can only produce a refused request, never extra access.
- * ADMIN passes every backend role check (auth.require_roles), so it is included everywhere.
+ * ADMIN passes every backend role check (auth.require_roles), so it is included everywhere EXCEPT reveal and
+ * downloadOriginal: those are decided by the server's masking policy (GET /masking-policies), whose defaults are
+ * INVESTIGATOR and REVIEWER, and which can never include ADMIN (separation of duties). If an administrator widens a
+ * policy, the server allows the extra role even though this table does not show the control yet.
  */
 export type Capability =
   | "upload"          // POST /cases/{id}/evidence, POST /evidence/{id}/process
@@ -19,8 +22,8 @@ export type Capability =
 
 const RULES: Record<Capability, readonly string[]> = {
   upload: ["EVIDENCE_OFFICER", "INVESTIGATOR", "ADMIN"],
-  downloadOriginal: ["INVESTIGATOR", "REVIEWER", "ADMIN"],
-  reveal: ["INVESTIGATOR", "REVIEWER", "ADMIN"],
+  downloadOriginal: ["INVESTIGATOR", "REVIEWER"],
+  reveal: ["INVESTIGATOR", "REVIEWER"],
   decide: ["REVIEWER", "INVESTIGATOR", "ADMIN"],
   createAnchor: ["INVESTIGATOR", "REVIEWER", "ANALYST", "ADMIN"],
   listAnchors: ["INVESTIGATOR", "REVIEWER", "ANALYST", "ADMIN", "AUDITOR"],

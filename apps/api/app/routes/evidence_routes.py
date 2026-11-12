@@ -12,6 +12,7 @@ from ..schemas import ContextRevealIn, DownloadIn, EvidenceOut
 
 from ..services import extract as extract_svc
 from ..services import pipeline, storage
+from ..services import masking_policy
 from ..services.audit import record_audit, record_read
 from ..services.evidence_service import build_context_window, mark_object_missing
 from ..services.masking import mask_text
@@ -202,15 +203,10 @@ def context(evidence_id: str, request: Request, row: int | None = None, page: in
 
 @router.post("/evidence/{evidence_id}/context/reveal")
 def context_reveal(evidence_id: str, body: ContextRevealIn, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db)):
-    """Authorized unmasking of evidence context. Requires a reason, is role-gated, and writes an UNMASK audit event."""
-    if user.role not in ("INVESTIGATOR", "REVIEWER", "ADMIN"):
-        ev = db.get(Evidence, evidence_id)
-        case_id = ev.case_id if ev else None
-        record_audit(db, request.state.trace_id, user.user_id, "UNMASK", "EVIDENCE", evidence_id, case_id, outcome="DENIED", detail={"reason": body.reason, "why": "role not permitted"})
-        db.commit()
-        raise HTTPException(403, f"role {user.role} may not reveal masked values")
-
+    """Authorized unmasking of evidence context. Requires a reason; allowed only by the EVIDENCE_CONTEXT masking policy
+    AND an assignment to the evidence's case; every attempt writes an UNMASK audit event."""
     ev = _authorize_evidence_read(db, user, evidence_id, request, action="UNMASK")
+    masking_policy.authorize_reveal(db, user, "EVIDENCE_CONTEXT", ev.case_id, request, "EVIDENCE", evidence_id, body.reason)
     data = storage.read_bytes(ev.storage_path)
     row, page, line, json_path, window = body.row, body.page, body.line, body.json_path, body.window
     ctx = build_context_window(data, ev.extension, row=row, page=page, line=line,
@@ -222,12 +218,15 @@ def context_reveal(evidence_id: str, body: ContextRevealIn, request: Request, us
 
 
 @router.post("/evidence/{evidence_id}/download")
-def download(evidence_id: str, body: DownloadIn, request: Request, user: User = Depends(require_roles("INVESTIGATOR", "REVIEWER", "ADMIN")),
+def download(evidence_id: str, body: DownloadIn, request: Request, user: User = Depends(current_user),
              db: Session = Depends(get_db)):
-    """Raw (unmasked) original bytes. DEF-101, owner decision 2026-11-04: only roles that may reveal masked values,
-    and only with a reason that is written to the audit log. POST so the reason never appears in URLs or access logs."""
+    """Raw (unmasked) original bytes. DEF-101: only with a reason written to the audit log; POST so the reason never
+    appears in URLs or access logs. Who may download is the RAW_FILE masking policy (default INVESTIGATOR, REVIEWER),
+    plus an assignment to the case. ADMIN cannot hold this permission (separation of duties), so the earlier ADMIN
+    exception for quarantined files no longer applies: a quarantined file is never released through this route."""
     ev = _authorize_evidence_read(db, user, evidence_id, request, action="EVIDENCE_DOWNLOAD", require_clean=False)
-    if ev.status in ("QUARANTINED", "MALWARE_SCANNING", "INFECTED", "SCAN_FAILED", "SCAN_TIMEOUT", "SCANNER_UNAVAILABLE", "INTEGRITY_MISMATCH") and user.role != "ADMIN":
+    masking_policy.authorize_reveal(db, user, "RAW_FILE", ev.case_id, request, "EVIDENCE", evidence_id, body.reason)
+    if ev.status in ("QUARANTINED", "MALWARE_SCANNING", "INFECTED", "SCAN_FAILED", "SCAN_TIMEOUT", "SCANNER_UNAVAILABLE", "INTEGRITY_MISMATCH"):
         raise HTTPException(409, "file is still in quarantine")
     data = storage.read_bytes(ev.storage_path)
     record_audit(db, request.state.trace_id, user.user_id, "EVIDENCE_DOWNLOAD", "EVIDENCE", evidence_id, ev.case_id,

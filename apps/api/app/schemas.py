@@ -128,6 +128,13 @@ class RevealIn(BaseModel):
     reason: str = Field(min_length=5, max_length=500)
 
 
+class AttributeRevealIn(BaseModel):
+    """Reveal one masked personal attribute of an entity, for one case, with a recorded reason."""
+    case_id: str = Field(max_length=64)
+    key: str = Field(pattern=r"^(address|dob|phone|account)$")
+    reason: str = Field(min_length=5, max_length=500)
+
+
 class ContextRevealIn(BaseModel):
     reason: str = Field(min_length=5, max_length=500)
     row: int | None = None

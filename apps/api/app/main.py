@@ -6,6 +6,7 @@ import uuid
 from pathlib import Path
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 
@@ -16,7 +17,7 @@ from .core.logging import configure_logging
 from .db import engine, init_db
 # Import integrity service before init_db so LedgerAnchor is registered with Base.metadata
 from .services import integrity as _integrity_svc  # noqa: F401 (side-effect: table registration)
-from .routes import audit_routes, auth_routes, case_routes, demo_routes, evidence_routes, graph_routes, integrity_routes, report_routes, review_routes
+from .routes import audit_routes, auth_routes, case_routes, demo_routes, evidence_routes, graph_routes, integrity_routes, masking_routes, report_routes, review_routes
 from .services import neo4j_store, ratelimit
 
 configure_logging()
@@ -80,6 +81,10 @@ async def trace_middleware(request: Request, call_next):
     response.headers["X-Trace-Id"] = ctx.request_id
     response.headers["X-Request-Id"] = ctx.request_id
     response.headers["X-Content-Type-Options"] = "nosniff"
+    if request.url.path.startswith("/api/"):
+        # Case data, revealed values and audit records must not be kept by browsers or intermediate caches.
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["Pragma"] = "no-cache"
     return response
 
 
@@ -97,6 +102,15 @@ async def domain_error_handler(request: Request, exc: DristiBaseError):
         content={"error": {"code": exc.code, "message": exc.safe_message(), "trace_id": trace_id,
                             "details": exc.detail}},
     )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_error(request: Request, exc: RequestValidationError):
+    """422 without the rejected values. FastAPI's default repeats each rejected `input` (and `ctx`), which sent an
+    over-long login password straight back in the response body. Location, message and type are enough to fix a
+    request; the value itself is never needed and may be a password, token or personal identifier."""
+    errors = [{"loc": list(e.get("loc", ())), "msg": e.get("msg", ""), "type": e.get("type", "")} for e in exc.errors()]
+    return JSONResponse(status_code=422, content={"detail": errors, "trace_id": getattr(request.state, "trace_id", None)})
 
 
 @app.exception_handler(ValueError)
@@ -135,7 +149,8 @@ def ready():
     return {"ready": True}
 
 
-routers = [auth_routes, case_routes, evidence_routes, review_routes, graph_routes, audit_routes, report_routes, integrity_routes]
+routers = [auth_routes, case_routes, evidence_routes, review_routes, graph_routes, audit_routes, report_routes, integrity_routes,
+           masking_routes]
 if config.DATABASE_URL.startswith("sqlite"):
     routers.append(demo_routes)
 

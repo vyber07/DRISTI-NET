@@ -16,6 +16,9 @@
 |--------|------|--------|-------------|
 | `POST` | `/auth/login` | Public | Authenticates officer credentials. Rate-limited per account, per source IP and per account across sources; see *Login and rate limits* below. Body is bounded (username 1–200, password 1–1024 characters, else 422). |
 | `GET` | `/auth/me` | Authenticated | Returns current officer profile, designation, role, office and jurisdiction. Subject to the per-user API ceiling. |
+| `GET` | `/masking-policies` | ADMIN, AUDITOR | Who may reveal each masked kind; lists `missing_kinds` (fail-closed). Audited (`MASKING_POLICY_VIEW`). |
+| `PUT` | `/masking-policies/{kind}` | ADMIN only | Body `{reveal_roles, reason}` (reason 10–500). ADMIN may not be listed (422). Audited with before and after (`MASKING_POLICY_UPDATE`). |
+| `POST` | `/entities/{id}/attributes/reveal` | Masking policy + case assignment | Body `{case_id, key: address\|dob\|phone\|account, reason}`. Returns one raw attribute. Audited (`UNMASK`). See `docs/MASKING_AUTHORIZATION.md`. |
 | `POST` | `/auth/logout` | Authenticated | Revokes the caller's server-side session (audited as `LOGOUT`). The token stops working; other sessions are unaffected. |
 | `GET` | `/users/{user_id}/login-status` | ADMIN | Lockout state of an account: `locked`, `retry_after`, `distinct_failing_sources`, `source_limit`, `escalation_level`. |
 | `POST` | `/users/{user_id}/unlock` | ADMIN | Clears every login lock and failure counter for the account. Audited (`USER_UNLOCK`). Returns `was_locked`. |

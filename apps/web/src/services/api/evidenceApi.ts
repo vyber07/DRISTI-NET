@@ -62,7 +62,8 @@ export async function revealEvidenceContext(evidenceId: string, reason: string, 
  * The server returns 409 while the item is quarantined; that error surfaces to the caller as an ApiError.
  */
 /** DEF-101: roles that may download raw (unmasked) evidence -- the same roles that may reveal masked values. */
-export const RAW_DOWNLOAD_ROLES = ["INVESTIGATOR", "REVIEWER", "ADMIN"];
+// Mirrors the server's default RAW_FILE masking policy (ADMIN can never hold it). UI only: the server decides.
+export const RAW_DOWNLOAD_ROLES = ["INVESTIGATOR", "REVIEWER"];
 
 export async function downloadEvidence(evidenceId: string, fallbackName: string, reason: string): Promise<void> {
   const headers: Record<string, string> = { "Content-Type": "application/json" };

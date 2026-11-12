@@ -283,6 +283,20 @@ class UserSession(Base):
     user_agent: Mapped[str | None] = mapped_column(String, nullable=True)
 
 
+class MaskingPolicy(Base):
+    """Who may reveal each kind of masked value (PHONE, ACCOUNT, PII_ATTRIBUTE, EVIDENCE_CONTEXT, RAW_FILE).
+
+    Masking itself is not configurable: every default output is masked for every role. This table only decides which
+    roles may request an audited reveal. Administered by ADMIN alone; ADMIN may never appear in reveal_roles
+    (services/masking_policy.py). A missing row means nobody may reveal that kind."""
+    __tablename__ = "masking_policies"
+    kind: Mapped[str] = mapped_column(String, primary_key=True)
+    reveal_roles: Mapped[list] = mapped_column(JSON, default=list)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+    updated_by: Mapped[str | None] = mapped_column(String, nullable=True)
+    reason: Mapped[str | None] = mapped_column(String, nullable=True)
+
+
 class Snapshot(Base):
     __tablename__ = "snapshots"
     snapshot_id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: new_id("SNP"))

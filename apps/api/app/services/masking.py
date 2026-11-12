@@ -36,6 +36,8 @@ def mask_node(node: dict) -> dict:
     node["label"] = mask_label(node.get("kind", ""), node.get("label", ""))
     node["masked"] = node.get("kind") in ("PHONE", "ACCOUNT")
     node["merged_from"] = [mask_label(node.get("kind", ""), x) for x in node.get("merged_from", [])]
+    if "attributes" in node:
+        node["attributes"] = mask_attributes(node["attributes"])
     return node
 
 
@@ -79,3 +81,83 @@ def mask_block_key(block_key: str | None) -> str | None:
     if not block_key:
         return block_key
     return "|".join(f"phone:{mask_phone(p[6:])}" if p.startswith("phone:") else p for p in block_key.split("|"))
+
+
+# ------------------------------------------------------------------ personal attributes (field-level)
+# Entity attributes carry personal data beyond phones and accounts. These keys are masked on every default output
+# path. The raw values stay in the database and are released only through the attribute-reveal endpoint, under the
+# masking policy (services/masking_policy.py).
+PII_ATTRIBUTE_KEYS = frozenset({"address", "dob"})
+SENSITIVE_ATTRIBUTE_KEYS = PII_ATTRIBUTE_KEYS | frozenset({"phone", "account"})
+_DOB_RE = re.compile(r"^(\d{4})-\d{2}-\d{2}")
+
+
+def mask_attribute(key: str, value):
+    """Default (masked) form of one attribute value. Unknown keys pass through unchanged."""
+    if value is None or key not in SENSITIVE_ATTRIBUTE_KEYS:
+        return value
+    if key == "dob":
+        match = _DOB_RE.match(str(value))
+        return f"{match.group(1)}-**-**" if match else "[masked]"
+    if key == "address":
+        return "[masked address]"
+    if key == "phone":
+        return mask_phone(str(value))
+    if key == "account":
+        return mask_account(str(value))
+    return "[masked]"
+
+
+def mask_attributes(attributes: dict | None) -> dict:
+    """Masked copy of an attribute map, for any response that is not an explicit reveal."""
+    return {k: mask_attribute(k, v) for k, v in (attributes or {}).items()}
+
+
+def case_pii_values(db, case_id: str) -> list[str]:
+    """Every raw personal value (addresses, dates of birth, phone and account attributes) for one case's entities.
+    Used to redact these values from free text such as provenance snippets, which may quote them."""
+    from ..models import Entity  # local import: models depends on db, not the other way round
+
+    values: set[str] = set()
+    for entity in db.query(Entity).all():
+        for key, value in case_attributes(entity.attributes, case_id).items():
+            if key in SENSITIVE_ATTRIBUTE_KEYS and isinstance(value, str) and len(value) >= 4:
+                values.add(value)
+    return sorted(values, key=len, reverse=True)
+
+
+def case_pii_values_cached(db, case_id: str) -> list[str]:
+    """case_pii_values, computed once per request (claim lists call it for every claim)."""
+    from ..core import request_context
+
+    ctx = request_context.current()
+    if ctx is None:
+        return case_pii_values(db, case_id)
+    key = ("case_pii_values", case_id)
+    if key not in ctx.cache:
+        ctx.cache[key] = case_pii_values(db, case_id)
+    return ctx.cache[key]
+
+
+def redact_structure(value, known_values, depth: int = 0):
+    """Masked copy of a JSON structure produced by analysis code (match signals, conflicts). Strings get phone and
+    account patterns masked and known personal values redacted; values under sensitive keys get the field mask."""
+    if depth > 8:
+        return "[masked]"
+    if isinstance(value, dict):
+        return {k: (mask_attribute(k, v) if k in SENSITIVE_ATTRIBUTE_KEYS and not isinstance(v, (dict, list))
+                    else redact_structure(v, known_values, depth + 1)) for k, v in value.items()}
+    if isinstance(value, list):
+        return [redact_structure(v, known_values, depth + 1) for v in value]
+    if isinstance(value, str):
+        return redact_known_values(mask_text(value), known_values)
+    return value
+
+
+def redact_known_values(text: str | None, values) -> str | None:
+    """Replace each known raw personal value in free text (longest first). Applied on top of mask_text."""
+    if not text:
+        return text
+    for raw in values:
+        text = text.replace(raw, "[masked]")
+    return text
