@@ -50,6 +50,7 @@ def init_db() -> None:
         Base.metadata.create_all(engine)
         _sqlite_add_missing_columns()
         _install_audit_immutability_sqlite()
+        install_override_history_immutability()
         _ensure_masking_policy_defaults()
 
 
@@ -74,6 +75,30 @@ def install_audit_immutability() -> None:
         _install_audit_immutability_postgres()
     else:
         _install_audit_immutability_sqlite()
+    install_override_history_immutability()
+
+
+def install_override_history_immutability() -> None:
+    """permission_override_events is the complete change history of every permission override: append-only, like
+    audit_events (PostgreSQL production gets the same triggers from migration 5bcde1234574)."""
+    from sqlalchemy import text
+
+    table = "permission_override_events"
+    with engine.begin() as conn:
+        if engine.dialect.name == "postgresql":
+            conn.execute(text(
+                "CREATE OR REPLACE FUNCTION override_history_append_only() RETURNS trigger AS $$ "
+                "BEGIN RAISE EXCEPTION 'permission_override_events is append-only'; END; $$ LANGUAGE plpgsql"))
+            conn.execute(text(f"DROP TRIGGER IF EXISTS {table}_no_update_delete ON {table}"))
+            conn.execute(text(f"CREATE TRIGGER {table}_no_update_delete BEFORE UPDATE OR DELETE ON {table} "
+                              "FOR EACH ROW EXECUTE FUNCTION override_history_append_only()"))
+            conn.execute(text(f"DROP TRIGGER IF EXISTS {table}_no_truncate ON {table}"))
+            conn.execute(text(f"CREATE TRIGGER {table}_no_truncate BEFORE TRUNCATE ON {table} "
+                              "FOR EACH STATEMENT EXECUTE FUNCTION override_history_append_only()"))
+        else:
+            for op in ("UPDATE", "DELETE"):
+                conn.execute(text(f"CREATE TRIGGER IF NOT EXISTS {table}_no_{op.lower()} BEFORE {op} ON {table} "
+                                  f"BEGIN SELECT RAISE(ABORT, '{table} is append-only'); END"))
 
 
 def _install_audit_immutability_postgres() -> None:

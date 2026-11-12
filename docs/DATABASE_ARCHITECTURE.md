@@ -63,13 +63,37 @@ erDiagram
 - `match_candidates`: Proposed entity candidate relationships (`candidate_id`, `case_id`, `left_entity_id`, `right_entity_id`, `confidence`, `positive_signals`, `counter_evidence`, `conflicts`, `missing`, `state`).
 - `reviews`: Immutable supervisory sign-off entries (`review_id`, `candidate_id`, `reviewer_id`, `decision`, `justification`, `created_at`).
 
-#### `audit_logs`
-- `audit_id` (VARCHAR PK): Unique event identifier.
-- `case_id` (VARCHAR): Case scope.
-- `actor_id` (VARCHAR): Acting officer user ID.
-- `action` (VARCHAR): Action enum (`CASE_VIEW`, `EVIDENCE_UPLOAD`, `SCAN_RESULT`, `EXTRACTED`, `CANDIDATES_GENERATED`, `HITL_DECISION`, `UNMASK`, `REPORT_EXPORT`).
-- `target_type`, `target_id`: Domain target.
-- `outcome` (VARCHAR): `OK`, `BLOCKED`, `ERROR`.
-- `detail` (JSON): Context parameters.
-- `prev_hash` (VARCHAR): Cryptographic pointer to preceding audit log event.
-- `signature` (VARCHAR): HMAC-SHA256 signature generated using active key (`k1-2026`).
+#### `audit_events` (append-only; ADR-013, docs/AUDIT_LOG_POLICY.md)
+Corrected 2026-11-12: this section previously named the table `audit_logs` and listed a `prev_hash` chain column. Neither
+exists. Integrity comes from per-row signatures, database triggers and daily digests.
+- `audit_id` (VARCHAR PK), `trace_id` (server request ID), `correlation_id` (validated client value).
+- `actor_id`, `actor_username`, `actor_role`, `office_id` (the actor's verified office), `session_id`.
+- `action`, `target_kind`, `target_id`, `case_id`, `resource_office` (the case's jurisdiction).
+- `outcome` (`OK`, `DENIED`, `ERROR`), `failure_reason`, `detail` (JSON, redacted).
+- `ip_address` (trusted-proxy aware), `user_agent` (sanitised), `created_at` (UTC).
+- `signature`: `key_id:hmac-sha256-json-v2:hex` over every field. Older algorithms still verify.
+- Triggers refuse UPDATE and DELETE (PostgreSQL also TRUNCATE).
+
+#### `users` (additional columns)
+- `active` (BOOLEAN; the earlier `is_active` name in this document was wrong), `token_version` (INTEGER, bumped on
+  password reset), `office_id` (VARCHAR, verified organisational office, assigned by an administrator).
+
+#### `user_sessions` (migration `5bcde1234572`)
+- `sid` (PK, the token's `sid` claim), `user_id` (FK), `created_at`, `expires_at`, `revoked_at` (set by logout), `ip_address`, `user_agent`.
+
+#### `masking_policies` (migration `5bcde1234573`; docs/MASKING_AUTHORIZATION.md)
+- `kind` (PK: `PHONE`, `ACCOUNT`, `PII_ATTRIBUTE`, `EVIDENCE_CONTEXT`, `RAW_FILE`), `reveal_roles` (JSON list; never
+  contains `ADMIN`), `updated_at`, `updated_by`, `reason`. A missing row means nobody may reveal that kind.
+
+#### `permission_overrides` (migration `5bcde1234574`; docs/AUTHORIZATION_OVERRIDES.md)
+- `override_id` (PK `OVR-...`), `effect` (`ALLOW`/`DENY`), `action`, `subject_type` (`USER`/`ROLE`), `subject`.
+- Scope: `case_id` (nullable = all cases), `resource_type` + `resource_id` (nullable = any resource).
+- `reason`, `starts_at`, `expires_at` (UTC; at most 90 days apart).
+- `status` (`PENDING`, `ACTIVE`, `REJECTED`, `REVOKED`). `SCHEDULED` and `EXPIRED` are derived from the time window, not stored.
+- `created_by`, `created_at`, `approved_by`, `approved_at`, `decided_reason`, `revoked_by`, `revoked_at`, `revoke_reason`.
+- Rows are never deleted. Indexes on `action`, `subject`, `case_id`, `status`.
+
+#### `permission_override_events` (append-only)
+- `event_id` (PK), `override_id` (indexed), `event` (`CREATED`, `APPROVED`, `REJECTED`, `REVOKED`), `actor_id`, `at`,
+  `reason`, `snapshot` (JSON: the override after the change). Triggers refuse UPDATE and DELETE (PostgreSQL also TRUNCATE).
+  Every event is also a signed `OVERRIDE_*` row in `audit_events`.

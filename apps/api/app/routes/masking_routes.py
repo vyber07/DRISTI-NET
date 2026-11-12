@@ -30,7 +30,7 @@ def _require_admin_exactly(user: User) -> None:
 
 
 @router.get("/masking-policies")
-def list_policies(request: Request, user: User = Depends(require_roles("ADMIN", "AUDITOR")), db: Session = Depends(get_db)):
+def list_policies(request: Request, user: User = Depends(require_roles("ADMIN", "AUDITOR", action="viewMaskingPolicy")), db: Session = Depends(get_db)):
     rows = db.query(MaskingPolicy).order_by(MaskingPolicy.kind).all()
     record_audit(db, request.state.trace_id, user.user_id, "MASKING_POLICY_VIEW", "MASKING_POLICY", None,
                  detail={"kinds": [r.kind for r in rows]})
@@ -43,7 +43,7 @@ def list_policies(request: Request, user: User = Depends(require_roles("ADMIN", 
 
 
 @router.put("/masking-policies/{kind}")
-def update_policy(kind: str, body: MaskingPolicyIn, request: Request, user: User = Depends(require_roles("ADMIN")),
+def update_policy(kind: str, body: MaskingPolicyIn, request: Request, user: User = Depends(require_roles("ADMIN", action="manageMaskingPolicy")),
                   db: Session = Depends(get_db)):
     _require_admin_exactly(user)
     try:

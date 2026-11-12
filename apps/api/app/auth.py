@@ -22,7 +22,7 @@ from . import config
 from .db import get_db
 from .core import request_context
 from .models import Case, CaseAssignment, User, UserSession, utcnow
-from .services import ratelimit
+from .services import overrides, ratelimit
 from .services.audit import record_audit
 
 bearer = HTTPBearer(auto_error=False)
@@ -130,17 +130,29 @@ def current_user(request: Request, creds: HTTPAuthorizationCredentials | None = 
 
 
 # ------------------------------------------------------------------ policy checks
-def require_roles(*roles: str):
+def require_roles(*roles: str, action: str):
+    """Role gate for one named action (services/overrides.ACTIONS). The role list is the baseline; active permission
+    overrides for this user, their role, the request's case and resource may then deny or allow it (deny wins).
+    Mandatory actions (overrides.NON_OVERRIDABLE) are decided by role alone."""
     def _dep(request: Request, user: User = Depends(current_user), db: Session = Depends(get_db)) -> User:
-        if user.role not in roles and user.role != "ADMIN":
-            # DEF-049: docs/context.md §6.1 "Unauthorized request -> deny server-side and audit". Role denials
-            # were raised without an audit row (case denials were audited).
-            case_id = request.path_params.get("case_id")
+        baseline = user.role in roles or user.role == "ADMIN"
+        case_id, resource = overrides.scope_from_path(db, request.path_params)
+        decision = overrides.evaluate(db, user, action, baseline=baseline, case_id=case_id, resource=resource)
+        if not decision.allowed:
+            # DEF-049: docs/context.md §6.1 "Unauthorized request -> deny server-side and audit".
+            by_override = decision.source == "override_deny"
             record_audit(db, getattr(request.state, "trace_id", "-"), user.user_id, "ACCESS_DENIED", "ROUTE",
-                         f"{request.method} {request.url.path}", case_id, outcome="DENIED",
-                         detail={"reason": "role not permitted", "role": user.role, "required": sorted(roles)})
+                         f"{request.method} {request.url.path}", case_id if case_id and db.get(Case, case_id) else None,
+                         outcome="DENIED",
+                         detail={"reason": "denied by permission override" if by_override else "role not permitted",
+                                 "action": action, "role": user.role, "required": sorted(roles),
+                                 **({"override_id": decision.override_id} if by_override else {})})
             db.commit()
-            raise HTTPException(status.HTTP_403_FORBIDDEN, f"Role {user.role} may not perform this action")
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "This action is not permitted for your account"
+                                if by_override else f"Role {user.role} may not perform this action")
+        if decision.source == "override_allow":
+            overrides.record_use(db, user, decision, action, case_id if case_id and db.get(Case, case_id) else None)
+            db.commit()
         return user
     return _dep
 
@@ -154,18 +166,27 @@ def authorize_case(db: Session, user: User, case_id: str, request: Request, acti
     case = db.get(Case, case_id)
     trace_id = getattr(request.state, "trace_id", "-")
     reason = None
+    decision = None
     if case is None:
         reason = "case not found"
-    elif user.role in ("ADMIN", "AUDITOR"):
-        reason = None
     else:
-        assigned = db.query(CaseAssignment).filter_by(case_id=case_id, user_id=user.user_id).first()
-        if assigned is None and case.owner_id != user.user_id:
-            reason = "user not assigned to case"
-        elif case.jurisdiction != user.jurisdiction:
+        privileged = user.role in ("ADMIN", "AUDITOR")
+        assigned = privileged or case.owner_id == user.user_id or \
+            db.query(CaseAssignment).filter_by(case_id=case_id, user_id=user.user_id).first() is not None
+        # Permission overrides (action "caseAccess"): a DENY removes access even from an assigned user or an ADMIN;
+        # an ALLOW grants access without an assignment. Jurisdiction below stays mandatory either way.
+        decision = overrides.evaluate(db, user, "caseAccess", baseline=assigned, case_id=case_id, resource=("CASE", case_id))
+        if not decision.allowed:
+            reason = "denied by permission override" if decision.source == "override_deny" else "user not assigned to case"
+        elif not privileged and case.jurisdiction != user.jurisdiction:
             reason = "jurisdiction mismatch"
     if reason:
-        record_audit(db, trace_id, user.user_id, "ACCESS_DENIED", "CASE", case_id, case_id, outcome="DENIED", detail={"reason": reason, "attempted_action": action})
+        record_audit(db, trace_id, user.user_id, "ACCESS_DENIED", "CASE", case_id, case_id if case is not None else None,
+                     outcome="DENIED", detail={"reason": reason, "attempted_action": action,
+                                               **({"override_id": decision.override_id} if decision and decision.override_id else {})})
         db.commit()
         raise HTTPException(status.HTTP_403_FORBIDDEN, "Access to this case is denied for the current user, purpose, or jurisdiction")
+    if decision is not None and decision.source == "override_allow":
+        overrides.record_use(db, user, decision, "caseAccess", case_id)
+        db.commit()
     return case

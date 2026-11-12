@@ -58,7 +58,7 @@ def evidence_out(ev: Evidence, db: Session | None = None) -> dict:
 @router.post("/cases/{case_id}/evidence", status_code=201, response_model=EvidenceOut)
 async def upload(case_id: str, request: Request, file: UploadFile = File(...), source_label: str = Form("synthetic"),
                  process: bool = Form(True),
-                 user: User = Depends(require_roles("EVIDENCE_OFFICER", "INVESTIGATOR", "ADMIN")), db: Session = Depends(get_db)):
+                 user: User = Depends(require_roles("EVIDENCE_OFFICER", "INVESTIGATOR", "ADMIN", action="upload")), db: Session = Depends(get_db)):
     """Upload → validate → UPLOADED → HASHED → QUARANTINED (→ optional immediate processing)."""
     case = authorize_case(db, user, case_id, request, action="EVIDENCE_UPLOAD")
     trace = request.state.trace_id
@@ -157,7 +157,7 @@ def get_evidence(evidence_id: str, request: Request, user: User = Depends(curren
 
 
 @router.post("/evidence/{evidence_id}/process", response_model=EvidenceOut)
-def process(evidence_id: str, request: Request, user: User = Depends(require_roles("EVIDENCE_OFFICER", "INVESTIGATOR", "ADMIN")), db: Session = Depends(get_db)):
+def process(evidence_id: str, request: Request, user: User = Depends(require_roles("EVIDENCE_OFFICER", "INVESTIGATOR", "ADMIN", action="upload")), db: Session = Depends(get_db)):
     ev = _get_ev(db, user, evidence_id, request, action="EVIDENCE_PROCESS")
     if ev.status not in ("QUARANTINED", "SCAN_FAILED", "SCAN_TIMEOUT", "SCANNER_UNAVAILABLE", "ACCEPTED", "EXTRACTION_FAILED", "EXTRACTED",
                          "MALWARE_SCANNING", "PROCESSING", "ENTITY_CANDIDATES"):  # in-between states: DEF-098 lease reclaim

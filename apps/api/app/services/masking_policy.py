@@ -81,14 +81,35 @@ def _case_member(db: Session, user: User, case_id: str) -> bool:
 def authorize_reveal(db: Session, user: User, kind: str, case_id: str | None, request: Request,
                      target_kind: str, target_id: str, reason: str | None) -> None:
     """Raise 403 (audited) unless the policy and the case assignment both allow this reveal."""
+    from . import overrides  # local import: overrides imports this module for effective_capabilities
+
     trace = getattr(request.state, "trace_id", None)
     why = None
+    action = "downloadOriginal" if kind == "RAW_FILE" else "reveal"
+    entity_or_evidence = target_id.split(":", 1)[0]
+    resource = ("EVIDENCE", entity_or_evidence) if target_kind == "EVIDENCE" else ("ENTITY", entity_or_evidence)
+    used = []
     if kind not in KINDS:
         why = "unknown masked kind"
-    elif user.role not in reveal_roles(db, kind):
-        why = "role not permitted by masking policy"
-    elif case_id is None or not _case_member(db, user, case_id):
-        why = "not assigned to the case"
+    else:
+        # Role: the masking policy is the baseline; a permission override may deny it, or allow it for a non-ADMIN.
+        role_decision = overrides.evaluate(db, user, action, baseline=user.role in reveal_roles(db, kind),
+                                           case_id=case_id, resource=resource)
+        if not role_decision.allowed:
+            why = ("denied by permission override" if role_decision.source == "override_deny"
+                   else "role not permitted by masking policy")
+        elif case_id is None:
+            why = "not assigned to the case"
+        else:
+            # Case membership: assignment or ownership (no ADMIN/AUDITOR bypass), adjusted by caseAccess overrides.
+            member_decision = overrides.evaluate(db, user, "caseAccess", baseline=_case_member(db, user, case_id),
+                                                 case_id=case_id, resource=("CASE", case_id))
+            if not member_decision.allowed:
+                why = "denied by permission override" if member_decision.source == "override_deny" else "not assigned to the case"
+            used = [(d, a) for d, a in ((role_decision, action), (member_decision, "caseAccess")) if d.source == "override_allow"]
+    if why is None:
+        for decision, act in used:
+            overrides.record_use(db, user, decision, act, case_id)
     if why is not None:
         record_audit(db, trace, user.user_id, "UNMASK", target_kind, target_id, case_id if case_id and db.get(Case, case_id) else None,
                      outcome="DENIED", detail={"reason": why, "masked_kind": kind, "stated_reason": reason})

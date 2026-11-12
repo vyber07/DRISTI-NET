@@ -80,7 +80,7 @@ def _get_case_evidence_hashes(db: Session, case_id: str) -> list[str]:
 def create_anchor(
     case_id: str,
     request: Request,
-    user: User = Depends(require_roles("INVESTIGATOR", "REVIEWER", "ANALYST", "ADMIN")),
+    user: User = Depends(require_roles("INVESTIGATOR", "REVIEWER", "ANALYST", "ADMIN", action="createAnchor")),
     db: Session = Depends(get_db),
 ):
     """Compute the Merkle root over all accepted evidence SHA-256 hashes and record it.
@@ -117,7 +117,7 @@ def create_anchor(
 def list_anchors(
     case_id: str,
     request: Request,
-    user: User = Depends(require_roles("INVESTIGATOR", "REVIEWER", "ANALYST", "ADMIN", "AUDITOR")),
+    user: User = Depends(require_roles("INVESTIGATOR", "REVIEWER", "ANALYST", "ADMIN", "AUDITOR", action="listAnchors")),
     db: Session = Depends(get_db),
 ):
     authorize_case(db, user, case_id, request, action="INTEGRITY_VIEW")
@@ -136,7 +136,7 @@ def merkle_proof(
     anchor_id: str,
     leaf_sha256: str,
     request: Request,
-    user: User = Depends(require_roles("INVESTIGATOR", "REVIEWER", "ANALYST", "ADMIN", "AUDITOR")),
+    user: User = Depends(require_roles("INVESTIGATOR", "REVIEWER", "ANALYST", "ADMIN", "AUDITOR", action="listAnchors")),
     db: Session = Depends(get_db),
 ):
     """Return the Merkle inclusion proof for a specific evidence SHA-256 hash.
@@ -174,7 +174,7 @@ def export_court_pdf(
     case_id: str,
     body: CourtPdfIn,
     request: Request,
-    user: User = Depends(require_roles("INVESTIGATOR", "REVIEWER", "ANALYST", "ADMIN")),
+    user: User = Depends(require_roles("INVESTIGATOR", "REVIEWER", "ANALYST", "ADMIN", action="report")),
     db: Session = Depends(get_db),
 ):
     """Generate an integrity-reference evidence dossier PDF with BSA s.63(4)(c) reference fields.

@@ -297,6 +297,49 @@ class MaskingPolicy(Base):
     reason: Mapped[str | None] = mapped_column(String, nullable=True)
 
 
+class PermissionOverride(Base):
+    """An administrator's explicit, time-boxed exception to role-based access (services/overrides.py).
+
+    effect ALLOW or DENY one `action` for a subject (a USER id or a ROLE), optionally narrowed to one case and/or one
+    resource. ALLOW needs a second administrator's approval (status PENDING until then); DENY is ACTIVE at once.
+    A row is never deleted: revocation sets status REVOKED, and every change is also in permission_override_events.
+    Effective status is derived at read time: ACTIVE before starts_at is SCHEDULED, ACTIVE after expires_at is EXPIRED."""
+    __tablename__ = "permission_overrides"
+    override_id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: new_id("OVR"))
+    effect: Mapped[str] = mapped_column(String)                 # ALLOW | DENY
+    action: Mapped[str] = mapped_column(String, index=True)
+    subject_type: Mapped[str] = mapped_column(String)           # USER | ROLE
+    subject: Mapped[str] = mapped_column(String, index=True)    # user_id or role name
+    case_id: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
+    resource_type: Mapped[str | None] = mapped_column(String, nullable=True)
+    resource_id: Mapped[str | None] = mapped_column(String, nullable=True)
+    reason: Mapped[str] = mapped_column(String)
+    starts_at: Mapped[datetime] = mapped_column(DateTime)
+    expires_at: Mapped[datetime] = mapped_column(DateTime)
+    status: Mapped[str] = mapped_column(String, index=True)     # PENDING | ACTIVE | REJECTED | REVOKED
+    created_by: Mapped[str] = mapped_column(String)
+    created_at: Mapped[datetime] = mapped_column(DateTime)
+    approved_by: Mapped[str | None] = mapped_column(String, nullable=True)
+    approved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    decided_reason: Mapped[str | None] = mapped_column(String, nullable=True)   # approval/rejection note
+    revoked_by: Mapped[str | None] = mapped_column(String, nullable=True)
+    revoked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    revoke_reason: Mapped[str | None] = mapped_column(String, nullable=True)
+
+
+class PermissionOverrideEvent(Base):
+    """Append-only history of one override: CREATED, APPROVED, REJECTED, REVOKED (with actor, time, reason and a
+    snapshot of the override after the change). Mirrors the OVERRIDE_* audit events, which are signed."""
+    __tablename__ = "permission_override_events"
+    event_id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: new_id("OVE"))
+    override_id: Mapped[str] = mapped_column(String, index=True)
+    event: Mapped[str] = mapped_column(String)
+    actor_id: Mapped[str] = mapped_column(String)
+    at: Mapped[datetime] = mapped_column(DateTime)
+    reason: Mapped[str | None] = mapped_column(String, nullable=True)
+    snapshot: Mapped[dict] = mapped_column(JSON, default=dict)
+
+
 class Snapshot(Base):
     __tablename__ = "snapshots"
     snapshot_id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: new_id("SNP"))

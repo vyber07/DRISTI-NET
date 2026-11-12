@@ -1,5 +1,10 @@
 import { create } from "zustand";
 
+/** Effective permissions (role + overrides) for the signed-in user; loaded lazily to keep this store's imports flat. */
+function loadEffectivePermissions(): void {
+  void import("./permissionsStore").then(({ usePermissionsStore }) => usePermissionsStore.getState().loadGlobal());
+}
+
 export type Role =
   | "ADMIN"
   | "AUDITOR"
@@ -68,6 +73,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           token,
           isAuthenticated: true,
         });
+        loadEffectivePermissions();
 
         return { success: true };
       }
@@ -106,6 +112,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
           token,
           isAuthenticated: true,
         });
+        loadEffectivePermissions();
       } else {
         get().logout({ expired: true });
       }
@@ -137,6 +144,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       import("../services/api/real_client").then(({ clearSession }) => {
         clearSession();  // was setSession("", undefined): wrote an empty token and the string "undefined"
       });
+      void import("./permissionsStore").then(({ usePermissionsStore }) => usePermissionsStore.getState().clear());
     } catch {
       // Storage fallback
     }

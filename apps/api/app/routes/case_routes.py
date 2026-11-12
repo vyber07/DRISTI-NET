@@ -45,7 +45,7 @@ def list_cases(response: Response, q: str | None = Query(None, max_length=200), 
 
 
 @router.post("/cases", status_code=201, response_model=CaseOut)
-def create_case(body: CaseIn, request: Request, user: User = Depends(require_roles("INVESTIGATOR", "ADMIN")), db: Session = Depends(get_db)):
+def create_case(body: CaseIn, request: Request, user: User = Depends(require_roles("INVESTIGATOR", "ADMIN", action="createCase")), db: Session = Depends(get_db)):
     if db.get(Case, body.case_id):
         raise HTTPException(409, "case_id already exists")
     if body.jurisdiction != user.jurisdiction and user.role != "ADMIN":

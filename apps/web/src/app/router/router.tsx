@@ -18,6 +18,7 @@ import { ReportsPage } from "@/features/reports/reports-page";
 import { ProfilePage } from "@/features/profile/profile-page";
 import { GlobalAuditPage } from "@/features/audit/global-audit-page";
 import { UserManagementPage } from "@/features/admin/user-management-page";
+import { PermissionOverridesPage } from "@/features/admin/permission-overrides-page";
 import { NotFoundPage } from "@/features/not-found/not-found-page";
 import { RouteErrorPage } from "@/features/not-found/route-error-page";
 
@@ -77,6 +78,7 @@ export const router = createBrowserRouter([
       { path: "settings", element: <Navigate to="/profile" replace /> },
       { path: "audit", element: <GlobalAuditPage /> },
       { path: "admin/users", element: <UserManagementPage /> },
+      { path: "admin/overrides", element: <PermissionOverridesPage /> },
       { path: "*", element: <NotFoundPage /> },
     ],
   },

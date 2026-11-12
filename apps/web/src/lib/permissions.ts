@@ -1,3 +1,5 @@
+import { usePermissionsStore } from "@/stores/permissionsStore";
+
 /**
  * What each role may do, mirroring the backend's `require_roles(...)` checks (apps/api/app/routes/*.py).
  *
@@ -18,7 +20,9 @@ export type Capability =
   | "report"          // POST /cases/{id}/report and /report/court-pdf
   | "globalAudit"     // GET /audit
   | "createCase"      // POST /cases
-  | "manageUsers";    // POST/PATCH /users, /users/{id}/deactivate|reactivate|reset-password
+  | "manageUsers"     // POST/PATCH /users, /users/{id}/deactivate|reactivate|reset-password
+  | "viewOverrides"   // GET /permission-overrides
+  | "manageOverrides";// POST /permission-overrides, /approve, /reject, /revoke
 
 const RULES: Record<Capability, readonly string[]> = {
   upload: ["EVIDENCE_OFFICER", "INVESTIGATOR", "ADMIN"],
@@ -31,6 +35,8 @@ const RULES: Record<Capability, readonly string[]> = {
   globalAudit: ["AUDITOR", "ADMIN"],
   createCase: ["INVESTIGATOR", "ADMIN"],
   manageUsers: ["ADMIN"],
+  viewOverrides: ["ADMIN", "AUDITOR"],
+  manageOverrides: ["ADMIN"],
 };
 
 const ROLE_LABEL: Record<string, string> = {
@@ -45,8 +51,20 @@ const ROLE_LABEL: Record<string, string> = {
 /** The 6 roles the backend accepts (models.ROLES) — for building a role picker. */
 export const ALL_ROLES = Object.keys(ROLE_LABEL);
 
+/**
+ * Whether to offer `capability` to a user of `role`. For the signed-in user it uses the server's effective
+ * permissions (role plus permission overrides): the case being viewed first, then global. Otherwise, or before those
+ * have loaded, it uses the static role table above. Presentation only: the server decides every request.
+ */
 export function can(role: string | undefined | null, capability: Capability): boolean {
-  return !!role && RULES[capability].includes(role);
+  if (!role) return false;
+  const eff = usePermissionsStore.getState();
+  if (eff.role === role) {
+    const caseMap = eff.currentCaseId ? eff.byCase[eff.currentCaseId] : undefined;
+    if (caseMap && capability in caseMap) return caseMap[capability];
+    if (eff.global && capability in eff.global) return eff.global[capability];
+  }
+  return RULES[capability].includes(role);
 }
 
 export function roleLabel(role: string | undefined | null): string {
@@ -70,6 +88,8 @@ export const CAPABILITY_TEXT: Record<Capability, string> = {
   globalAudit: "View the audit log across all cases",
   createCase: "Create cases",
   manageUsers: "Create, update and deactivate user accounts",
+  viewOverrides: "Review permission overrides and their history",
+  manageOverrides: "Create, approve, reject and revoke permission overrides",
 };
 
 export const ALL_CAPABILITIES = Object.keys(RULES) as Capability[];

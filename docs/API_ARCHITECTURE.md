@@ -16,6 +16,12 @@
 |--------|------|--------|-------------|
 | `POST` | `/auth/login` | Public | Authenticates officer credentials. Rate-limited per account, per source IP and per account across sources; see *Login and rate limits* below. Body is bounded (username 1–200, password 1–1024 characters, else 422). |
 | `GET` | `/auth/me` | Authenticated | Returns current officer profile, designation, role, office and jurisdiction. Subject to the per-user API ceiling. |
+| `GET` | `/auth/me/permissions?case_id=` | Authenticated | The caller's effective capabilities (role + overrides), each with its source. Drives the UI only. |
+| `GET` | `/permission-overrides?status=` | ADMIN, AUDITOR | Overrides filtered by effective status (all, active, pending, scheduled, expired, revoked, rejected). Audited. |
+| `GET` | `/permission-overrides/meta` | ADMIN, AUDITOR | Overridable and mandatory actions, resource types, maximum duration, precedence. |
+| `GET` | `/permission-overrides/{id}` | ADMIN, AUDITOR | One override with its complete history. Audited. |
+| `POST` | `/permission-overrides` | ADMIN | Create `{effect, action, subject_type, subject, case_id?, resource_type?, resource_id?, reason, starts_at?, expires_at}`. ALLOW starts PENDING. 422 with the rule broken. See `docs/AUTHORIZATION_OVERRIDES.md`. |
+| `POST` | `/permission-overrides/{id}/approve` · `/reject` · `/revoke` | ADMIN | Approve (a different ADMIN, `{note?}`), reject or revoke (`{reason}`). No action on an override that applies to you. |
 | `GET` | `/masking-policies` | ADMIN, AUDITOR | Who may reveal each masked kind; lists `missing_kinds` (fail-closed). Audited (`MASKING_POLICY_VIEW`). |
 | `PUT` | `/masking-policies/{kind}` | ADMIN only | Body `{reveal_roles, reason}` (reason 10–500). ADMIN may not be listed (422). Audited with before and after (`MASKING_POLICY_UPDATE`). |
 | `POST` | `/entities/{id}/attributes/reveal` | Masking policy + case assignment | Body `{case_id, key: address\|dob\|phone\|account, reason}`. Returns one raw attribute. Audited (`UNMASK`). See `docs/MASKING_AUTHORIZATION.md`. |

@@ -17,7 +17,8 @@ from .core.logging import configure_logging
 from .db import engine, init_db
 # Import integrity service before init_db so LedgerAnchor is registered with Base.metadata
 from .services import integrity as _integrity_svc  # noqa: F401 (side-effect: table registration)
-from .routes import audit_routes, auth_routes, case_routes, demo_routes, evidence_routes, graph_routes, integrity_routes, masking_routes, report_routes, review_routes
+from .routes import (audit_routes, auth_routes, case_routes, demo_routes, evidence_routes, graph_routes, integrity_routes,
+                     masking_routes, override_routes, report_routes, review_routes)
 from .services import neo4j_store, ratelimit
 
 configure_logging()
@@ -150,7 +151,7 @@ def ready():
 
 
 routers = [auth_routes, case_routes, evidence_routes, review_routes, graph_routes, audit_routes, report_routes, integrity_routes,
-           masking_routes]
+           masking_routes, override_routes]
 if config.DATABASE_URL.startswith("sqlite"):
     routers.append(demo_routes)
 

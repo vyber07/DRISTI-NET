@@ -1,3 +1,18 @@
+# Unreleased — permission overrides (branch `worktree-auth-login-ratelimit`)
+- Administrator-controlled, time-boxed ALLOW/DENY overrides of named actions for a user or a role, optionally scoped to
+  a case and/or a resource (`permission_overrides`, migration `5bcde1234574`). Deny wins. Mandatory restrictions
+  (oversight and administration actions, authentication, jurisdiction, evidence integrity, ADMIN never gaining reveal)
+  cannot be overridden.
+- Every role gate now names its action (`require_roles(..., action=...)`). Overrides are evaluated in the three central
+  gates: role, case access and reveal.
+- Governance: ADMIN only; ALLOW needs a different ADMIN's approval; no acting on an override that applies to yourself;
+  expiry required (at most 90 days); append-only history (`permission_override_events`); every change and use audited.
+- `GET /auth/me/permissions` drives `can()` in the frontend (global and per case). New page `/admin/overrides` for review
+  and management.
+- Docs: `docs/AUTHORIZATION_OVERRIDES.md`, ADR-015. `docs/DATABASE_ARCHITECTURE.md` corrected: the audit table is
+  `audit_events` with no `prev_hash`, and `users.active` (not `is_active`). It also now lists the newer tables.
+- Tests: 47 override tests. Suite: SQLite 400 passed; PostgreSQL 16 disposable container 402 passed. Isolated browser check: 16 passed.
+
 # Unreleased — masking policy and sensitive-field authorization (branch `worktree-auth-login-ratelimit`)
 - SECURITY: personal attributes (address, date of birth) were returned raw to every role on candidates, graph nodes,
   claims, evidence claims and matcher signals. They are now masked on every default output; one attribute can be

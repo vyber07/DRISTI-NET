@@ -17,7 +17,7 @@ router = APIRouter(tags=["report"])
 
 
 @router.post("/cases/{case_id}/report")
-def export_report(case_id: str, body: ReportIn, request: Request, user: User = Depends(require_roles("INVESTIGATOR", "REVIEWER", "ANALYST", "ADMIN")), db: Session = Depends(get_db)):
+def export_report(case_id: str, body: ReportIn, request: Request, user: User = Depends(require_roles("INVESTIGATOR", "REVIEWER", "ANALYST", "ADMIN", action="report")), db: Session = Depends(get_db)):
     case = authorize_case(db, user, case_id, request, action="EXPORT")
     G = graph_svc.build_projection(db, case_id)
     nodes, edges, _ = graph_svc.aggregate(G)

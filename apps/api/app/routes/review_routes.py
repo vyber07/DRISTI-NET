@@ -102,7 +102,7 @@ def get_candidate(candidate_id: str, request: Request, user: User = Depends(curr
 
 
 @router.post("/candidates/{candidate_id}/decision")
-def decide(candidate_id: str, body: DecisionIn, request: Request, user: User = Depends(require_roles("REVIEWER", "INVESTIGATOR", "ADMIN")), db: Session = Depends(get_db)):
+def decide(candidate_id: str, body: DecisionIn, request: Request, user: User = Depends(require_roles("REVIEWER", "INVESTIGATOR", "ADMIN", action="decide")), db: Session = Depends(get_db)):
     """Human decision on an identity-match candidate. APPROVE is the only path to a merged node in the projection."""
     m = db.get(MatchCandidate, candidate_id)
     if m is None:
@@ -128,7 +128,7 @@ def decide(candidate_id: str, body: DecisionIn, request: Request, user: User = D
 
 
 @router.post("/candidates/{candidate_id}/assign")
-def assign_candidate(candidate_id: str, request: Request, user: User = Depends(require_roles("REVIEWER", "INVESTIGATOR", "ADMIN")), db: Session = Depends(get_db)):
+def assign_candidate(candidate_id: str, request: Request, user: User = Depends(require_roles("REVIEWER", "INVESTIGATOR", "ADMIN", action="decide")), db: Session = Depends(get_db)):
     """Assign a candidate to the current user."""
     m = db.get(MatchCandidate, candidate_id)
     if m is None:
@@ -144,7 +144,7 @@ def assign_candidate(candidate_id: str, request: Request, user: User = Depends(r
     return candidate_out(db, m)  # DEF-032: was candidate_out(m) -> TypeError -> HTTP 500 after the commit
 
 @router.get("/cases/{case_id}/stats")
-def hitl_stats(case_id: str, request: Request, user: User = Depends(require_roles("REVIEWER", "INVESTIGATOR", "ADMIN")), db: Session = Depends(get_db)):
+def hitl_stats(case_id: str, request: Request, user: User = Depends(require_roles("REVIEWER", "INVESTIGATOR", "ADMIN", action="decide")), db: Session = Depends(get_db)):
     """Returns HITL statistics for a case."""
     authorize_case(db, user, case_id, request, action="HITL_STATS")  # DEF-031
     record_read(db, None, user.user_id, "HITL_STATS_VIEW", case_id=case_id)
@@ -168,7 +168,7 @@ def hitl_stats(case_id: str, request: Request, user: User = Depends(require_role
     }
 
 @router.post("/claims/{claim_id}/decision")
-def decide_claim(claim_id: str, body: DecisionIn, request: Request, user: User = Depends(require_roles("REVIEWER", "INVESTIGATOR", "ADMIN")), db: Session = Depends(get_db)):
+def decide_claim(claim_id: str, body: DecisionIn, request: Request, user: User = Depends(require_roles("REVIEWER", "INVESTIGATOR", "ADMIN", action="decide")), db: Session = Depends(get_db)):
     """Decisions on individual claims (e.g. resolving or flagging a contradiction, marking a claim STALE)."""
     c = db.get(Claim, claim_id)
     if c is None:

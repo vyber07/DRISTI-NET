@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { getCaseDetails } from "@/services/api/casesApi";
 import type { CaseDetail } from "@/types/case";
+import { usePermissionsStore } from "@/stores/permissionsStore";
 
 /**
  * The case being viewed, loaded once by CaseLayout and shared by every tab, so tabs no longer refetch it or fall
@@ -12,6 +13,8 @@ interface CaseContextValue {
   /** user_id → display name, for showing people instead of USR- IDs. Falls back to the ID itself. */
   personName: (userId: string | null | undefined) => string;
   reload: () => void;
+  /** Changes when this user's effective permissions for the case load, so consumers re-render and re-ask can(). */
+  permissionsVersion: number;
 }
 
 const Ctx = createContext<CaseContextValue | null>(null);
@@ -56,6 +59,13 @@ export function useCaseLoader(caseId: string): [CaseLoad, () => void] {
 }
 
 export function CaseProvider({ caseId, caseData, reload, children }: { caseId: string; caseData: CaseDetail; reload: () => void; children: ReactNode }) {
+  // Effective permissions for this case (role + case-scoped permission overrides), used by can() in every tab.
+  // `permVersion` is part of the context value so tabs re-render when they arrive.
+  const permVersion = usePermissionsStore((s) => s.version);
+  useEffect(() => {
+    void usePermissionsStore.getState().enterCase(caseId);
+    return () => usePermissionsStore.getState().leaveCase(caseId);
+  }, [caseId]);
   const value = useMemo<CaseContextValue>(() => {
     const names = new Map(caseData.people.map((p) => [p.user_id, p.display_name]));
     return {
@@ -63,7 +73,8 @@ export function CaseProvider({ caseId, caseData, reload, children }: { caseId: s
       caseData,
       reload,
       personName: (id) => (id ? names.get(id) ?? id : "—"),
+      permissionsVersion: permVersion,
     };
-  }, [caseId, caseData, reload]);
+  }, [caseId, caseData, reload, permVersion]);
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
