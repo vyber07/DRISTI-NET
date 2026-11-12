@@ -62,6 +62,7 @@ def init_db() -> None:
         install_override_history_immutability()
         install_user_request_history_immutability()
         install_org_user_id_registry_guard()
+        install_case_assignment_history_immutability()
         _ensure_masking_policy_defaults()
 
 
@@ -89,6 +90,30 @@ def install_audit_immutability() -> None:
     install_override_history_immutability()
     install_user_request_history_immutability()
     install_org_user_id_registry_guard()
+    install_case_assignment_history_immutability()
+
+
+def install_case_assignment_history_immutability() -> None:
+    """case_assignment_events is the history of who was put on or taken off each case: append-only. PostgreSQL
+    production gets the same triggers from migration 5bcde1234578."""
+    from sqlalchemy import text
+
+    table = "case_assignment_events"
+    with engine.begin() as conn:
+        if engine.dialect.name == "postgresql":
+            conn.execute(text(
+                "CREATE OR REPLACE FUNCTION case_assignment_history_append_only() RETURNS trigger AS $$ "
+                "BEGIN RAISE EXCEPTION 'case_assignment_events is append-only'; END; $$ LANGUAGE plpgsql"))
+            conn.execute(text(f"DROP TRIGGER IF EXISTS {table}_no_update_delete ON {table}"))
+            conn.execute(text(f"CREATE TRIGGER {table}_no_update_delete BEFORE UPDATE OR DELETE ON {table} "
+                              "FOR EACH ROW EXECUTE FUNCTION case_assignment_history_append_only()"))
+            conn.execute(text(f"DROP TRIGGER IF EXISTS {table}_no_truncate ON {table}"))
+            conn.execute(text(f"CREATE TRIGGER {table}_no_truncate BEFORE TRUNCATE ON {table} "
+                              "FOR EACH STATEMENT EXECUTE FUNCTION case_assignment_history_append_only()"))
+        else:
+            for op in ("UPDATE", "DELETE"):
+                conn.execute(text(f"CREATE TRIGGER IF NOT EXISTS {table}_no_{op.lower()} BEFORE {op} ON {table} "
+                                  f"BEGIN SELECT RAISE(ABORT, '{table} is append-only'); END"))
 
 
 # The only permitted change to an org_user_ids row: ending an ACTIVE allocation (status RETIRED or VOIDED, ended_* set),

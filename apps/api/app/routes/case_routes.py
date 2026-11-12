@@ -5,8 +5,9 @@ from sqlalchemy.orm import Session
 from ..auth import authorize_case, current_user, require_roles
 from ..db import get_db
 from ..models import Case, CaseAssignment, Evidence, MatchCandidate, User
-from ..schemas import AssignIn, CaseIn, CaseOut
-from ..services.audit import record_audit, record_read
+from ..schemas import AssignIn, CaseIn, CaseOut, CasePrimaryIn, CaseUnassignIn
+from ..services import case_assignments
+from ..services.audit import record_audit, record_audit_best_effort, record_read
 from .listing import MAX_LIMIT, page, text_filter
 
 router = APIRouter(tags=["cases"])
@@ -53,6 +54,7 @@ def create_case(body: CaseIn, request: Request, user: User = Depends(require_rol
     c = Case(**body.model_dump(), owner_id=user.user_id)
     c.assignments.append(CaseAssignment(user_id=user.user_id, purpose="owner"))
     db.add(c)
+    case_assignments.record_creation(db, c, user)  # creator = primary investigator; history rows
     record_audit(db, request.state.trace_id, user.user_id, "CASE_CREATE", "CASE", c.case_id, c.case_id, detail=body.model_dump())
     db.commit()
     return case_out(c, db)
@@ -68,22 +70,70 @@ def get_case(case_id: str, request: Request, user: User = Depends(current_user),
 
 @router.post("/cases/{case_id}/assign", response_model=CaseOut)
 def assign(case_id: str, body: AssignIn, request: Request, user: User = Depends(current_user), db: Session = Depends(get_db, scope="function")):
-    c = authorize_case(db, user, case_id, request, action="CASE_ASSIGN")
-    if user.role != "ADMIN" and c.owner_id != user.user_id:
-        raise HTTPException(403, "only the case owner or an ADMIN may assign users")
-    target = db.query(User).filter_by(username=body.username).first()
+    """Add a person to the case as a supporting member: the primary investigator or an ADMIN, with a reason
+    (services/case_assignments.py). The caller must be able to open the case."""
+    authorize_case(db, user, case_id, request, action="CASE_ASSIGN")
+    if bool(body.username) == bool(body.user_id):
+        raise HTTPException(422, "name the person by exactly one of username or user_id")
+    target = (db.query(User).filter_by(username=body.username).first() if body.username
+              else db.get(User, body.user_id))
     if target is None:
         raise HTTPException(404, "unknown user")
-    # BUG-NEW-10: an inactive account or one in a different jurisdiction would otherwise be
-    # recorded as "assigned" by this call and only fail silently later, at authorize_case(), the
-    # next time they try to actually open the case -- a misleading success for an action that
-    # never granted real access.
-    if not target.active:
-        raise HTTPException(400, "cannot assign a deactivated user")
-    if target.jurisdiction != c.jurisdiction:
-        raise HTTPException(400, f"user's jurisdiction ({target.jurisdiction!r}) does not match the case's ({c.jurisdiction!r})")
-    if not db.query(CaseAssignment).filter_by(case_id=case_id, user_id=target.user_id).first():
-        db.add(CaseAssignment(case_id=case_id, user_id=target.user_id, purpose=body.purpose))
-    record_audit(db, request.state.trace_id, user.user_id, "CASE_ASSIGN", "USER", target.user_id, case_id, detail={"purpose": body.purpose})
+    case_assignments.assign(db, user, case_id, target, purpose=body.purpose, reason=body.reason,
+                            trace_id=request.state.trace_id)
     db.commit()
     return case_out(db.get(Case, case_id), db)
+
+
+@router.post("/cases/{case_id}/assignments/{user_id}/remove")
+def unassign(case_id: str, user_id: str, body: CaseUnassignIn, request: Request, user: User = Depends(require_roles("ADMIN", action="manageCaseAssignments")), db: Session = Depends(get_db, scope="function")):
+    """Take a supporting member off the case. Their access ends on their next request. ADMIN only, reason required.
+    The primary investigator cannot be removed (409 PRIMARY_CANNOT_BE_REMOVED): hand the case over first."""
+    result = case_assignments.remove(db, user, case_id, user_id, reason=body.reason, trace_id=request.state.trace_id)
+    db.commit()
+    return result
+
+
+@router.post("/cases/{case_id}/primary")
+def change_primary(case_id: str, body: CasePrimaryIn, request: Request, user: User = Depends(require_roles("ADMIN", action="manageCaseAssignments")), db: Session = Depends(get_db, scope="function")):
+    """Hand the case to another investigator (controlled handover). ADMIN only, reason required. 409 PRIMARY_CHANGED
+    if expected_primary_id is no longer the primary investigator. previous=KEEP leaves the old primary on the case as a
+    supporting member; REMOVE takes them off it."""
+    target = db.get(User, body.user_id)
+    if target is None:
+        raise HTTPException(404, "unknown user")
+    result = case_assignments.set_primary(db, user, case_id, target, expected_primary_id=body.expected_primary_id,
+                                          reason=body.reason, previous=body.previous, trace_id=request.state.trace_id)
+    db.commit()
+    return result
+
+
+@router.get("/cases/{case_id}/assignments")
+def case_assignment_detail(case_id: str, request: Request, user: User = Depends(require_roles("ADMIN", "AUDITOR", action="viewCaseAssignments")), db: Session = Depends(get_db, scope="function")):
+    """The case team with each person's effective access, and the assignment history (newest first)."""
+    case = db.get(Case, case_id)
+    if case is None:
+        raise HTTPException(404, "unknown case")
+    team = case_assignments.members(db, case)
+    out = {**case_assignments.case_overview(db, case, team), "members": team,
+           "history": case_assignments.history(db, case_id)}
+    record_audit_best_effort(db, request.state.trace_id, user.user_id, "CASE_ASSIGNMENTS_VIEW", "CASE", case_id, case_id)
+    return out
+
+
+@router.get("/case-assignments")
+def case_assignment_list(response: Response, request: Request, q: str | None = Query(None, max_length=200),
+                         jurisdiction: str | None = Query(None, max_length=120), user_id: str | None = Query(None, max_length=64),
+                         attention: bool = False, unstaffed: bool = False,
+                         limit: int = Query(50, ge=1, le=200), offset: int = Query(0, ge=0),
+                         user: User = Depends(require_roles("ADMIN", "AUDITOR", action="viewCaseAssignments")),
+                         db: Session = Depends(get_db, scope="function")):
+    """Every case with its primary investigator, team size and problems. attention=true: cases whose primary
+    investigator or a member cannot actually open the case. unstaffed=true: no supporting member with access.
+    X-Total-Count = matches."""
+    rows = case_assignments.list_cases(db, q=q, jurisdiction=jurisdiction, user_id=user_id, attention=attention,
+                                       unstaffed=unstaffed)
+    response.headers["X-Total-Count"] = str(len(rows))
+    record_audit_best_effort(db, request.state.trace_id, user.user_id, "CASE_ASSIGNMENTS_LIST", "CASE", None,
+                             detail={"q": q, "attention": attention, "unstaffed": unstaffed, "count": len(rows)})
+    return rows[offset:offset + limit]

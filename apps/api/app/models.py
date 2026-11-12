@@ -84,13 +84,35 @@ class Case(Base):
 
 
 class CaseAssignment(Base):
+    """A person on a case. The case's owner_id is its primary (lead) investigator and always has a row here; every
+    other row is a supporting member. Changes go through services/case_assignments.py (ADR-020), which also writes
+    case_assignment_events. assigned_by/assigned_at/reason are NULL for rows created before migration 5bcde1234578."""
     __tablename__ = "case_assignments"
     __table_args__ = (UniqueConstraint("case_id", "user_id"),)
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     case_id: Mapped[str] = mapped_column(ForeignKey("cases.case_id"))
     user_id: Mapped[str] = mapped_column(ForeignKey("users.user_id"))
     purpose: Mapped[str] = mapped_column(String, default="investigation")
+    assigned_by: Mapped[str | None] = mapped_column(String, nullable=True)
+    assigned_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
     case: Mapped[Case] = relationship(back_populates="assignments")
+
+
+class CaseAssignmentEvent(Base):
+    """Append-only history of who was put on or taken off a case, and of every change of primary investigator:
+    by whom, when and why (services/case_assignments.py). Database triggers refuse UPDATE and DELETE."""
+    __tablename__ = "case_assignment_events"
+    event_id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: new_id("CAE"))
+    case_id: Mapped[str] = mapped_column(String, index=True)
+    user_id: Mapped[str] = mapped_column(String, index=True)          # the person assigned / removed / made primary
+    event: Mapped[str] = mapped_column(String)                        # ASSIGNED | REMOVED | PRIMARY_SET | PRIMARY_RELEASED
+    purpose: Mapped[str | None] = mapped_column(String, nullable=True)
+    actor_id: Mapped[str] = mapped_column(String)
+    actor_role: Mapped[str] = mapped_column(String)
+    at: Mapped[datetime] = mapped_column(DateTime, index=True)
+    reason: Mapped[str] = mapped_column(Text)
+    detail: Mapped[dict] = mapped_column(JSON, default=dict)
 
 
 # ----------------------------------------------------------------------------- evidence & jobs

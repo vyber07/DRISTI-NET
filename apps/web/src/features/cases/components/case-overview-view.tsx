@@ -134,15 +134,22 @@ export function CaseOverviewView() {
           ]} />
         </Section>
         <Section title={`People on this case (${c.people.length || c.assigned.length})`} icon={<Users className="h-4 w-4" />}
-          actions={(user?.role === "ADMIN" || user?.user_id === c.owner_id) ? (
-            <Button variant="secondary" size="sm" className="gap-1.5" onClick={() => setAssigning(true)}><UserPlus className="h-3.5 w-3.5" aria-hidden="true" /> Add person</Button>
+          actions={(user?.role === "ADMIN" || user?.user_id === c.owner_id || can(user?.role, "viewCaseAssignments")) ? (
+            <span className="flex flex-wrap items-center gap-2">
+              {can(user?.role, "viewCaseAssignments") && (
+                <Link to={`/admin/case-assignments?case=${encodeURIComponent(c.id)}`} className="text-sm text-electric-blue hover:underline">Manage team</Link>
+              )}
+              {(user?.role === "ADMIN" || user?.user_id === c.owner_id) && (
+                <Button variant="secondary" size="sm" className="gap-1.5" onClick={() => setAssigning(true)}><UserPlus className="h-3.5 w-3.5" aria-hidden="true" /> Add person</Button>
+              )}
+            </span>
           ) : undefined}>
           {c.people.length ? (
             <ul className="space-y-2">
               {c.people.map((p) => (
                 <li key={p.user_id} className="text-sm">
                   <span className="text-text-primary">{p.display_name}</span>
-                  <span className="block text-xs text-text-secondary">{roleLabel(p.role)}{p.org_user_id ? <> · <span className="font-mono">{p.org_user_id}</span></> : null}{p.is_owner ? " · owner" : ""}</span>
+                  <span className="block text-xs text-text-secondary">{roleLabel(p.role)}{p.org_user_id ? <> · <span className="font-mono">{p.org_user_id}</span></> : null}{p.is_owner ? " · primary investigator" : ""}</span>
                 </li>
               ))}
             </ul>

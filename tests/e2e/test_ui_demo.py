@@ -390,6 +390,7 @@ def test_create_case_and_assign_a_person(page):
     a = page.locator("[data-testid=assign-dialog]")
     a.wait_for()
     a.locator("select").first.select_option("reviewer")
+    a.locator("input").last.fill("E2E: review of candidate matches")  # reason, required since ADR-020
     a.locator("button[type=submit]").click()
     page.wait_for_selector("text=Reviewer Meera (demo)")
     login(page, "reviewer")

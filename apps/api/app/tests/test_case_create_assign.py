@@ -30,24 +30,24 @@ def test_blank_or_missing_text_rejected(client, investigator):
 def test_owner_assigns_a_user_who_then_sees_the_case(client, investigator, reviewer):
     client.post("/api/v1/cases", json={"case_id": "CASE-T104", **GOOD}, headers=investigator)
     assert client.get("/api/v1/cases/CASE-T104", headers=reviewer).status_code == 403
-    r = client.post("/api/v1/cases/CASE-T104/assign", json={"username": "reviewer", "purpose": "review"}, headers=investigator)
+    r = client.post("/api/v1/cases/CASE-T104/assign", json={"username": "reviewer", "purpose": "review", "reason": "Needs review of matches"}, headers=investigator)
     assert r.status_code == 200 and any(p["role"] == "REVIEWER" for p in r.json()["people"])
     assert client.get("/api/v1/cases/CASE-T104", headers=reviewer).status_code == 200
 
 
 def test_only_owner_or_admin_may_assign(client, investigator, reviewer):
     client.post("/api/v1/cases", json={"case_id": "CASE-T105", **GOOD}, headers=investigator)
-    client.post("/api/v1/cases/CASE-T105/assign", json={"username": "reviewer"}, headers=investigator)
+    client.post("/api/v1/cases/CASE-T105/assign", json={"username": "reviewer", "reason": "Needs review of matches"}, headers=investigator)
     # reviewer is now on the case but is not its owner
-    assert client.post("/api/v1/cases/CASE-T105/assign", json={"username": "analyst"}, headers=reviewer).status_code == 403
-    assert client.post("/api/v1/cases/CASE-T105/assign", json={"username": "no-such-user"}, headers=investigator).status_code == 404
+    assert client.post("/api/v1/cases/CASE-T105/assign", json={"username": "analyst", "reason": "Analysis needed"}, headers=reviewer).status_code == 403
+    assert client.post("/api/v1/cases/CASE-T105/assign", json={"username": "no-such-user", "reason": "Test unknown user"}, headers=investigator).status_code == 404
 
 
 def test_assign_refuses_a_different_jurisdiction(client, investigator, outsider):
     """BUG-NEW-10: previously this recorded the assignment, then authorize_case() silently refused
     the outsider the next time they tried to actually open the case -- a misleading success."""
     client.post("/api/v1/cases", json={"case_id": "CASE-T106", **GOOD}, headers=investigator)  # Demo District A
-    r = client.post("/api/v1/cases/CASE-T106/assign", json={"username": "outsider"}, headers=investigator)  # District B
+    r = client.post("/api/v1/cases/CASE-T106/assign", json={"username": "outsider", "reason": "Cross-district help"}, headers=investigator)  # District B
     assert r.status_code == 400
     assert client.get("/api/v1/cases/CASE-T106", headers=outsider).status_code == 403
 
@@ -58,5 +58,5 @@ def test_assign_refuses_a_deactivated_user(client, admin, investigator):
                                                    "password": "assign-deactivated1"}, headers=admin).json()
     client.post(f"/api/v1/users/{created['user_id']}/deactivate", headers=admin)
     client.post("/api/v1/cases", json={"case_id": "CASE-T107", **GOOD}, headers=investigator)
-    r = client.post("/api/v1/cases/CASE-T107/assign", json={"username": "assign-deactivated"}, headers=investigator)
+    r = client.post("/api/v1/cases/CASE-T107/assign", json={"username": "assign-deactivated", "reason": "Analysis needed"}, headers=investigator)
     assert r.status_code == 400

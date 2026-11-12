@@ -60,3 +60,10 @@ clean non-root container startup with no permission errors.
 - **BUG-NEW-03 / SEC-08 (Compose interpolation blocker)** — this was an audit-environment
   limitation, not a product defect: the prior pass had no access to `.env.compose`'s secrets. The
   live Compose stack was independently verified running and healthy throughout this session.
+
+## 2026-11-12 case-assignment addendum (branch `worktree-auth-login-ratelimit`)
+
+| ID | Status | Severity | Evidence / reproduction | Impact and action |
+|---|---|---|---|---|
+| BUG-NEW-11 | BUG REPRODUCED (data, pre-existing) | P2 | `GET /case-assignments?attention=true` on a freshly seeded store lists 46 of 48 cases with `PRIMARY_JURISDICTION_MISMATCH` and `MEMBER_ACCESS_BLOCKED`. Seed cases CASE-0003 onward are in other jurisdictions (e.g. "District Himachal Pradesh"), while `seed.py` makes the District A account `investigator` their owner and assigns District A accounts. `authorize_case` therefore refuses everyone except ADMIN/AUDITOR. Not introduced by the assignment work; it is now visible. | Demo cases look staffed but are unreachable for investigators. Decide whether to give those cases matching-jurisdiction demo users, or to reassign them. Not changed here (seed data and the live demo are the owner's call). |
+

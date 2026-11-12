@@ -283,7 +283,7 @@ def test_internal_key_and_relationships_survive_changes(client, admin):
     oid = _oid()
     u = _create(client, admin, org_user_id=oid, role="INVESTIGATOR")
     assert client.post(f"{API}/cases/CASE-0001/assign", headers=admin,
-                       json={"username": u["username"], "purpose": "investigation"}).status_code in (200, 201)
+                       json={"username": u["username"], "purpose": "investigation", "reason": "test setup assignment"}).status_code in (200, 201)
     new = _oid()
     assert _assign(client, admin, u["user_id"], new, oid).status_code == 200
     with SessionLocal() as db:

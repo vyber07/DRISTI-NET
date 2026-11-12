@@ -112,8 +112,25 @@ class CaseIn(BaseModel):
 
 
 class AssignIn(BaseModel):
-    username: str
-    purpose: str = "investigation"
+    """POST /cases/{id}/assign. Name the person by username or user_id. reason is required (services/case_assignments)."""
+    username: str | None = Field(default=None, max_length=64)
+    user_id: str | None = Field(default=None, max_length=64)
+    purpose: str = Field(default="investigation", max_length=60)
+    reason: str | None = Field(default=None, max_length=500)
+
+
+class CaseUnassignIn(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    reason: str = Field(max_length=500)
+
+
+class CasePrimaryIn(BaseModel):
+    """POST /cases/{id}/primary. expected_primary_id is required: the handover applies only if it still matches."""
+    model_config = ConfigDict(extra="forbid")
+    user_id: str = Field(max_length=64)
+    expected_primary_id: str | None = Field(max_length=64)
+    reason: str = Field(max_length=500)
+    previous: str = Field(default="KEEP", pattern=r"^(KEEP|REMOVE)$")
 
 
 

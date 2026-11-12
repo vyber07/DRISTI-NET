@@ -78,8 +78,9 @@ export async function getCaseReviews(caseId: string): Promise<ApiResponse<any[]>
   return { data: Array.isArray(data) ? data : [], meta: { requestId: "req", timestamp: new Date().toISOString(), durationMs: 0, securityClassification: "REAL" } };
 }
 
-export async function assignCase(caseId: string, username: string, purpose = "investigator"): Promise<ApiResponse<any>> {
-  const data = await post(`/cases/${caseId}/assign`, { username, purpose });
+/** POST /cases/{id}/assign: the primary investigator or an ADMIN; a reason (5-500 characters) is required. */
+export async function assignCase(caseId: string, username: string, purpose: string, reason: string): Promise<ApiResponse<any>> {
+  const data = await post(`/cases/${caseId}/assign`, { username, purpose, reason });
   return { data, meta: { requestId: "req", timestamp: new Date().toISOString(), durationMs: 0, securityClassification: "REAL" } };
 }
 
@@ -93,7 +94,7 @@ export async function createCase(body: { case_id: string; title: string; jurisdi
   return mapBackendCaseToFrontend(await post<BackendCase>(`/cases`, body));
 }
 
-export interface UserSummary { user_id: string; username: string; display_name: string; role: string; jurisdiction: string }
+export interface UserSummary { user_id: string; org_user_id?: string | null; username: string; display_name: string; role: string; jurisdiction: string; active?: boolean }
 /** GET /users — allowed for ADMIN, AUDITOR, INVESTIGATOR (others get 403; the assign dialog then asks for a username). */
 export function listUsers(): Promise<UserSummary[]> {
   return get(`/users`);

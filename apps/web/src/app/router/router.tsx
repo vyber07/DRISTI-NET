@@ -19,6 +19,7 @@ import { ProfilePage } from "@/features/profile/profile-page";
 import { GlobalAuditPage } from "@/features/audit/global-audit-page";
 import { UserManagementPage } from "@/features/admin/user-management-page";
 import { PermissionOverridesPage } from "@/features/admin/permission-overrides-page";
+import { CaseAssignmentsPage } from "@/features/admin/case-assignments-page";
 import { RequestsPage } from "@/features/requests/requests-page";
 import { RequestDetailPage } from "@/features/requests/request-detail-page";
 import { NotFoundPage } from "@/features/not-found/not-found-page";
@@ -81,6 +82,7 @@ export const router = createBrowserRouter([
       { path: "audit", element: <GlobalAuditPage /> },
       { path: "admin/users", element: <UserManagementPage /> },
       { path: "admin/overrides", element: <PermissionOverridesPage /> },
+      { path: "admin/case-assignments", element: <CaseAssignmentsPage /> },
       { path: "requests", element: <RequestsPage /> },
       { path: "requests/:requestId", element: <RequestDetailPage /> },
       { path: "*", element: <NotFoundPage /> },

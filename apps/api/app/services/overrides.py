@@ -64,12 +64,17 @@ ACTIONS: dict[str, tuple[str, ...] | None] = {
     # Organisational user ID history and lookup (services/org_user_ids.py): oversight, mandatory. Allocation itself is
     # manageUsers.
     "viewUserIdHistory": ("ADMIN", "AUDITOR"),
+    # Case assignment administration (services/case_assignments.py): oversight and administration, mandatory. Adding
+    # a person to a case is also open to the case's primary investigator through authorize_case, as before.
+    "viewCaseAssignments": ("ADMIN", "AUDITOR"),
+    "manageCaseAssignments": ("ADMIN",),
 }
 # Mandatory: oversight, account and policy administration, and the override system itself can neither be granted nor
 # withdrawn by an override (no self-reinforcing escalation, no locking administrators or auditors out).
 NON_OVERRIDABLE = frozenset({"globalAudit", "manageUsers", "viewMaskingPolicy", "manageMaskingPolicy", "viewOverrides",
                              "manageOverrides", "demoTamper", "manageUploadPolicy", "viewUploadMetrics", "viewDiagnostics",
-                             "viewAllUserRequests", "reviewUserRequests", "viewUserIdHistory"})
+                             "viewAllUserRequests", "reviewUserRequests", "viewUserIdHistory",
+                             "viewCaseAssignments", "manageCaseAssignments"})
 OVERRIDABLE = frozenset(a for a in ACTIONS if a not in NON_OVERRIDABLE)
 # Separation of duties (masking policy): ADMIN may never gain these through an ALLOW override.
 SEPARATION_ACTIONS = frozenset({"reveal", "downloadOriginal"})
@@ -77,7 +82,8 @@ RESOURCE_TYPES = {"EVIDENCE": Evidence, "CANDIDATE": MatchCandidate, "CLAIM": Cl
 MAX_DURATION_DAYS = 90
 FRONTEND_CAPABILITIES = ("upload", "downloadOriginal", "reveal", "decide", "createAnchor", "listAnchors", "report",
                          "globalAudit", "createCase", "manageUsers", "viewOverrides", "manageOverrides",
-                         "createUserRequest", "viewAllUserRequests", "reviewUserRequests")
+                         "createUserRequest", "viewAllUserRequests", "reviewUserRequests", "viewCaseAssignments",
+                         "manageCaseAssignments")
 
 
 @dataclass(frozen=True)

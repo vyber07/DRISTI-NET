@@ -1,3 +1,34 @@
+# Unreleased — administrator case assignment (branch `worktree-auth-login-ratelimit`)
+- All case-team changes now go through `services/case_assignments.py`: assign (ADMIN or the primary investigator),
+  remove (ADMIN) and hand over the primary investigator (ADMIN, compare-and-set on the expected primary, investigators
+  only; the previous primary is kept as supporting or removed). Request fulfilment uses the same path.
+- Every change needs a reason (5–500 characters) and writes:
+  - an append-only `case_assignment_events` row;
+  - a signed audit event (`CASE_ASSIGN`, `CASE_UNASSIGN`, `CASE_PRIMARY_CHANGE`);
+  - an in-app notification to the person concerned.
+- Eligibility: active, an assignable role (ADMIN and AUDITOR see every case and are no longer "assigned"), and the
+  case's jurisdiction. The primary investigator cannot be removed.
+- Removal takes effect on the person's next request: case, evidence, graph, case list and `/auth/me`, with the same
+  token.
+- Concurrency: a case-row lock, plus atomic conditional UPDATE/DELETE statements, so a concurrent change can never
+  leave two primaries or a primary without a row, on PostgreSQL or SQLite.
+- New ADMIN/AUDITOR page **Case assignments**:
+  - every case with its primary investigator, team size and "needs attention" indicators (deactivated, other
+    jurisdiction, blocked by override, primary not an investigator, no supporting members);
+  - a team dialog with add, remove, handover and history; auditors see it read-only.
+- The case overview gets "Manage team", and the Add person dialog requires a reason.
+- New mandatory actions `viewCaseAssignments` and `manageCaseAssignments`.
+- **API change:** `POST /cases/{id}/assign` requires `reason`, refuses ADMIN and AUDITOR targets, and returns 409
+  (not 200) for an existing member.
+- Migration `5bcde1234578`: three nullable columns, the history table and triggers, and a backfill of missing
+  primary-investigator rows. Docs: `docs/CASE_ASSIGNMENT.md`, ADR-020.
+- Tests:
+  - 17 module tests; existing `/assign` callers in tests and `scripts/perf_test.py` updated; SQLite 527 passed;
+  - PostgreSQL 16 182 passed, including the Alembic chain, plus a migration check with data from before the change;
+  - browser walkthrough 21 of 21 (`scripts/reliability/verify_case_assignments_ui.mjs`).
+- Finding: 46 of 48 seeded demo cases can only be opened by ADMIN and AUDITOR (jurisdiction mismatch with their team);
+  see BUG-NEW-11.
+
 # Unreleased — organisational user ID allocation (branch `worktree-auth-login-ratelimit`)
 - Administrators can allocate each account an organisational user ID (service or employee number), at creation or
   later. It is shown as "User ID" across the app. `users.user_id` (`USR-…`) stays the immutable internal key that

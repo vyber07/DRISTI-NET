@@ -17,7 +17,7 @@ def sec_case(client, admin, officer, ingested):
                     "jurisdiction": "Demo District A", "purpose": "RETROSPECTIVE_REVIEW", "authority_reference": "TEST-SEC-1"})
     assert r.status_code == 201, r.text
     for u in ("officer", "unassigned"):
-        assert client.post(f"/api/v1/cases/{SEC_CASE}/assign", headers=admin, json={"username": u}).status_code == 200
+        assert client.post(f"/api/v1/cases/{SEC_CASE}/assign", headers=admin, json={"username": u, "reason": "test setup assignment"}).status_code == 200
     # aliases.json mentions people whose attributes (DOB, address) exist only in CASE-0001
     assert upload(client, officer, SEC_CASE, "aliases.json").status_code == 201
     return SEC_CASE
@@ -71,7 +71,7 @@ def test_merkle_anchor_excludes_evidence_that_never_cleared_the_scan_gate(client
     assert client.post("/api/v1/cases", headers=admin, json={"case_id": case_id, "title": "Anchor probe", "jurisdiction": "Demo District A",
                        "purpose": "RETROSPECTIVE_REVIEW", "authority_reference": "TEST-SEC-2"}).status_code == 201
     for u in ("officer", "investigator"):
-        client.post(f"/api/v1/cases/{case_id}/assign", headers=admin, json={"username": u})
+        client.post(f"/api/v1/cases/{case_id}/assign", headers=admin, json={"username": u, "reason": "test setup assignment"})
     monkeypatch.setattr(config, "SCANNER_MODE", "unavailable")
     ev = upload(client, officer, case_id, "vehicles.csv").json()
     assert ev["status"] == "SCANNER_UNAVAILABLE", ev["status"]
@@ -115,7 +115,7 @@ def test_missing_stored_object_is_a_controlled_integrity_failure(client, admin, 
     assert client.post("/api/v1/cases", headers=admin, json={"case_id": case_id, "title": "Missing object probe", "jurisdiction": "Demo District A",
                        "purpose": "RETROSPECTIVE_REVIEW", "authority_reference": "TEST-SEC-3"}).status_code == 201
     for u in ("officer", "investigator"):
-        client.post(f"/api/v1/cases/{case_id}/assign", headers=admin, json={"username": u})
+        client.post(f"/api/v1/cases/{case_id}/assign", headers=admin, json={"username": u, "reason": "test setup assignment"})
     ev = upload(client, officer, case_id, "vehicles.csv").json()
     dl = lambda: client.post(f"/api/v1/evidence/{ev['evidence_id']}/download", headers=investigator, json={"reason": "integrity check"})
     assert dl().status_code == 200  # success path first (raw download: unmask-capable role + reason, DEF-101)
@@ -196,7 +196,7 @@ def test_corrupt_pdf_context_is_a_controlled_error(client, officer, investigator
 
 def test_case_listing_applies_jurisdiction(client, admin, outsider):
     """DEF-048: an out-of-jurisdiction user assigned to a case saw it in /cases while /cases/{id} returned 403."""
-    client.post("/api/v1/cases/CASE-0001/assign", headers=admin, json={"username": "outsider"})
+    client.post("/api/v1/cases/CASE-0001/assign", headers=admin, json={"username": "outsider", "reason": "test setup assignment"})
     assert client.get("/api/v1/cases/CASE-0001", headers=outsider).status_code == 403
     assert "CASE-0001" not in [c["case_id"] for c in client.get("/api/v1/cases", headers=outsider).json()]
 
@@ -208,7 +208,7 @@ def test_review_reasons_are_masked_in_candidate_output(client, admin, officer, r
     assert client.post("/api/v1/cases", headers=admin, json={"case_id": case_id, "title": "Reason masking probe", "jurisdiction": "Demo District A",
                        "purpose": "RETROSPECTIVE_REVIEW", "authority_reference": "TEST-SEC-4"}).status_code == 201
     for u in ("officer", "reviewer"):
-        client.post(f"/api/v1/cases/{case_id}/assign", headers=admin, json={"username": u})
+        client.post(f"/api/v1/cases/{case_id}/assign", headers=admin, json={"username": u, "reason": "test setup assignment"})
     for rel in ("people.json", "aliases.json", "calls.csv"):
         assert upload(client, officer, case_id, rel).status_code == 201
     cands = client.get(f"/api/v1/cases/{case_id}/candidates", headers=reviewer).json()
@@ -268,7 +268,7 @@ def test_storage_failure_during_scan_is_retryable_not_stuck(client, admin, offic
     case_id = "CASE-SEC5"
     assert client.post("/api/v1/cases", headers=admin, json={"case_id": case_id, "title": "Scan storage failure", "jurisdiction": "Demo District A",
                        "purpose": "RETROSPECTIVE_REVIEW", "authority_reference": "TEST-SEC-5"}).status_code == 201
-    client.post(f"/api/v1/cases/{case_id}/assign", headers=admin, json={"username": "officer"})
+    client.post(f"/api/v1/cases/{case_id}/assign", headers=admin, json={"username": "officer", "reason": "test setup assignment"})
 
     real = storage.local_copy
 
@@ -296,7 +296,7 @@ def test_resolution_failure_is_visible_and_retryable(client, admin, officer, aud
     case_id = "CASE-SEC6"
     assert client.post("/api/v1/cases", headers=admin, json={"case_id": case_id, "title": "Resolution failure", "jurisdiction": "Demo District A",
                        "purpose": "RETROSPECTIVE_REVIEW", "authority_reference": "TEST-SEC-6"}).status_code == 201
-    client.post(f"/api/v1/cases/{case_id}/assign", headers=admin, json={"username": "officer"})
+    client.post(f"/api/v1/cases/{case_id}/assign", headers=admin, json={"username": "officer", "reason": "test setup assignment"})
     real = resolution.generate_candidates
 
     def boom(*a, **k):
@@ -373,8 +373,8 @@ def test_source_person_ids_never_merge_people_across_cases(client, admin, office
     for cid in ("CASE-PID1", "CASE-PID2"):
         assert client.post("/api/v1/cases", headers=admin, json={"case_id": cid, "title": "pid scope", "jurisdiction": "Demo District A",
                            "purpose": "RETROSPECTIVE_REVIEW", "authority_reference": "TEST-PID"}).status_code == 201
-        client.post(f"/api/v1/cases/{cid}/assign", headers=admin, json={"username": "officer"})
-    client.post("/api/v1/cases/CASE-PID2/assign", headers=admin, json={"username": "unassigned"})
+        client.post(f"/api/v1/cases/{cid}/assign", headers=admin, json={"username": "officer", "reason": "test setup assignment"})
+    client.post("/api/v1/cases/CASE-PID2/assign", headers=admin, json={"username": "unassigned", "reason": "test setup assignment"})
     a = json.dumps([{"person_id": "P-001", "name": "Asha Verma", "dob": "1990-01-01", "phone": "+91 90000 12345"}]).encode()
     b = json.dumps([{"person_id": "P-001", "name": "Nikhil Rao", "dob": "1975-05-05", "phone": "+91 90000 67890"}]).encode()
     for cid, data in (("CASE-PID1", a), ("CASE-PID2", b)):

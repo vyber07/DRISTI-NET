@@ -84,7 +84,7 @@ def main() -> None:
                                                               "purpose": "performance measurement", "authority_reference": "PERF"})
         assert r.status_code == 201, r.text
         for u in ("officer", "investigator"):
-            assert client.post(f"/api/v1/cases/{cid}/assign", headers=admin, json={"username": u}).status_code == 200
+            assert client.post(f"/api/v1/cases/{cid}/assign", headers=admin, json={"username": u, "reason": "test setup assignment"}).status_code == 200
         return cid
 
     def timed_upload(case_id: str, name: str, data: bytes, label: str):

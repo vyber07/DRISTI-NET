@@ -44,6 +44,10 @@
 | `POST` | `/users` | ADMIN | Also accepts an optional `org_user_id` (organisational user ID, docs/USER_ID_ALLOCATION.md); 422/409 roll the creation back. `PATCH /users/{id}` refuses unknown fields, including `org_user_id`. |
 | `PUT` | `/users/{user_id}/org-user-id` | ADMIN, not for their own account | `{org_user_id, current_org_user_id, reason, correction?}`. Allocate or change; the old ID is retired (never reused) or, for a correction within the window, voided. 409 `ORG_USER_ID_IN_USE` / `ORG_USER_ID_RETIRED` / `ORG_USER_ID_STALE` / `ORG_USER_ID_CONFLICT` / `ORG_USER_ID_UNCHANGED`; 403 `SELF_CHANGE_FORBIDDEN`. Audited. |
 | `POST` | `/users/{user_id}/org-user-id/retire` | ADMIN, not for their own account | `{current_org_user_id, reason}`. Withdraws the ID; it can never be reused. Audited (`USER_ID_RETIRE`). |
+| `POST` | `/cases/{case_id}/assign` | ADMIN or the case's primary investigator | `{username` or `user_id, purpose, reason}` (reason 5–500, required). 400 `USER_INACTIVE` / `ROLE_NOT_ASSIGNABLE` (ADMIN, AUDITOR) / `JURISDICTION_MISMATCH`; 409 `ALREADY_ASSIGNED`. History, audit (`CASE_ASSIGN`), notification. docs/CASE_ASSIGNMENT.md |
+| `POST` | `/cases/{case_id}/assignments/{user_id}/remove` | ADMIN | `{reason}`. Access ends on the person's next request. 409 `PRIMARY_CANNOT_BE_REMOVED` / `NOT_ASSIGNED`; response has `access_remains_via_override`. |
+| `POST` | `/cases/{case_id}/primary` | ADMIN | `{user_id, expected_primary_id, reason, previous: KEEP\|REMOVE}`. Handover; 409 `PRIMARY_CHANGED` / `ALREADY_PRIMARY`; 400 `PRIMARY_ROLE_REQUIRED`. Audited (`CASE_PRIMARY_CHANGE`). |
+| `GET` | `/cases/{case_id}/assignments` · `/case-assignments` | ADMIN, AUDITOR | Team with effective access, issues and history; all cases with primary, team size and issues (`q`, `jurisdiction`, `user_id`, `attention`, `unstaffed`, `limit` ≤ 200, `offset`, `X-Total-Count`). Audited. |
 | `GET` | `/users/{user_id}/org-user-id/history` · `/org-user-ids/{org_user_id}` | ADMIN, AUDITOR | Allocation history of an account; who holds or held an ID, and when. Audited. |
 
 #### Login and rate limits

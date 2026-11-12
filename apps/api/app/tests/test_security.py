@@ -21,7 +21,7 @@ def test_unassigned_user_denied_server_side(client, unassigned, auditor):
 
 
 def test_jurisdiction_mismatch_denied(client, outsider, admin):
-    client.post("/api/v1/cases/CASE-0001/assign", headers=admin, json={"username": "outsider"})
+    client.post("/api/v1/cases/CASE-0001/assign", headers=admin, json={"username": "outsider", "reason": "test setup assignment"})
     assert client.get("/api/v1/cases/CASE-0001", headers=outsider).status_code == 403
 
 

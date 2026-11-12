@@ -21,6 +21,7 @@ verification history behind ADR-003/004/005/009/017.
 | [011](011-deployment-model.md) | Deployment: Docker Compose, not Kubernetes | Accepted |
 | [018](018-user-requests.md) | User request management: typed categories, server-side state machine, versioned transitions, duplicate index, append-only history, in-app notifications | Accepted (not yet deployed) |
 | [019](019-org-user-ids.md) | Organisational user IDs: separate from the immutable internal key, administrator-allocated, never reused (correction window excepted), compare-and-set, guarded registry | Accepted (not yet deployed) |
+| [020](020-case-assignment.md) | Case assignment through one service: primary investigator handover (compare-and-set), ADMIN-only removal, reasons, append-only history, notifications, effective-access indicators | Accepted (not yet deployed) |
 | [017](017-request-reliability.md) | Request reliability: auth dependencies release their DB connection, pool sized to the thread pool, one error envelope with request ID, retryable 503s, client retry/offline recovery, same-origin 421 for a moved origin | Accepted (not yet deployed) |
 | [016](016-upload-policy.md) | Streaming uploads, per-category configurable limits, signature validation, store-only media and forensic evidence | Accepted (not yet deployed) |
 | [015](015-permission-overrides.md) | Scoped, time-boxed ALLOW/DENY permission overrides with two-admin approval; deny wins; mandatory restrictions | Accepted (not yet deployed) |

@@ -1,4 +1,4 @@
-import { FolderOpen, Home, Inbox, ScrollText, ShieldCheck, Users } from "lucide-react";
+import { Briefcase, FolderOpen, Home, Inbox, ScrollText, ShieldCheck, Users } from "lucide-react";
 import type { Capability } from "@/lib/permissions";
 
 export interface NavItem {
@@ -17,5 +17,6 @@ export const NAV_ITEMS: NavItem[] = [
   { label: "Requests", path: "/requests", icon: Inbox, description: "Ask an administrator for access, a role change or support, and follow its progress" },
   { label: "Audit log", path: "/audit", icon: ScrollText, description: "Audit events across all cases", requires: "globalAudit" },
   { label: "Users", path: "/admin/users", icon: Users, description: "Create, update and deactivate accounts", requires: "manageUsers" },
+  { label: "Case assignments", path: "/admin/case-assignments", icon: Briefcase, description: "Who is on each case: assign, remove and hand over investigators", requires: "viewCaseAssignments" },
   { label: "Permission overrides", path: "/admin/overrides", icon: ShieldCheck, description: "Review and manage time-limited permission exceptions", requires: "viewOverrides" },
 ];

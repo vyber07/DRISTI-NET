@@ -13,7 +13,7 @@ def case(client, admin):
     assert client.post("/api/v1/cases", headers=admin, json={"case_id": cid, "title": "provenance probe", "jurisdiction": "Demo District A",
                        "purpose": "RETROSPECTIVE_REVIEW", "authority_reference": "TEST-PROV"}).status_code == 201
     for u in ("officer", "investigator", "reviewer"):
-        client.post(f"/api/v1/cases/{cid}/assign", headers=admin, json={"username": u})
+        client.post(f"/api/v1/cases/{cid}/assign", headers=admin, json={"username": u, "reason": "test setup assignment"})
     return cid
 
 
@@ -147,7 +147,7 @@ def test_undecided_candidates_refresh_and_decided_ones_show_new_evidence(client,
     assert client.post("/api/v1/cases", headers=admin, json={"case_id": cid, "title": "candidate refresh", "jurisdiction": "Demo District A",
                        "purpose": "RETROSPECTIVE_REVIEW", "authority_reference": "TEST-PROV2"}).status_code == 201
     for u in ("officer", "reviewer"):
-        client.post(f"/api/v1/cases/{cid}/assign", headers=admin, json={"username": u})
+        client.post(f"/api/v1/cases/{cid}/assign", headers=admin, json={"username": u, "reason": "test setup assignment"})
     people = [{"person_id": "P-1", "name": "Meera Joshi"},
               {"person_id": "P-2", "name": "Meera Joshi"},
               {"person_id": "P-3", "name": "Ravi Menon"},

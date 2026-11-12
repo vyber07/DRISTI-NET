@@ -32,6 +32,16 @@ This file maps the required alignment between frontend features, API service fil
 | **Reports** | `reportApi.ts` | generateReport | `POST /api/v1/cases/{case_id}/report` | 🔴 False success | Send `ReportIn`, handle download response |
 | **Reports** | `reportApi.ts` | getCourtPdf | `POST /api/v1/cases/{case_id}/report/court-pdf` | 🔴 Missing body | Fix payload (`CourtPdfIn`) and download |
 
+## Case assignments (branch `worktree-auth-login-ratelimit`, 2026-11-12; docs/CASE_ASSIGNMENT.md)
+
+| Feature Domain | Frontend Service | Action | Real FastAPI Route | Status | Page |
+| --- | --- | --- | --- | --- | --- |
+| **Assignments** | `caseAssignmentsApi.ts` | listCaseAssignments | `GET /api/v1/case-assignments` | 🟢 Wired | `/admin/case-assignments` (search, filters, pager) |
+| **Assignments** | `caseAssignmentsApi.ts` | getCaseAssignments | `GET /api/v1/cases/{id}/assignments` | 🟢 Wired | Team dialog (members, access, history) |
+| **Assignments** | `caseAssignmentsApi.ts` / `casesApi.ts` | assignToCase / assignCase | `POST /api/v1/cases/{id}/assign` | 🟢 Wired | Team dialog "Add"; case overview "Add person" (reason required) |
+| **Assignments** | `caseAssignmentsApi.ts` | removeFromCase | `POST /api/v1/cases/{id}/assignments/{user}/remove` | 🟢 Wired | Team dialog "Remove" (ADMIN) |
+| **Assignments** | `caseAssignmentsApi.ts` | changePrimary | `POST /api/v1/cases/{id}/primary` | 🟢 Wired | Team dialog "Hand over" (ADMIN) |
+
 ## Organisational user IDs (branch `worktree-auth-login-ratelimit`, 2026-11-12; docs/USER_ID_ALLOCATION.md)
 
 | Feature Domain | Frontend Service | Action | Real FastAPI Route | Status | Page |

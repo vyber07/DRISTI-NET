@@ -81,6 +81,14 @@ exists. Integrity comes from per-row signatures, database triggers and daily dig
   allocated by an administrator and shown as "User ID". `user_id` stays the immutable internal key that every
   foreign key references. NULL = not allocated. See docs/USER_ID_ALLOCATION.md and ADR-019.
 
+#### `case_assignments` (additional columns) and `case_assignment_events` (migration `5bcde1234578`; docs/CASE_ASSIGNMENT.md)
+- `case_assignments.assigned_by`, `assigned_at`, `reason` (all NULL for rows created before the migration). The case's
+  `owner_id` is its primary investigator and always has a row here (the migration backfills missing ones); every other
+  row is a supporting member. Written only by `services/case_assignments.py`.
+- `case_assignment_events`: `event_id` (sortable in creation order), `case_id`, `user_id`, `event` (`ASSIGNED`,
+  `REMOVED`, `PRIMARY_SET`, `PRIMARY_RELEASED`), `purpose`, `actor_id`, `actor_role`, `at`, `reason`, `detail`.
+  Triggers refuse UPDATE and DELETE (PostgreSQL also TRUNCATE).
+
 #### `org_user_ids` (migration `5bcde1234577`; docs/USER_ID_ALLOCATION.md)
 - `assignment_id` (integer PK), `org_user_id` (upper-cased), `user_id` (FK `users`), `status` (`ACTIVE`, `RETIRED`,
   `VOIDED`), `assigned_by` (`user_id` or `SEED`), `assigned_at`, `assign_reason`, `ended_by`, `ended_at`, `end_reason`.

@@ -10,42 +10,47 @@ const PURPOSES = [
   { value: "review", label: "Review of candidate matches" },
   { value: "analysis", label: "Analysis" },
   { value: "evidence handling", label: "Evidence handling" },
-  { value: "audit", label: "Audit" },
 ];
+// Roles that case assignment governs (services/case_assignments.ASSIGNABLE_ROLES). ADMIN and AUDITOR see every case.
+const ASSIGNABLE = ["INVESTIGATOR", "EVIDENCE_OFFICER", "REVIEWER", "ANALYST"];
 
 /**
- * Assign a colleague to the case (POST /cases/{id}/assign; owner or administrator only — the server checks).
+ * Assign a colleague to the case (POST /cases/{id}/assign; primary investigator or administrator, with a reason — the
+ * server checks). Removal and handover are on the administrators' Case assignments page.
  * Lists users in the case's jurisdiction who are not yet assigned; people outside it would still be refused access.
  */
 export function AssignPersonDialog({ caseData, open, onOpenChange, onAssigned }: {
   caseData: CaseDetail; open: boolean; onOpenChange: (o: boolean) => void; onAssigned: () => void;
 }) {
-  const ids = { user: useId(), purpose: useId(), err: useId() };
+  const ids = { user: useId(), purpose: useId(), reason: useId(), err: useId() };
   const [users, setUsers] = useState<UserSummary[] | null>(null);
   const [usersError, setUsersError] = useState<string | null>(null);
   const [username, setUsername] = useState("");
   const [purpose, setPurpose] = useState(PURPOSES[0].value);
+  const [reason, setReason] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     if (!open) return;
-    setUsername(""); setPurpose(PURPOSES[0].value); setError(null); setUsers(null); setUsersError(null);
+    setUsername(""); setPurpose(PURPOSES[0].value); setReason(""); setError(null); setUsers(null); setUsersError(null);
     listUsers().then(setUsers).catch((e) => setUsersError(e?.status === 403 ? "forbidden" : (e?.message || "unavailable")));
   }, [open]);
 
   const assigned = new Set(caseData.assigned);
-  const candidates = (users ?? []).filter((u) => u.jurisdiction === caseData.jurisdiction && !assigned.has(u.user_id));
+  const candidates = (users ?? []).filter((u) => u.jurisdiction === caseData.jurisdiction && !assigned.has(u.user_id)
+    && ASSIGNABLE.includes(u.role) && u.active !== false);
 
   const submit = async () => {
     if (!username.trim()) return setError("Choose a person.");
+    if (reason.trim().length < 5) return setError("Give a reason of at least 5 characters.");
     setBusy(true); setError(null);
     try {
-      await assignCase(caseData.id, username.trim(), purpose);
+      await assignCase(caseData.id, username.trim(), purpose, reason.trim());
       onAssigned();
       onOpenChange(false);
     } catch (e: any) {
-      setError(e?.status === 404 ? "No user with that username." : e?.status === 403 ? (e?.message || "Only the case owner or an administrator may assign people.") : (e?.message || "The assignment was not recorded."));
+      setError(e?.status === 404 ? "No user with that username." : e?.status === 403 ? (e?.message || "Only the primary investigator or an administrator may assign people.") : (e?.message || "The assignment was not recorded."));
     } finally { setBusy(false); }
   };
   const field = "mt-1 block w-full rounded-md border border-border-strong bg-surface-1 px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-electric-blue-soft";
@@ -74,7 +79,7 @@ export function AssignPersonDialog({ caseData, open, onOpenChange, onAssigned }:
             ) : (
               <select id={ids.user} value={username} onChange={(e) => setUsername(e.target.value)} className={field} autoFocus>
                 <option value="">Choose…</option>
-                {candidates.map((u) => <option key={u.user_id} value={u.username}>{u.display_name} — {roleLabel(u.role)}</option>)}
+                {candidates.map((u) => <option key={u.user_id} value={u.username}>{u.display_name}{u.org_user_id ? ` (${u.org_user_id})` : ""} — {roleLabel(u.role)}</option>)}
               </select>
             )}
           </div>
@@ -83,6 +88,11 @@ export function AssignPersonDialog({ caseData, open, onOpenChange, onAssigned }:
             <select id={ids.purpose} value={purpose} onChange={(e) => setPurpose(e.target.value)} className={field}>
               {PURPOSES.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
             </select>
+          </div>
+          <div>
+            <label htmlFor={ids.reason} className="text-sm font-medium">Reason</label>
+            <input id={ids.reason} value={reason} onChange={(e) => setReason(e.target.value)} className={field} required minLength={5} maxLength={500}
+                   placeholder="Why this person needs the case" />
           </div>
           {error && <p id={ids.err} role="alert" className="text-sm text-critical-red">{error}</p>}
           <DialogFooter className="gap-2 pt-1">

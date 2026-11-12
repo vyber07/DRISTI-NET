@@ -25,7 +25,9 @@ export type Capability =
   | "manageOverrides" // POST /permission-overrides, /approve, /reject, /revoke
   | "createUserRequest"   // POST /user-requests
   | "viewAllUserRequests" // GET /user-requests?scope=all
-  | "reviewUserRequests"; // POST /user-requests/{id}/claim|release|approve|reject|complete
+  | "reviewUserRequests"  // POST /user-requests/{id}/claim|release|approve|reject|complete
+  | "viewCaseAssignments"   // GET /case-assignments, GET /cases/{id}/assignments
+  | "manageCaseAssignments"; // POST /cases/{id}/assignments/{user}/remove, POST /cases/{id}/primary
 
 const RULES: Record<Capability, readonly string[]> = {
   upload: ["EVIDENCE_OFFICER", "INVESTIGATOR", "ADMIN"],
@@ -43,6 +45,8 @@ const RULES: Record<Capability, readonly string[]> = {
   createUserRequest: ["INVESTIGATOR", "EVIDENCE_OFFICER", "REVIEWER", "ANALYST", "AUDITOR", "ADMIN"],
   viewAllUserRequests: ["ADMIN", "AUDITOR"],
   reviewUserRequests: ["ADMIN"],
+  viewCaseAssignments: ["ADMIN", "AUDITOR"],
+  manageCaseAssignments: ["ADMIN"],
 };
 
 const ROLE_LABEL: Record<string, string> = {
@@ -99,6 +103,8 @@ export const CAPABILITY_TEXT: Record<Capability, string> = {
   createUserRequest: "Raise requests for case access, role changes, permissions and support",
   viewAllUserRequests: "See every user's requests and their history",
   reviewUserRequests: "Review, approve, reject and complete user requests",
+  viewCaseAssignments: "See every case's team, access status and assignment history",
+  manageCaseAssignments: "Assign, remove and hand over case investigators",
 };
 
 export const ALL_CAPABILITIES = Object.keys(RULES) as Capability[];

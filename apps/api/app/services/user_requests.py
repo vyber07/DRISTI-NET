@@ -534,14 +534,17 @@ def _fulfil(db: Session, actor: User, trace_id: str, row: UserRequest) -> dict |
             raise RequestError(409, f"The requester's jurisdiction ({target.jurisdiction}) does not match the case's "
                                     f"({case.jurisdiction}); reject the request instead.", "FULFILMENT_FAILED")
         purpose = row.details.get("purpose", "investigation")
-        if db.query(CaseAssignment).filter_by(case_id=case.case_id, user_id=target.user_id).first() is None:
-            db.add(CaseAssignment(case_id=case.case_id, user_id=target.user_id, purpose=purpose))
-            note = f"Assigned to {case.case_id} for {purpose}."
-        else:
-            note = f"Already assigned to {case.case_id}; nothing to change."
-        record_audit(db, trace_id, actor.user_id, "CASE_ASSIGN", "USER", target.user_id, case.case_id,
-                     detail={"purpose": purpose, "via_request": reference(row.request_id)})
-        return {"note": note, "case_id": case.case_id}
+        if db.query(CaseAssignment).filter_by(case_id=case.case_id, user_id=target.user_id).first() is not None:
+            return {"note": f"Already assigned to {case.case_id}; nothing to change.", "case_id": case.case_id}
+        from . import case_assignments  # same rules, history, audit and notification as an administrator's assignment
+        try:
+            case_assignments.assign(db, actor, case.case_id, target, purpose=purpose,
+                                    reason=f"Approved request {reference(row.request_id)}", trace_id=trace_id,
+                                    via=reference(row.request_id))
+        except case_assignments.AssignmentError as exc:
+            raise RequestError(409, f"The assignment cannot be applied: {exc.detail}; reject the request instead.",
+                               "FULFILMENT_FAILED")
+        return {"note": f"Assigned to {case.case_id} for {purpose}.", "case_id": case.case_id}
     if row.category == "ROLE_CHANGE":
         new_role = row.details["requested_role"]
         if new_role not in ROLES or new_role == "ADMIN":
