@@ -26,13 +26,15 @@ def _h(client, username):
     return {"Authorization": f"Bearer {r.json()['token']}"}
 
 
-def _entity(kind, case_id="CASE-0001", only_case=False):
-    """An entity of `kind` that has a claim in case_id (and, with only_case, no claim in CASE-0001)."""
+def _entity(kind, case_id="CASE-0001", only_case=False, not_in=None):
+    """An entity of `kind` that has a claim in case_id (and, with only_case, no claim in CASE-0001; with not_in, no claim
+    in that case). Entities are a global registry shared across cases, so a cross-case test must exclude the other case
+    explicitly: otherwise it passes or fails depending on which entity the unordered query happens to return first."""
     with SessionLocal() as s:
-        for e in s.query(Entity).filter_by(kind=kind).all():
+        for e in s.query(Entity).filter_by(kind=kind).order_by(Entity.entity_id).all():
             cases = {c for (c,) in s.query(Claim.case_id).filter(
                 (Claim.source_entity_id == e.entity_id) | (Claim.target_entity_id == e.entity_id)).distinct()}
-            if case_id in cases and (not only_case or "CASE-0001" not in cases):
+            if case_id in cases and (not only_case or "CASE-0001" not in cases) and (not_in is None or not_in not in cases):
                 return e.entity_id, e.label
     pytest.skip(f"no {kind} entity in {case_id}")
 
@@ -231,7 +233,7 @@ def test_permitted_role_without_case_assignment_is_denied(client, ingested):
 def test_idor_entity_from_another_case_under_an_assigned_case_id(client, ingested):
     """'unassigned' is an INVESTIGATOR (a reveal role) assigned to CASE-0002 only. Naming their own case while asking for
     a CASE-0001 entity must fail: the entity has to belong to the case named, not just to some case."""
-    entity_id, raw = _entity("PHONE", case_id="CASE-0001")
+    entity_id, raw = _entity("PHONE", case_id="CASE-0001", not_in="CASE-0002")
     h = _h(client, "unassigned")
     for path, body in ((f"/api/v1/entities/{entity_id}/reveal", {"case_id": "CASE-0002", "reason": "cross-case attempt"}),
                        (f"/api/v1/entities/{entity_id}/attributes/reveal", {"case_id": "CASE-0002", "key": "phone", "reason": "cross-case attempt"}),

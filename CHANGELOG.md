@@ -1,3 +1,33 @@
+# Unreleased — graph loading and rendering (branch `worktree-auth-login-ratelimit`)
+- Root cause: with Neo4j configured, every graph, analysis, report and integrity request rewrote the whole case into
+  Neo4j.
+  - Concurrent viewers deadlocked: 10–20 viewers waited 2.5–9.7 s, and some views fell back with "graph is being
+    rebuilt".
+  - A time-filtered view overwrote the copy with its subset, so a concurrent full view could show only part of the
+    case.
+- The Neo4j copy is now written only by the unfiltered graph view, and only when the projection's fingerprint changed
+  (stored on a `(:Projection)` node in the same transaction).
+  - Writers of one case serialise on that node; within a process, one thread writes and the rest wait. The marker
+    creation race is handled.
+  - Time-filtered views use the in-process graph only.
+  - Result: sequential view 60–75 ms (was up to 1.2 s); 20 concurrent viewers p50 1.5 s, max 1.7 s; 0 deadlocks.
+- Uncentered listings rank most-connected first on both backends (was alphabetical entity_id under Neo4j). The first
+  view of a large case now shows its connected core: 632 vs 156 relationships among the first 100 entities of a
+  418-entity case.
+- Layout:
+  - computed in screen pixels for the area the camera fit uses; node radius chosen from the available room (16 px,
+    minimum 6 px); overlap removal;
+  - CASE-0001 went from 118 overlapping node pairs to 0;
+  - the mock-data layout code (fake-ID positions, special labels, re-anchoring) is removed.
+- Empty graph: an explanatory empty state with links to Evidence and the Review queue, and no misleading time slider.
+- Fixed an order-dependent test (`test_idor_entity_from_another_case_under_an_assigned_case_id`): it could pick an
+  entity shared with CASE-0002.
+- No migration. New Neo4j constraint `projection_case`. Docs: `docs/GRAPH_LOADING.md`, ADR-021.
+- Tests:
+  - 13 new tests (4 against live Neo4j); SQLite 536 passed; live Neo4j 543 passed;
+  - load benchmark before and after;
+  - browser walkthrough 16 of 16 (`scripts/reliability/verify_graph_ui.mjs`).
+
 # Unreleased — administrator case assignment (branch `worktree-auth-login-ratelimit`)
 - All case-team changes now go through `services/case_assignments.py`: assign (ADMIN or the primary investigator),
   remove (ADMIN) and hand over the primary investigator (ADMIN, compare-and-set on the expected primary, investigators

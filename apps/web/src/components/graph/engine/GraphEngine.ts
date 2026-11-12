@@ -1,5 +1,4 @@
 import Graph from "graphology";
-import forceAtlas2 from "graphology-layout-forceatlas2";
 import Sigma from "sigma";
 import type {
   GraphNodeAttributes,
@@ -10,6 +9,7 @@ import type {
 import type { EvidenceTier } from "@/constants/evidenceTiers";
 import { maskPersonName, maskSensitiveText } from "@/lib/pii";
 import { exposeForTests } from "@/lib/test-hooks";
+import { layoutGraph } from "./layout";
 import {
   isNodeVisibleForFilters,
   isEdgeVisibleForFilters,
@@ -46,13 +46,6 @@ const TIER_COLORS: Record<EvidenceTier, string> = {
   6: "#6B5B95", // purple
 };
 
-/** Deterministic pseudo-random start position from an id (FNV-1a), so the same case always lays out the same way. */
-function seededPosition(id: string): { x: number; y: number } {
-  let h = 2166136261;
-  for (let i = 0; i < id.length; i++) { h ^= id.charCodeAt(i); h = Math.imul(h, 16777619); }
-  const a = ((h >>> 0) % 10000) / 10000, b = (((h >>> 0) / 10000) % 10000) / 10000;
-  return { x: a * 100, y: b * 100 };
-}
 
 /** Node colours actually drawn; the legend imports this so the two can never disagree (FE-008). */
 export const ENTITY_COLORS: Record<EntityType, string> = {
@@ -64,35 +57,12 @@ export const ENTITY_COLORS: Record<EntityType, string> = {
   CYBER: "#6B5B95",        // Purple (Phone / Device)
 };
 
-export const CANONICAL_NODE_POSITIONS: Record<string, { x: number; y: number }> = {
-  // Centre: hub entity (legacy mock-id layout; real case ids never match this table)
-  "E-PERS-01": { x: 0, y: 0 },
 
-  // Northwest (Upper-Left): Threat Call & Proxy
-  "E-PERS-02": { x: -180, y: -130 },
-  "E-EVT-01": { x: -80, y: -230 },
-  "E-CYB-02": { x: -320, y: -210 },
-
-  // North (Upper-Center): Tower & Contradiction
-  "E-LOC-01": { x: -100, y: 190 },
-  "E-EVT-03": { x: -230, y: 270 },
-
-  // West & Southwest: Hardware & SIM supply
-  "E-CYB-01": { x: -220, y: 30 },
-  "E-PERS-04": { x: -360, y: 110 },
-  "E-ORG-03": { x: -450, y: 190 },
-
-  // Northeast (Upper-Right): Safehouse, Courier & Cash Handover
-  "E-PERS-03": { x: 200, y: 90 },
-  "E-LOC-02": { x: 80, y: 260 },
-  "E-EVT-02": { x: 340, y: 210 },
-
-  // Southeast & East: Shell Company & Bank Trail
-  "E-ORG-01": { x: 170, y: -90 },
-  "E-ORG-02": { x: 310, y: -200 },
-  "E-FIN-01": { x: 310, y: -40 },
-  "E-LOC-03": { x: 430, y: 50 },
-};
+// Camera fit geometry, shared by updateCustomBBoxAndFit and organizeMap (which lays out for exactly this area).
+const STAGE_PADDING = 35;
+const FIT_PAD_X = 0.14;
+const FIT_PAD_Y_TOP = 0.22;
+const FIT_PAD_Y_BOTTOM = 0.16;
 
 export class GraphEngine {
   private container: HTMLElement;
@@ -170,7 +140,7 @@ export class GraphEngine {
       edgeLabelFont: '"Inter", sans-serif',
       edgeLabelSize: 9,
       edgeLabelColor: { color: "#526273" },
-      stagePadding: 35,
+      stagePadding: STAGE_PADDING,
       allowInvalidContainer: true,
       zIndex: true,
 
@@ -200,19 +170,17 @@ export class GraphEngine {
         // truncate long names with ellipsis when zoomed out (> 1.15) and unselected
         const cameraRatio = this.sigma ? this.sigma.getCamera().ratio : 1.0;
         let displayNodeLabel = safeLabel;
-        if (node === "E-CYB-01") {
-          // Custom positioned in drawCustomOverlay with calibrated clearance from USED DEVICE edge and Vikram
-          displayNodeLabel = "";
-        } else if (!isSelected && !isHovered && cameraRatio > 1.15 && displayNodeLabel.length > 18) {
+        if (!isSelected && !isHovered && cameraRatio > 1.15 && displayNodeLabel.length > 18) {
           displayNodeLabel = `${displayNodeLabel.slice(0, 16)}…`;
         }
 
+        const baseSize = (data.size as number) || 16;  // chosen by the layout from the room each node has
         return {
           ...data,
           label: displayNodeLabel,
           hidden: !isVisible,
           highlighted: isSelected || isHovered,
-          size: isSelected ? 24 : isHovered ? 21 : (data.size as number) || 16,
+          size: isSelected ? baseSize * 1.5 : isHovered ? baseSize * 1.3 : baseSize,
           color: dimmed ? "#D8DFE2" : ENTITY_COLORS[entityType] || "#287C7A",
           zIndex: isSelected ? 3 : isHovered ? 2 : 1,
         };
@@ -361,14 +329,10 @@ export class GraphEngine {
       const rawLabel = (n.maskedLabel || n.label || "");
       const safeLabel = entityType === "PERSON" ? maskPersonName(rawLabel as string) : maskSensitiveText(rawLabel as string);
 
-      const canonical = CANONICAL_NODE_POSITIONS[n.id];
-      const posX = canonical ? canonical.x : n.x;
-      const posY = canonical ? canonical.y : n.y;
-
       this.graph.addNode(n.id, {
         ...n,
-        x: posX,
-        y: posY,
+        x: n.x,
+        y: n.y,
         size: n.size || 16,
         label: safeLabel,
       });
@@ -724,34 +688,6 @@ export class GraphEngine {
       ctx.restore();
     });
 
-    // 2.1 Draw E-CYB-01 custom node label with calibrated clearance from nearby edges and Vikram S******
-    if (this.isNodeVisible("E-CYB-01")) {
-      const cybAttr = this.graph.getNodeAttributes("E-CYB-01");
-      const p = this.sigma!.graphToViewport({ x: cybAttr.x as number, y: cybAttr.y as number });
-      const size = (cybAttr.size as number) || 16;
-      const isSelected = this.selectedNodeId === "E-CYB-01";
-      const isHovered = this.hoveredNodeId === "E-CYB-01";
-      const labelText = maskSensitiveText((cybAttr.maskedLabel || cybAttr.label || "IMEI 3589********102") as string);
-
-      ctx.save();
-      ctx.font = '600 11px "Inter", sans-serif';
-      const tw = ctx.measureText(labelText).width;
-      const lx = p.x + size + 6;
-      const ly = p.y - 12; // Shifted upward by 12px for generous clearance above USED DEVICE edge
-
-      // Crisp background pill for zero edge collision
-      ctx.fillStyle = "rgba(255, 255, 255, 0.92)";
-      ctx.beginPath();
-      ctx.roundRect(lx - 3, ly - 8, tw + 6, 15, 3);
-      ctx.fill();
-
-      ctx.fillStyle = isSelected || isHovered ? "#287C7A" : "#17324D";
-      ctx.textAlign = "left";
-      ctx.textBaseline = "middle";
-      ctx.fillText(labelText, lx, ly);
-      ctx.restore();
-    }
-
     // 3. Render Tactical Hover HUD Tooltip when a node is hovered (Light Theme)
     if (this.hoveredNodeId && this.isNodeVisible(this.hoveredNodeId)) {
       const attr = this.graph.getNodeAttributes(this.hoveredNodeId);
@@ -918,10 +854,10 @@ export class GraphEngine {
     const spanX = Math.max(maxX - minX, 60);
     const spanY = Math.max(maxY - minY, 60);
 
-    // Calibrated safe margins to achieve approximately 75–82% canvas utilization without clipping:
-    const padX = spanX * 0.14;
-    const padYTop = spanY * 0.22;
-    const padYBottom = spanY * 0.16;
+    // Margins around the nodes (room for labels and the floating controls). organizeMap lays out for these.
+    const padX = spanX * FIT_PAD_X;
+    const padYTop = spanY * FIT_PAD_Y_TOP;
+    const padYBottom = spanY * FIT_PAD_Y_BOTTOM;
 
     this.sigma.setCustomBBox({
       x: [minX - padX, maxX + padX],
@@ -959,56 +895,24 @@ export class GraphEngine {
   }
 
   /**
-   * Deterministic Semantic POLE+ Map Organization:
-   * Sets the calibrated canonical positions for all known nodes, guaranteeing
-   * zero node overlaps and clear label clearances with an investigation-first
-   * POLE+ structure anchored on Vikram S****** (E-PERS-01) at (0, 0), and smoothly
-   * fits the camera to show all 16 entities with calibrated safe padding.
+   * Lay the graph out (layout.ts: seeded ForceAtlas2, scaled to the canvas, overlaps removed) and fit the camera.
+   * Deterministic: the same case always gets the same picture. (P1.4 removed the table of positions for the old mock
+   * ids and the step that re-centred the graph on one mock entity; real entity ids never matched them.)
    */
   public organizeMap(onComplete?: () => void): void {
     if (!this.graph || this.graph.order === 0) {
       onComplete?.();
       return;
     }
-
-    // 1. Reset all nodes to calibrated canonical non-overlapping positions
-    let canonicalCount = 0;
-    this.graph.forEachNode((nodeId) => {
-      const canonical = CANONICAL_NODE_POSITIONS[nodeId];
-      if (canonical) {
-        canonicalCount++;
-        this.graph.setNodeAttribute(nodeId, "x", canonical.x);
-        this.graph.setNodeAttribute(nodeId, "y", canonical.y);
-      }
+    // Lay out in screen pixels: the area updateCustomBBoxAndFit will map the layout into (stage padding, then the
+    // FIT_PAD_* margins around the nodes), so the gaps chosen here are the gaps drawn.
+    const rect = this.container.getBoundingClientRect();
+    const w = rect.width > 0 ? rect.width : 800, h = rect.height > 0 ? rect.height : 450;
+    const radius = layoutGraph(this.graph, {
+      width: (w - 2 * STAGE_PADDING) / (1 + 2 * FIT_PAD_X),
+      height: (h - 2 * STAGE_PADDING) / (1 + FIT_PAD_Y_TOP + FIT_PAD_Y_BOTTOM),
     });
-
-    // 1b. FE-006: the canonical table only knows the old mock ids, so on real case data "Organize" changed nothing and
-    // nodes kept random positions. Run ForceAtlas2 (bounded, synchronous) from deterministic seed positions instead.
-    if (canonicalCount < this.graph.order) {
-      this.graph.forEachNode((nodeId) => {
-        if (CANONICAL_NODE_POSITIONS[nodeId]) return;
-        const p = seededPosition(nodeId);
-        this.graph.setNodeAttribute(nodeId, "x", p.x);
-        this.graph.setNodeAttribute(nodeId, "y", p.y);
-      });
-      forceAtlas2.assign(this.graph, {
-        iterations: Math.min(300, 60 + this.graph.order * 2),
-        settings: { ...forceAtlas2.inferSettings(this.graph), barnesHutOptimize: this.graph.order > 200, adjustSizes: true },
-      });
-    }
-
-    // 2. Re-anchor Vikram S****** (E-PERS-01) at (0, 0) if present
-    if (this.graph.hasNode("E-PERS-01")) {
-      const centerAttrs = this.graph.getNodeAttributes("E-PERS-01");
-      const offsetX = (centerAttrs.x as number) || 0;
-      const offsetY = (centerAttrs.y as number) || 0;
-      if (offsetX !== 0 || offsetY !== 0) {
-        this.graph.forEachNode((nodeId, attrs) => {
-          this.graph.setNodeAttribute(nodeId, "x", (attrs.x as number) - offsetX);
-          this.graph.setNodeAttribute(nodeId, "y", (attrs.y as number) - offsetY);
-        });
-      }
-    }
+    this.graph.forEachNode((id) => this.graph.setNodeAttribute(id, "size", radius));
 
     // 3. Refresh renderer & overlay
     this.refresh();

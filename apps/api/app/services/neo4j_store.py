@@ -77,15 +77,52 @@ def apply_constraints() -> None:
             s.run(stmt)
 
 
-def write_projection(case_id: str, nodes: list[dict], edges: list[dict]) -> None:
+def projection_fingerprint(case_id: str) -> str | None:
+    """Fingerprint of the projection last written for this case (None = never written). One indexed lookup."""
+    with driver().session() as s:
+        rec = s.run(_q("MATCH (p:Projection {case_id: $case_id}) RETURN p.fingerprint AS fp"), case_id=case_id).single()
+    return rec["fp"] if rec else None
+
+
+def write_projection(case_id: str, nodes: list[dict], edges: list[dict], fingerprint: str | None = None) -> bool:
     """Rebuild this case's projection in Neo4j from the given (already-merged, already-approved) nodes/edges.
     Idempotent: re-running with the same input converges to the same graph (MERGE, not CREATE).
+
+    P1.4: the transaction first locks the case's (:Projection) node, so writers of one case run one at a time (they
+    used to deadlock on Entity nodes when several people opened the same graph), and it skips the rewrite when that
+    node already holds `fingerprint` (another writer stored this exact projection meanwhile). The fingerprint is
+    stored in the same transaction as the projection, so it never describes data that is not there. Returns True if it
+    wrote, False if the stored projection already matched.
     """
+    from neo4j.exceptions import ConstraintError
+
     with driver().session() as s:
-        s.execute_write(_write_projection_tx, case_id, nodes, edges)
+        # Create the marker node on its own first. Concurrent MERGEs of a node that does not exist yet race on the
+        # uniqueness constraint (the losers get ConstraintError, which the driver does not retry); losing that race
+        # just means it exists now.
+        try:
+            s.execute_write(lambda tx: tx.run("MERGE (:Projection {case_id: $case_id})", case_id=case_id).consume())
+        except ConstraintError:
+            pass
+        # The whole write is idempotent, so it is safe to repeat if two cases race to create the same new shared
+        # Entity (same ConstraintError). Deadlocks are TransientErrors and are retried by execute_write itself.
+        for attempt in range(3):
+            try:
+                return s.execute_write(_write_projection_tx, case_id, nodes, edges, fingerprint)
+            except ConstraintError:
+                if attempt == 2:
+                    raise
+    return False
 
 
-def _write_projection_tx(tx, case_id: str, nodes: list[dict], edges: list[dict]) -> None:
+def _write_projection_tx(tx, case_id: str, nodes: list[dict], edges: list[dict], fingerprint: str | None = None) -> bool:
+    # Take the per-case write lock (SET on the existing marker node) before touching any Entity, and re-check under it.
+    current = tx.run(
+        "MATCH (p:Projection {case_id: $case_id}) SET p.lock_seq = coalesce(p.lock_seq, 0) + 1 RETURN p.fingerprint AS fp",
+        case_id=case_id,
+    ).single()["fp"]
+    if fingerprint is not None and current == fingerprint:
+        return False
     # Entities are a global registry in Postgres (an ACCOUNT/PHONE/etc. entity can be referenced by claims
     # from more than one case) — so a node's case membership is a *set*, not overwritten wholesale by the
     # next case's sync. But it must still be RECONCILED, not just grown: when an approved identity match
@@ -127,6 +164,9 @@ def _write_projection_tx(tx, case_id: str, nodes: list[dict], edges: list[dict])
         """,
         case_id=case_id, edges=edges,
     )
+    tx.run("MATCH (p:Projection {case_id: $case_id}) SET p.fingerprint = $fp, p.synced_at = datetime()",
+           case_id=case_id, fp=fingerprint)
+    return True
 
 
 def read_bounded(case_id: str, center: str | None, hops: int, max_nodes: int, offset: int = 0) -> tuple[list[dict], list[dict], bool]:
@@ -159,8 +199,16 @@ def read_bounded(case_id: str, center: str | None, hops: int, max_nodes: int, of
             ).single()
             node_records = rows["nodes"] if rows else []
         else:
+            # P1.4: most-connected first (this case's relationships; a self-loop counts once), entity_id as tie-break --
+            # the same order graph.rank_nodes() uses in-process, so a fallback mid-pagination never mixes two orders.
+            # Before, the order was entity_id alone, so the first page of a large case was effectively random.
             node_records = [r["n"] for r in s.run(
-                _q("MATCH (n:Entity) WHERE $case_id IN n.case_ids RETURN n ORDER BY n.entity_id SKIP $offset LIMIT $max_nodes"),
+                _q("""
+                MATCH (n:Entity) WHERE $case_id IN n.case_ids
+                OPTIONAL MATCH (n)-[r:REL {case_id: $case_id}]-()
+                WITH n, count(DISTINCT r) AS deg
+                RETURN n ORDER BY deg DESC, n.entity_id SKIP $offset LIMIT $max_nodes
+                """),
                 case_id=case_id, max_nodes=max_nodes, offset=offset,
             )]
         node_ids = [n["entity_id"] for n in node_records]

@@ -70,8 +70,11 @@ def graph(case_id: str, request: Request, center: str | None = None, hops: int =
     authorize_case(db, user, case_id, request, action="GRAPH_VIEW")
     if offset < 0:
         raise HTTPException(422, "offset must be >= 0")
-    G = graph_svc.build_projection(db, case_id, _t(t_from), _t(t_to))
-    keep, truncated = graph_svc.bounded_subgraph(G, case_id, center, hops, max_nodes, offset)
+    tf, tt = _t(t_from), _t(t_to)
+    filtered = tf is not None or tt is not None
+    # P1.4: only the full projection is kept in Neo4j; a time-filtered view is served from the in-process graph.
+    G = graph_svc.build_projection(db, case_id, tf, tt, sync_neo4j=not filtered)
+    keep, truncated = graph_svc.bounded_subgraph(G, case_id, center, hops, max_nodes, offset, use_neo4j=not filtered)
     nodes, edges, reference = graph_svc.aggregate(G)
     nodes = [mask_node(n) for n in nodes if n["entity_id"] in keep]
     edges = [e for e in edges if e["source"] in keep and e["target"] in keep]

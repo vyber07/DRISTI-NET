@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { useSearchParams } from "react-router-dom";
-import { PanelRightClose, PanelRightOpen } from "lucide-react";
+import { Link, useSearchParams } from "react-router-dom";
+import { Network, PanelRightClose, PanelRightOpen } from "lucide-react";
 import { GraphCanvas } from "@/components/graph/GraphCanvas";
 import { GraphListView } from "@/components/graph/GraphListView";
 import { GraphCanvasBoundary } from "@/components/graph/GraphCanvasBoundary";
@@ -11,7 +11,7 @@ import { EdgeDrawer } from "@/components/graph/drawers/EdgeDrawer";
 import { EmptyDrawer } from "@/components/graph/drawers/EmptyDrawer";
 import { TemporalSlider } from "@/components/graph/TemporalSlider";
 import { Button } from "@/components/ui/button";
-import { ErrorState } from "@/components/layout/page";
+import { EmptyState, ErrorState } from "@/components/layout/page";
 import { useGraphStore } from "@/stores/graphStore";
 import { useCase } from "./case-context";
 import { cn } from "@/lib/utils";
@@ -23,7 +23,7 @@ import { cn } from "@/lib/utils";
  * exports are on the Reports tab.
  */
 export function CaseGraphPage() {
-  const { caseId } = useCase();
+  const { caseId, caseData } = useCase();
   const { selectedNodeId, selectedEdgeId, loadGraph, isLoading, error, nodes, edges, graphBounds, selectNode } = useGraphStore();
   const [params, setParams] = useSearchParams();
   const focusEntity = params.get("entity");
@@ -35,6 +35,8 @@ export function CaseGraphPage() {
   // FE-032: a selection opens the panel, but "Hide details" must still be able to close it afterwards.
   useEffect(() => { if (selectedNodeId || selectedEdgeId) setPanelOpen(true); }, [selectedNodeId, selectedEdgeId]);
   const showPanel = panelOpen;
+  // P1.4: a case with nothing projected yet used to show a blank canvas and a time slider blaming "undated" relationships.
+  const empty = !isLoading && !error && nodes.length === 0;
 
   useEffect(() => {
     loadGraph(caseId);
@@ -85,6 +87,20 @@ export function CaseGraphPage() {
       <div className="relative flex flex-1 min-h-0">
         <div className="relative flex-1 min-w-0 min-h-[360px]">
           {isLoading ? <p className="p-6 text-sm text-text-secondary" role="status">Loading the relationship graph…</p>
+            : error ? null
+            : empty ? (
+              <div className="p-6" data-testid="graph-empty">
+                <EmptyState icon={Network} title="No relationships to show yet"
+                  action={<span className="flex flex-wrap justify-center gap-3 text-sm">
+                    <Link to={`/cases/${caseId}/evidence`} className="text-electric-blue hover:underline">Open evidence</Link>
+                    <Link to={`/cases/${caseId}/review`} className="text-electric-blue hover:underline">Open review queue</Link>
+                  </span>}>
+                  {caseData && caseData.evidence_count === 0
+                    ? "This case has no evidence yet. Relationships appear here once evidence is uploaded and processed."
+                    : "Relationships appear once uploaded evidence has been processed and its identity matches reviewed. Pending matches are in the review queue."}
+                </EmptyState>
+              </div>
+            )
             : view === "list" ? <GraphListView />
             : <GraphCanvasBoundary key={caseId} onUseList={() => setView("list")}><GraphCanvas key={caseId} /></GraphCanvasBoundary> /* FE-016: a new engine per case */}
         </div>
@@ -96,7 +112,7 @@ export function CaseGraphPage() {
           </aside>
         )}
       </div>
-      <div className="border-t border-border-subtle bg-surface-1"><TemporalSlider /></div>
+      {!empty && !error && <div className="border-t border-border-subtle bg-surface-1"><TemporalSlider /></div>}
     </div>
   );
 }

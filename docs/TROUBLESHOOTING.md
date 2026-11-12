@@ -78,6 +78,15 @@ On the live `main` build, a raw **"Failed to fetch"** under "Could not load this
   - Error panels reload their data when the browser is back online.
   - Writes are never retried automatically, so an upload or a review decision is never sent twice.
 
+### 4. Slow or partial relationship graph with Neo4j (2026-11-12, reproduced, fixed on branch; docs/GRAPH_LOADING.md)
+- Symptom: the Relationship graph takes seconds to load, times out, shows "The graph is being rebuilt", or (rarely)
+  shows only part of a case; the API log shows `Neo.TransientError.Transaction.DeadlockDetected`.
+- Cause: every graph, analysis, report and integrity request rewrote the case's projection in Neo4j, and
+  time-filtered views wrote their subset.
+- Fix: the copy is synced only on change, writers are serialised, and filtered views stay in process. Check:
+  `MATCH (p:Projection {case_id: 'CASE-…'}) RETURN p.fingerprint, p.synced_at`. It changes only when the case's
+  claims change.
+
 ### Checked and ruled out
 
 | Hypothesis | Result |
