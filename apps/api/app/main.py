@@ -22,7 +22,8 @@ from .db import engine, init_db
 # Import integrity service before init_db so LedgerAnchor is registered with Base.metadata
 from .services import integrity as _integrity_svc  # noqa: F401 (side-effect: table registration)
 from .routes import (audit_routes, auth_routes, case_routes, demo_routes, evidence_routes, graph_routes, integrity_routes,
-                     diagnostics_routes, masking_routes, override_routes, report_routes, review_routes, upload_policy_routes)
+                     diagnostics_routes, masking_routes, notification_routes, override_routes, report_routes, review_routes,
+                     upload_policy_routes, user_request_routes)
 from .services import neo4j_store, ratelimit
 
 configure_logging()
@@ -149,8 +150,9 @@ _HTTP_CODES = {400: "BAD_REQUEST", 401: "UNAUTHENTICATED", 403: "FORBIDDEN", 404
 
 @app.exception_handler(StarletteHTTPException)
 async def http_error(request: Request, exc: StarletteHTTPException):
-    return error_body(request, exc.status_code, exc.detail, _HTTP_CODES.get(exc.status_code, f"HTTP_{exc.status_code}"),
-                      headers=dict(exc.headers or {}))
+    # An exception may carry its own stable code (services/user_requests.RequestError); otherwise one per status.
+    code = getattr(exc, "code", None) or _HTTP_CODES.get(exc.status_code, f"HTTP_{exc.status_code}")
+    return error_body(request, exc.status_code, exc.detail, code, headers=dict(exc.headers or {}))
 
 
 @app.exception_handler(DristiBaseError)
@@ -233,7 +235,8 @@ def ready():
 
 
 routers = [auth_routes, case_routes, evidence_routes, review_routes, graph_routes, audit_routes, report_routes, integrity_routes,
-           masking_routes, override_routes, upload_policy_routes, diagnostics_routes]
+           masking_routes, override_routes, upload_policy_routes, diagnostics_routes,
+           user_request_routes, notification_routes]
 if config.DATABASE_URL.startswith("sqlite"):
     routers.append(demo_routes)
 

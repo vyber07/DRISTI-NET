@@ -20,6 +20,13 @@
 | `GET` | `/upload-policies` | Authenticated | Accepted types, current per-category limits, scanner limit. |
 | `PUT` | `/upload-policies/{category}` | ADMIN | `{max_mb, enabled, reason}`; bounded by the hard and extractable ceilings; audited (`UPLOAD_POLICY_UPDATE`). |
 | `GET` | `/upload-policies/metrics` | ADMIN, AUDITOR | Rejections by code, accepted volume, concurrency, disk and staging state, 24-hour audit counts. |
+| `GET` | `/user-requests/categories` | authenticated | Request categories, their fields, priorities, statuses and limits (docs/USER_REQUESTS.md). |
+| `GET` | `/user-requests` | authenticated (`scope=all`: ADMIN, AUDITOR) | Filters `status`, `category`, `priority`, `q`, `requester`, `assigned_to_me`, `created_from/to`; `sort`; `limit` ≤ 100, `offset`; `X-Total-Count`. |
+| `GET` | `/user-requests/summary` | authenticated | Counts by status for `scope=mine` or `all`. |
+| `POST` | `/user-requests` | every role (`createUserRequest`) | Create a draft or submit; 409 `DUPLICATE_REQUEST` / `TOO_MANY_OPEN` / `ALREADY_GRANTED`. |
+| `GET`, `PATCH` | `/user-requests/{id}` | requester (PATCH: drafts only); ADMIN and AUDITOR read | Detail with history; others get 404. `PATCH` needs `version`. |
+| `POST` | `/user-requests/{id}/{submit\|cancel\|claim\|release\|approve\|reject\|complete}` | requester: submit, cancel. ADMIN (not the requester): the rest | `{version, reason?}`; 409 `INVALID_TRANSITION` / `VERSION_CONFLICT` / `FULFILMENT_FAILED`. |
+| `GET`, `POST` | `/notifications`, `/notifications/unread-count`, `/notifications/{id}/read`, `/notifications/read-all` | own only | In-app notifications (request status changes). |
 | `GET` | `/diagnostics` | ADMIN, AUDITOR | Uptime, request outcomes, slow requests, recent server errors with request IDs, DB pool and worker-thread usage, database/Redis/storage checks (audited; ADR-017, docs/TROUBLESHOOTING.md). |
 | `GET` | `/auth/me/permissions?case_id=` | Authenticated | The caller's effective capabilities (role + overrides), each with its source. Drives the UI only. |
 | `GET` | `/permission-overrides?status=` | ADMIN, AUDITOR | Overrides filtered by effective status (all, active, pending, scheduled, expired, revoked, rejected). Audited. |

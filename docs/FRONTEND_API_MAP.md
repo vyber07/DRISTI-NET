@@ -32,6 +32,18 @@ This file maps the required alignment between frontend features, API service fil
 | **Reports** | `reportApi.ts` | generateReport | `POST /api/v1/cases/{case_id}/report` | 🔴 False success | Send `ReportIn`, handle download response |
 | **Reports** | `reportApi.ts` | getCourtPdf | `POST /api/v1/cases/{case_id}/report/court-pdf` | 🔴 Missing body | Fix payload (`CourtPdfIn`) and download |
 
+## User requests and notifications (branch `worktree-auth-login-ratelimit`, 2026-11-12; docs/USER_REQUESTS.md)
+
+| Feature Domain | Frontend Service | Action | Real FastAPI Route | Status | Page |
+| --- | --- | --- | --- | --- | --- |
+| **Requests** | `userRequestsApi.ts` | getRequestMeta | `GET /api/v1/user-requests/categories` | 🟢 Wired | New request dialog (fields from server) |
+| **Requests** | `userRequestsApi.ts` | listRequests | `GET /api/v1/user-requests` | 🟢 Wired | `/requests` (tabs, search, filters, pager) |
+| **Requests** | `userRequestsApi.ts` | getRequestSummary | `GET /api/v1/user-requests/summary` | 🟢 Wired | `/requests` tab counts |
+| **Requests** | `userRequestsApi.ts` | createRequest | `POST /api/v1/user-requests` | 🟢 Wired | Save draft / Submit |
+| **Requests** | `userRequestsApi.ts` | getRequest / editRequest | `GET`, `PATCH /api/v1/user-requests/{id}` | 🟢 Wired | `/requests/:id`, Edit draft |
+| **Requests** | `userRequestsApi.ts` | actOnRequest | `POST /api/v1/user-requests/{id}/{action}` | 🟢 Wired | Buttons from `allowed_actions` |
+| **Notifications** | `notificationsApi.ts` | unread count / list / read | `/api/v1/notifications…` | 🟢 Wired | Bell in the top bar |
+
 ## Discarded / Deprecated Features
 *   **Notes:** No backend support. UI to be removed.
 *   **Alerts:** No backend support. UI to be removed.

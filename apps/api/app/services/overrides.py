@@ -56,18 +56,25 @@ ACTIONS: dict[str, tuple[str, ...] | None] = {
     "manageUploadPolicy": ("ADMIN",),
     "viewUploadMetrics": ("ADMIN", "AUDITOR"),
     "viewDiagnostics": ("ADMIN", "AUDITOR"),
+    # User requests (services/user_requests.py). Raising a request is open to every role and can be withdrawn from a
+    # user by a DENY override; seeing everyone's requests and deciding them are oversight/administration: mandatory.
+    "createUserRequest": ("INVESTIGATOR", "EVIDENCE_OFFICER", "REVIEWER", "ANALYST", "AUDITOR", "ADMIN"),
+    "viewAllUserRequests": ("ADMIN", "AUDITOR"),
+    "reviewUserRequests": ("ADMIN",),
 }
 # Mandatory: oversight, account and policy administration, and the override system itself can neither be granted nor
 # withdrawn by an override (no self-reinforcing escalation, no locking administrators or auditors out).
 NON_OVERRIDABLE = frozenset({"globalAudit", "manageUsers", "viewMaskingPolicy", "manageMaskingPolicy", "viewOverrides",
-                             "manageOverrides", "demoTamper", "manageUploadPolicy", "viewUploadMetrics", "viewDiagnostics"})
+                             "manageOverrides", "demoTamper", "manageUploadPolicy", "viewUploadMetrics", "viewDiagnostics",
+                             "viewAllUserRequests", "reviewUserRequests"})
 OVERRIDABLE = frozenset(a for a in ACTIONS if a not in NON_OVERRIDABLE)
 # Separation of duties (masking policy): ADMIN may never gain these through an ALLOW override.
 SEPARATION_ACTIONS = frozenset({"reveal", "downloadOriginal"})
 RESOURCE_TYPES = {"EVIDENCE": Evidence, "CANDIDATE": MatchCandidate, "CLAIM": Claim, "ENTITY": Entity}
 MAX_DURATION_DAYS = 90
 FRONTEND_CAPABILITIES = ("upload", "downloadOriginal", "reveal", "decide", "createAnchor", "listAnchors", "report",
-                         "globalAudit", "createCase", "manageUsers", "viewOverrides", "manageOverrides")
+                         "globalAudit", "createCase", "manageUsers", "viewOverrides", "manageOverrides",
+                         "createUserRequest", "viewAllUserRequests", "reviewUserRequests")
 
 
 @dataclass(frozen=True)

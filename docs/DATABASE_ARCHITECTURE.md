@@ -98,6 +98,20 @@ exists. Integrity comes from per-row signatures, database triggers and daily dig
   `updated_at`, `updated_by`, `reason`. Empty until an administrator sets a limit; a missing row means the environment default.
 - `evidence.record_type` gains `image`, `audio`, `video`, `forensic` for stored-only evidence (no claims extracted).
 
+#### `user_requests`, `user_request_events` (append-only), `notifications` (migration `5bcde1234576`; docs/USER_REQUESTS.md)
+- `user_requests`:
+  - `request_id` (integer PK; shown as `UR-000123`), `category`, `title`, `justification`, `details` (JSON),
+    `priority`, `status` (`DRAFT`, `PENDING`, `UNDER_REVIEW`, `APPROVED`, `REJECTED`, `COMPLETED`, `CANCELLED`),
+    `dedupe_key`, `requester_id` (FK `users`), `case_id`;
+  - `reviewer_id`, `decision_reason`, `decided_at`, `completed_by`, `completed_at`, `completion_note`;
+  - `created_at`, `submitted_at`, `updated_at`, `version` (incremented by every change; changes are conditional on it).
+- Unique partial index `uix_user_requests_open_dedupe (requester_id, dedupe_key) WHERE status IN (DRAFT, PENDING,
+  UNDER_REVIEW, APPROVED)`: no duplicate open requests, even under concurrent creates.
+- `user_request_events`: `event_id`, `request_id`, `event`, `from_status`, `to_status`, `actor_id`, `actor_role`, `at`,
+  `reason`, `detail`. Triggers refuse UPDATE and DELETE (PostgreSQL also TRUNCATE).
+- `notifications`: `notification_id`, `user_id`, `kind`, `title`, `body`, `link`, `request_id`, `created_at`,
+  `read_at`. Each user reads only their own.
+
 #### `permission_override_events` (append-only)
 - `event_id` (PK), `override_id` (indexed), `event` (`CREATED`, `APPROVED`, `REJECTED`, `REVOKED`), `actor_id`, `at`,
   `reason`, `snapshot` (JSON: the override after the change). Triggers refuse UPDATE and DELETE (PostgreSQL also TRUNCATE).

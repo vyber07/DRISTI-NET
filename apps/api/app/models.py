@@ -7,7 +7,7 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Integer, String, Text, UniqueConstraint
+from sqlalchemy import JSON, Boolean, DateTime, Float, ForeignKey, Index, Integer, String, Text, UniqueConstraint, text
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from .db import Base
@@ -361,3 +361,73 @@ class Snapshot(Base):
     created_by: Mapped[str] = mapped_column(String)
     payload: Mapped[dict] = mapped_column(JSON, default=dict)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=utcnow)
+
+
+# ----------------------------------------------------------------------------- user requests (docs/USER_REQUESTS.md)
+USER_REQUEST_STATUSES = ("DRAFT", "PENDING", "UNDER_REVIEW", "APPROVED", "REJECTED", "COMPLETED", "CANCELLED")
+# Open = still in the workflow. At most one open request per requester and duplicate key (uix_user_requests_open_dedupe).
+USER_REQUEST_OPEN_STATUSES = ("DRAFT", "PENDING", "UNDER_REVIEW", "APPROVED")
+_OPEN_SQL = "status IN ('DRAFT', 'PENDING', 'UNDER_REVIEW', 'APPROVED')"
+
+
+class UserRequest(Base):
+    """A request a signed-in user raises for an administrator's decision: access to a case, a role change, a temporary
+    permission, a data correction or general support (services/user_requests.py, ADR-018).
+
+    `version` is incremented by every change; each change must name the version it was based on, so two people acting
+    on the same request at once cannot overwrite each other. Rows are never deleted: CANCELLED, REJECTED and COMPLETED
+    are final. Every change is also in user_request_events (append-only) and in the signed audit log."""
+    __tablename__ = "user_requests"
+    __table_args__ = (
+        Index("uix_user_requests_open_dedupe", "requester_id", "dedupe_key", unique=True,
+              postgresql_where=text(_OPEN_SQL), sqlite_where=text(_OPEN_SQL)),
+    )
+    request_id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    category: Mapped[str] = mapped_column(String, index=True)
+    title: Mapped[str] = mapped_column(String)
+    justification: Mapped[str] = mapped_column(Text)
+    details: Mapped[dict] = mapped_column(JSON, default=dict)
+    priority: Mapped[str] = mapped_column(String, default="NORMAL")
+    status: Mapped[str] = mapped_column(String, index=True)
+    dedupe_key: Mapped[str] = mapped_column(String)
+    requester_id: Mapped[str] = mapped_column(ForeignKey("users.user_id"), index=True)
+    case_id: Mapped[str | None] = mapped_column(String, nullable=True, index=True)
+    reviewer_id: Mapped[str | None] = mapped_column(String, nullable=True, index=True)   # who claimed / decided
+    decision_reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    decided_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    completed_by: Mapped[str | None] = mapped_column(String, nullable=True)
+    completed_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    completion_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime)
+    submitted_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime)
+    version: Mapped[int] = mapped_column(Integer, default=1)
+
+
+class UserRequestEvent(Base):
+    """Append-only history of one user request: who did what, when, from which status to which, and why."""
+    __tablename__ = "user_request_events"
+    event_id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: new_id("URE"))
+    request_id: Mapped[int] = mapped_column(Integer, index=True)
+    event: Mapped[str] = mapped_column(String)
+    from_status: Mapped[str | None] = mapped_column(String, nullable=True)
+    to_status: Mapped[str | None] = mapped_column(String, nullable=True)
+    actor_id: Mapped[str] = mapped_column(String)
+    actor_role: Mapped[str] = mapped_column(String)
+    at: Mapped[datetime] = mapped_column(DateTime)
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    detail: Mapped[dict] = mapped_column(JSON, default=dict)
+
+
+class Notification(Base):
+    """An in-app message for one user (the bell in the top bar). Holds a reference and a status, never case data."""
+    __tablename__ = "notifications"
+    notification_id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: new_id("NTF"))
+    user_id: Mapped[str] = mapped_column(String, index=True)
+    kind: Mapped[str] = mapped_column(String)
+    title: Mapped[str] = mapped_column(String)
+    body: Mapped[str] = mapped_column(String, default="")
+    link: Mapped[str | None] = mapped_column(String, nullable=True)
+    request_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, index=True)
+    read_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

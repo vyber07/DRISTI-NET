@@ -22,7 +22,10 @@ export type Capability =
   | "createCase"      // POST /cases
   | "manageUsers"     // POST/PATCH /users, /users/{id}/deactivate|reactivate|reset-password
   | "viewOverrides"   // GET /permission-overrides
-  | "manageOverrides";// POST /permission-overrides, /approve, /reject, /revoke
+  | "manageOverrides" // POST /permission-overrides, /approve, /reject, /revoke
+  | "createUserRequest"   // POST /user-requests
+  | "viewAllUserRequests" // GET /user-requests?scope=all
+  | "reviewUserRequests"; // POST /user-requests/{id}/claim|release|approve|reject|complete
 
 const RULES: Record<Capability, readonly string[]> = {
   upload: ["EVIDENCE_OFFICER", "INVESTIGATOR", "ADMIN"],
@@ -37,6 +40,9 @@ const RULES: Record<Capability, readonly string[]> = {
   manageUsers: ["ADMIN"],
   viewOverrides: ["ADMIN", "AUDITOR"],
   manageOverrides: ["ADMIN"],
+  createUserRequest: ["INVESTIGATOR", "EVIDENCE_OFFICER", "REVIEWER", "ANALYST", "AUDITOR", "ADMIN"],
+  viewAllUserRequests: ["ADMIN", "AUDITOR"],
+  reviewUserRequests: ["ADMIN"],
 };
 
 const ROLE_LABEL: Record<string, string> = {
@@ -90,6 +96,9 @@ export const CAPABILITY_TEXT: Record<Capability, string> = {
   manageUsers: "Create, update and deactivate user accounts",
   viewOverrides: "Review permission overrides and their history",
   manageOverrides: "Create, approve, reject and revoke permission overrides",
+  createUserRequest: "Raise requests for case access, role changes, permissions and support",
+  viewAllUserRequests: "See every user's requests and their history",
+  reviewUserRequests: "Review, approve, reject and complete user requests",
 };
 
 export const ALL_CAPABILITIES = Object.keys(RULES) as Capability[];

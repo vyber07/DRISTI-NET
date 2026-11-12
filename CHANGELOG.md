@@ -1,3 +1,29 @@
+# Unreleased — user request management (branch `worktree-auth-login-ratelimit`)
+- New module: officers raise requests and administrators decide them. Five categories with fields defined on the
+  server: case access and role change are applied automatically on completion; temporary permission, data correction
+  and support are completed by hand.
+- States: DRAFT → PENDING → UNDER_REVIEW → APPROVED/REJECTED → COMPLETED, plus CANCELLED.
+  - Approve and reject need a reason, and only the claiming administrator may give them.
+  - No administrator may review their own request.
+  - ADMIN can never be requested.
+  - A role change ends the user's sessions.
+- Isolation: requesters see their own requests; ADMIN and AUDITOR see all (AUDITOR read-only, audited); anyone else
+  gets 404.
+- Concurrency and duplicates:
+  - every change carries a `version` and is applied by a conditional UPDATE (409 `VERSION_CONFLICT`);
+  - a unique partial index blocks duplicate open requests, even under concurrent creates;
+  - at most 10 open requests per user.
+- History: append-only `user_request_events` and a signed audit event for every change and every refused attempt.
+- Notifications: new `notifications` table and a bell in the top bar.
+- Paging, search (including by `UR-` reference), filters, summary counts, and per-field validation errors.
+- New permissions `createUserRequest` (overridable), `viewAllUserRequests` and `reviewUserRequests` (mandatory), also
+  in `/auth/me/permissions`.
+- The error envelope now carries an exception's own `code`.
+- Migration `5bcde1234576`. Docs: `docs/USER_REQUESTS.md`, ADR-018, and updates to the database, API, override and
+  frontend docs.
+- Tests: 33 module tests; SQLite 486 passed; PostgreSQL 16 488 passed (module repeated three times); migration
+  upgrade/downgrade/upgrade; browser walkthrough 9 of 9 (`scripts/reliability/verify_user_requests_ui.py`).
+
 # Unreleased — "Failed to fetch" and page failures (branch `worktree-auth-login-ratelimit`)
 - Root cause, under load: the auth dependency held a database connection while the request waited for a second worker
   thread. At about 50 concurrent users every thread waited for a connection, so each request hung 30 s and then failed

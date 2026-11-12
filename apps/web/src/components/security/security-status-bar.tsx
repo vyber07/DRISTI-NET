@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button";
 import { useAuthStore } from "@/stores/authStore";
 import { useUIStore } from "@/stores/uiStore";
 import { roleLabel } from "@/lib/permissions";
+import { NotificationsBell } from "@/components/layout/notifications-bell";
 
 /**
  * Top bar: who is signed in, their role and jurisdiction (the context every request is authorized against),
- * and Sign out. Removed: a notification bell with no handler or backend, and the duplicated role text.
+ * notifications (request status changes; GET /notifications) and Sign out.
  * "Sensitive values masked" reflects the server's behaviour: API responses are masked unless a reveal with a reason
  * is made, and revealed values are shown only inside the dialog that requested them.
  */
@@ -35,6 +36,7 @@ export function SecurityStatusBar() {
       <span className="hidden sm:inline-flex items-center gap-1.5 text-xs text-text-secondary whitespace-nowrap" title="Phone numbers and account numbers are masked by the server unless revealed with a recorded reason">
         <EyeOff className="h-3.5 w-3.5" aria-hidden="true" /> Sensitive values masked
       </span>
+      <NotificationsBell />
       <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => logout()} aria-label="Sign out">
         <LogOut className="h-4 w-4" aria-hidden="true" />
         <span className="hidden md:inline">Sign out</span>
