@@ -41,7 +41,7 @@ export function AuditIntegrityHeader({ caseId }: AuditIntegrityHeaderProps) {
       <div className="space-y-1">
         <div className="flex items-center gap-2">
           <h2 className="text-lg font-semibold text-text-primary tracking-tight flex items-center gap-2">
-            <ShieldCheck className="h-5 w-5 text-emerald-500" />
+            <ShieldCheck className="h-5 w-5 text-verified-emerald" />
             Audit log
           </h2>
         </div>

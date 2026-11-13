@@ -584,3 +584,19 @@ if (!caseData) { return <div role="alert" className="p-8 text-center text-text-m
 
 ### FE-060 · P3 · Unused code and dependencies
 10 unreachable files, 14 unused exports, 6 unused packages, 104 unused-variable warnings (see inventory §4, §11).
+
+## P2.1 audit (2026-11-13, `frontend-audit/P21_UI_AUDIT.md`)
+
+Browser sweep of 21 routes × 2 widths (axe-core 4.10.2) plus a static scan; all fixed on branch `worktree-auth-login-ratelimit`.
+
+| ID | Severity | Finding | Status |
+|---|---|---|---|
+| FE-062 | P2 | 8,624 visible text elements under the 12px minimum (`text-micro` token was 11px; 28 hard-coded 9–11px sizes) | Fixed: token 12px, sizes → `text-xs`; sweep 0 |
+| FE-063 | P2 | Users, Case assignments and global Audit log had no `<h1>` (ad-hoc uppercase mono `<h2>` bars) | Fixed: `PageHeader`; sweep 0 pages without one H1 |
+| FE-064 | P2 | Global Audit log: actor shown as internal `USR-` key, outcome by colour only, unlabelled action filter (axe `select-name`), list not keyboard-scrollable | Fixed: semantic table with username/role/office, outcome words, labelled filters |
+| FE-065 | P2 | `window.confirm` for retiring a user ID, removing a case member and handing over a case | Fixed: `ConfirmDialog` |
+| FE-066 | P3 | axe: `scrollable-region-focusable` (request detail), `link-in-text-block` (Decisions), `button-name` (graph Organize at <640px) | Fixed |
+| FE-067 | P3 | Patterns: entity type ran into the name ("ORGANIZATIONRiverside Traders"); jargon headings; palette colours | Fixed |
+| FE-068 | P3 | 47 Tailwind palette colour classes instead of tokens (low contrast `emerald-400`/`amber-400` on white) | Fixed: 0 left |
+| FE-069 | P3 | Ad-hoc spinners and plain-text empty states on newer pages | Fixed: `LoadingState`/`EmptyState`/`ErrorState` |
+

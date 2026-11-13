@@ -52,7 +52,7 @@ export function AuditFilterBar() {
           >
             <FilterX className="h-4 w-4" />
             Clear Filters
-            <Badge tone="neutral" className="ml-1 text-[10px] font-mono px-1.5 py-0 h-4">
+            <Badge tone="neutral" className="ml-1 text-xs font-mono px-1.5 py-0 h-4">
               {activeFilterCount}
             </Badge>
           </button>

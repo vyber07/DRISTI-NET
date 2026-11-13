@@ -43,7 +43,7 @@ export function EdgeDrawer() {
         {/* Connection Summary Node -> Node */}
         <div className="flex items-center justify-between gap-3 bg-surface-2 p-3 rounded-lg border border-border-subtle">
           <div className="flex-1 min-w-0 text-center">
-            <p className="text-[10px] font-mono text-text-muted uppercase mb-1">Source</p>
+            <p className="text-xs font-mono text-text-muted uppercase mb-1">Source</p>
             <p className="text-sm font-semibold text-text-primary truncate" title={rel.sourceLabel}>
               {rel.sourceLabel}
             </p>
@@ -55,7 +55,7 @@ export function EdgeDrawer() {
             <Network className="h-4 w-4 text-border-strong" />
           </div>
           <div className="flex-1 min-w-0 text-center">
-            <p className="text-[10px] font-mono text-text-muted uppercase mb-1">Target</p>
+            <p className="text-xs font-mono text-text-muted uppercase mb-1">Target</p>
             <p className="text-sm font-semibold text-text-primary truncate" title={rel.targetLabel}>
               {rel.targetLabel}
             </p>
@@ -64,7 +64,7 @@ export function EdgeDrawer() {
 
         {/* Stats */}
         <div className="space-y-3">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-text-muted">
+          <h3 className="text-sm font-semibold text-text-primary">
             Relationship Evidence Metrics
           </h3>
           <div className="rounded-md border border-border-subtle bg-surface-1 divide-y divide-border-subtle text-sm">
@@ -94,10 +94,10 @@ export function EdgeDrawer() {
           </p>
           {rel.claims === undefined && <p className="text-xs text-text-muted">Loading provenance…</p>}
           {rel.claimsError && (
-            <p role="alert" className="text-xs text-red-500">Provenance could not be loaded: {rel.claimsError}</p>
+            <p role="alert" className="text-xs text-critical-red">Provenance could not be loaded: {rel.claimsError}</p>
           )}
           {rel.claims && rel.claims.length === 0 && !rel.claimsError && (
-            <p role="alert" className="text-xs text-amber-500">
+            <p role="alert" className="text-xs text-amber-dim">
               No supporting claims were returned for this edge. Treat it as unverified and report the discrepancy.
             </p>
           )}
@@ -117,10 +117,10 @@ export function EdgeDrawer() {
                   </span>
                   <Badge tone="neutral">{Math.round(c.confidence * 100)}%</Badge>
                 </div>
-                <p className="text-[11px] text-text-muted">
+                <p className="text-xs text-text-muted">
                   {c.method} v{c.method_version} · {where} · {c.state}
                 </p>
-                {prov?.snippet && <p className="text-[11px] text-text-secondary italic break-words">“{prov.snippet}”</p>}
+                {prov?.snippet && <p className="text-xs text-text-secondary italic break-words">“{prov.snippet}”</p>}
                 <Button
                   variant="secondary"
                   size="sm"

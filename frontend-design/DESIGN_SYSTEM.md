@@ -48,7 +48,8 @@ Inter for UI, JetBrains Mono for identifiers and hashes (both self-hosted; works
 | Identifiers, hashes | 12px mono | `font-mono text-xs` |
 | Badges | 12px / 500 | `Badge` |
 
-The minimum text size is **12px**. The previous 10–10.5px labels were raised. All-caps letter-spaced labels are kept only for
+The minimum text size is **12px**. The previous 10–10.5px labels were raised. The `text-micro` token is 12px since P2.1
+(2026-11-13); it was 11px, which put 8,624 visible text elements below the minimum (`frontend-audit/P21_UI_AUDIT.md`). All-caps letter-spaced labels are kept only for
 table headers, never for sentences.
 
 ## 4. Layout
@@ -83,6 +84,9 @@ table headers, never for sentences.
 - **ReasonDialog** (new, `components/ui/reason-dialog.tsx`): one accessible Radix dialog for every action that needs an
   audited reason (download original, reveal, review decision, reversal). It replaces `window.prompt` and three ad-hoc modals.
   It has a focus trap, Escape to cancel, a minimum-length check with a visible message, and the reason is never stored client-side.
+- **ConfirmDialog** (`components/ui/confirm-dialog.tsx`, `useConfirm()`, P2.1): the confirmation for irreversible or
+  access-removing actions that need no reason (retire a user ID, remove a case member, hand a case over). Never
+  `window.confirm`. Destructive style when access is removed; nests inside the dialog that opened it.
 - **Tables**: a semantic `<table>` with a sticky header, row hover, a whole-row click target plus an explicit
   link in the first cell (so keyboard users get a real link), and numeric columns right-aligned.
 - **Drawer** (Radix dialog, side variant): contextual detail (an evidence record) without leaving the list.
@@ -101,3 +105,5 @@ table headers, never for sentences.
 - Tabs use links (`aria-current="page"`), so every tab has its own URL and works with the keyboard and browser history.
 - Form fields have `<label>`s. Errors are linked with `aria-describedby` and announced via `role="alert"`.
 - `prefers-reduced-motion` turns motion tokens off (already in `tokens.css`).
+- Scrollable page areas (`PageBody`, `CaseTabBody`) are focusable, so a keyboard user can scroll content with no controls.
+- Measure with `scripts/reliability/ui_audit_sweep.mjs` (axe, H1, overflow, text under 12px, errors; 21 routes × 2 widths).

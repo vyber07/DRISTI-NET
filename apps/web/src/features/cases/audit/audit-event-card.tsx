@@ -133,13 +133,13 @@ export function AuditEventCard({
           <span className="font-mono text-xs font-bold text-electric-blue bg-electric-blue/10 border border-electric-blue/20 rounded px-1.5 py-0.5">
             #{String(blockNumber).padStart(2, "0")}
           </span>
-          <span className="font-mono text-[10px] text-text-muted mt-1">{log.audit_id}</span>
+          <span className="font-mono text-xs text-text-muted mt-1">{log.audit_id}</span>
         </div>
 
         <div className="space-y-0.5">
           <div className="flex items-center gap-1.5">
             <ActionIcon className="h-3.5 w-3.5 text-text-muted shrink-0" />
-            <Badge tone={actionConfig.tone} className="text-[10px] tracking-wider uppercase font-semibold">
+            <Badge tone={actionConfig.tone} className="text-xs tracking-wider uppercase font-semibold">
               {actionConfig.label}
             </Badge>
           </div>
@@ -193,8 +193,8 @@ export function AuditEventCard({
       <div className="flex items-center justify-between md:justify-end gap-3 min-w-[220px] pt-2 md:pt-0 border-t md:border-t-0 border-border-subtle/50">
         <div className="space-y-1 text-right">
           <div className="flex items-center justify-end gap-1.5">
-            <span className="text-[10px] uppercase font-mono text-text-muted">Trace:</span>
-            <code className="text-[11px] font-mono text-text-secondary bg-surface-2 px-1.5 py-0.5 rounded border border-border-subtle">
+            <span className="text-xs uppercase font-mono text-text-muted">Trace:</span>
+            <code className="text-xs font-mono text-text-secondary bg-surface-2 px-1.5 py-0.5 rounded border border-border-subtle">
               {log.trace_id.slice(0, 8)}...
             </code>
             <button
@@ -205,7 +205,7 @@ export function AuditEventCard({
               className="text-text-muted hover:text-electric-blue p-0.5"
             >
               {copiedHash ? (
-                <Check className="h-3 w-3 text-emerald-400" />
+                <Check className="h-3 w-3 text-verified-emerald" />
               ) : (
                 <Copy className="h-3 w-3" />
               )}

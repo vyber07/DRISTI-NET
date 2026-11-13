@@ -75,7 +75,7 @@ export function GraphLegend({ className }: { className?: string }) {
         {/* Contradiction indicator */}
         <div className="flex items-center justify-between border-t border-border-subtle pt-2 text-micro">
           <div className="flex items-center gap-1.5">
-            <span className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full bg-critical-red text-[9px] font-bold text-white">
+            <span className="inline-flex h-3.5 w-3.5 items-center justify-center rounded-full bg-critical-red text-xs font-bold text-white">
               !
             </span>
             <span className="text-critical-red font-medium">Conflicting entities</span>

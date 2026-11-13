@@ -145,7 +145,7 @@ export function ColumnChart({ points, title, valueLabel, color = ACCENT, testId 
           ))}
         </div>
       </div>
-      <div className="flex h-4 gap-[2px] text-[11px] text-text-secondary" aria-hidden="true">
+      <div className="flex h-4 gap-[2px] text-xs text-text-secondary" aria-hidden="true">
         {points.map((p, i) => <div key={p.key} className="relative flex-1 text-center"><span className="absolute left-1/2 -translate-x-1/2 whitespace-nowrap">{i % tickEvery === 0 ? p.label : ""}</span></div>)}
       </div>
       <SrTable id={tableId} caption={title} head={["Period", valueLabel]} rows={points.map((p) => [p.label, String(p.value)])} />

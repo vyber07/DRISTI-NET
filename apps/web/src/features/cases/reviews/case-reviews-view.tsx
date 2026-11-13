@@ -53,7 +53,7 @@ export function CaseReviewsView() {
       {notice && <p role="status" className="text-sm text-verified-emerald">{notice}</p>}
       {error ? <ErrorState message={error.message} trace={error.trace} onRetry={load} /> : rows === null ? <LoadingState label="Loading decisions…" /> : rows.length === 0 ? (
         <EmptyState title="No decisions yet">
-          Decisions appear here once a reviewer acts on the <Link className="text-electric-blue hover:underline" to={`/cases/${encodeURIComponent(caseId)}/review`}>review queue</Link>.
+          Decisions appear here once a reviewer acts on the <Link className="text-electric-blue underline underline-offset-2" to={`/cases/${encodeURIComponent(caseId)}/review`}>review queue</Link>.
         </EmptyState>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-border-subtle bg-surface-1">

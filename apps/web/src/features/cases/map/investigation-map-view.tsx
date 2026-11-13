@@ -4,6 +4,7 @@ import { MapPin, AlertTriangle, RefreshCw, Navigation } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { getCaseLocations } from "@/services/api/casesApi";
+import { LoadingState } from "@/components/layout/page";
 
 interface Location {
   entity_id: string;
@@ -65,13 +66,11 @@ export function InvestigationMapView() {
       </div>
 
       {isLoading && (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="h-7 w-7 animate-spin rounded-full border-2 border-electric-blue border-t-transparent" />
-        </div>
+        <div className="flex-1 p-5"><LoadingState label="Loading locations…" rows={3} /></div>
       )}
 
       {error && (
-        <div className="m-5 rounded-lg border border-red-400/30 bg-red-400/5 p-4 text-xs text-red-400 flex items-center gap-2">
+        <div className="m-5 rounded-lg border border-critical-red/30 bg-critical-red/5 p-4 text-xs text-critical-red flex items-center gap-2">
           <AlertTriangle className="h-4 w-4" /> {error}
         </div>
       )}
@@ -112,7 +111,7 @@ export function InvestigationMapView() {
                     return (
                       <g key={loc.entity_id} className="cursor-pointer" onClick={() => setSelected(isSelected ? null : loc)}>
                         <circle cx={x} cy={y} r={isSelected ? 8 : 5} fill={isSelected ? "#3b82f6" : "#6b7280"} stroke={isSelected ? "#93c5fd" : "#374151"} strokeWidth="1.5" />
-                        <text x={x + 9} y={y + 4} fontSize="9" fill={isSelected ? "#93c5fd" : "#9ca3af"} className="select-none">
+                        <text x={x + 9} y={y + 4} fontSize="12" fill={isSelected ? "#93c5fd" : "#9ca3af"} className="select-none">
                           {loc.label.substring(0, 20)}
                         </text>
                       </g>
@@ -136,7 +135,7 @@ export function InvestigationMapView() {
           <div className="w-full lg:w-72 shrink-0 overflow-y-auto">
             <div className="p-3 border-b border-border-subtle bg-surface-1">
               <p className="text-xs font-semibold text-text-primary">{withCoords.length} with coordinates</p>
-              {noCoords.length > 0 && <p className="text-[10.5px] text-text-muted">{noCoords.length} without coordinates</p>}
+              {noCoords.length > 0 && <p className="text-xs text-text-muted">{noCoords.length} without coordinates</p>}
               {truncated && <Badge tone="amber" className="text-micro mt-1">Results truncated</Badge>}
             </div>
             <div className="divide-y divide-border-subtle">
@@ -150,7 +149,7 @@ export function InvestigationMapView() {
                     <MapPin className={`h-3.5 w-3.5 shrink-0 ${loc.has_coords ? "text-electric-blue" : "text-text-muted"}`} />
                     <div className="min-w-0">
                       <p className="text-xs font-medium text-text-primary truncate">{loc.label}</p>
-                      <p className="text-[10px] text-text-muted font-mono">{loc.has_coords ? `${loc.lat?.toFixed(4)}, ${loc.lon?.toFixed(4)}` : "No coordinates"}</p>
+                      <p className="text-xs text-text-muted font-mono">{loc.has_coords ? `${loc.lat?.toFixed(4)}, ${loc.lon?.toFixed(4)}` : "No coordinates"}</p>
                     </div>
                   </div>
                 </button>

@@ -88,7 +88,16 @@ check("add person succeeds and appears", await waitFor(`${dlg}.textContent.inclu
 // remove analyst
 await evaluate(`__setVal(__byLabel(${dlg}, 'Reason'), 'Analysis finished for this case'); true`);
 await sleep(200);
+// P2.1: Cancel in the confirmation dialog must leave the member on the case
 await evaluate(`__btn(${dlg}.querySelector('[data-testid=member-analyst]'), 'Remove').click(); true`);
+await waitFor(`!!document.querySelector('[data-testid=confirm-dialog]')`);
+await evaluate(`__btn(document.querySelector('[data-testid=confirm-dialog]'), 'Cancel').click(); true`);
+await sleep(400);
+check("cancelling the confirmation keeps the member", await evaluate(`!document.querySelector('[data-testid=confirm-dialog]') && !!${dlg}.querySelector('[data-testid=member-analyst]')`));
+await evaluate(`__btn(${dlg}.querySelector('[data-testid=member-analyst]'), 'Remove').click(); true`);
+// P2.1: confirmation is our own dialog now (was window.confirm)
+await waitFor(`!!document.querySelector('[data-testid=confirm-dialog-confirm]')`);
+await evaluate(`document.querySelector('[data-testid=confirm-dialog-confirm]').click(); true`);
 check("remove succeeds and member disappears", await waitFor(`${dlg}.textContent.includes('was removed from CASE-0001') && !${dlg}.querySelector('[data-testid=member-analyst]')`));
 
 // the primary investigator has no Remove button
@@ -99,6 +108,9 @@ await evaluate(`(() => { const d = ${dlg}; __setVal(__byLabel(d, 'Reason'), 'Ash
   const sel = __byLabel(d, 'Hand over'); __setVal(sel, __optionByText(sel, 'Investigator Priya')); return true })()`);
 await sleep(200);
 await evaluate(`__btn(${dlg}, 'Hand over').click(); true`);
+// P2.1: confirmation is our own dialog now (was window.confirm)
+await waitFor(`!!document.querySelector('[data-testid=confirm-dialog-confirm]')`);
+await evaluate(`document.querySelector('[data-testid=confirm-dialog-confirm]').click(); true`);
 check("handover makes Priya primary, Asha stays supporting", await waitFor(`${dlg}.textContent.includes('Case handed over.') &&
   ${dlg}.querySelector('[data-testid=member-unassigned]').textContent.includes('Primary') &&
   ${dlg}.querySelector('[data-testid=member-investigator]').textContent.includes('Supporting')`));

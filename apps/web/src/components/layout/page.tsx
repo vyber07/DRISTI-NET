@@ -84,7 +84,9 @@ export function PageHeader({ title, description, crumbs, actions, className, ico
 /** Scrollable content column under a PageHeader. */
 export function PageBody({ children, className, wide }: { children: ReactNode; className?: string; wide?: boolean }) {
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto">
+    // tabIndex: a keyboard user can focus the scroll area and scroll it with the arrow/Page keys even when it holds no
+    // control (axe scrollable-region-focusable, P2.1).
+    <div className="flex-1 min-h-0 overflow-y-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-electric-blue-soft" tabIndex={0}>
       <div className={cn("mx-auto w-full px-4 sm:px-6 py-5 space-y-5", wide ? "max-w-7xl" : "max-w-6xl", className)}>{children}</div>
     </div>
   );
@@ -205,7 +207,7 @@ export function CaseTabBody({ title, description, actions, children, wide }: {
   title: ReactNode; description?: ReactNode; actions?: ReactNode; children: ReactNode; wide?: boolean;
 }) {
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto">
+    <div className="flex-1 min-h-0 overflow-y-auto focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-electric-blue-soft" tabIndex={0}>
       <div className={cn("mx-auto w-full px-4 sm:px-6 py-5 space-y-4", wide ? "max-w-7xl" : "max-w-6xl")}>
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div className="min-w-0">

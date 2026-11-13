@@ -56,7 +56,7 @@ export function TimelineEventRow({
 
       <div className="relative z-10 pt-0.5 mt-2 ml-1">
         <div className="w-6 h-6 rounded-full bg-electric-blue flex items-center justify-center shrink-0">
-           <span className="text-white text-[10px]">{event.rel_type.substring(0,2)}</span>
+           <span className="text-white text-xs">{event.rel_type.substring(0,2)}</span>
         </div>
       </div>
 

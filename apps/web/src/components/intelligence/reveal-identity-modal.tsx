@@ -119,7 +119,7 @@ function RevealModalContent({ modalTarget }: RevealModalContentProps) {
         <DialogHeader>
           <div className="flex items-center justify-between gap-2 pr-6">
             <div className="flex items-center gap-2">
-              <div className="flex h-7 w-7 items-center justify-center rounded bg-amber-500/10 border border-amber-500/30 text-amber-400">
+              <div className="flex h-7 w-7 items-center justify-center rounded bg-amber/10 border border-amber/30 text-amber-dim">
                 <Lock className="h-4 w-4" />
               </div>
               <DialogTitle className="text-base text-text-primary">
@@ -135,16 +135,16 @@ function RevealModalContent({ modalTarget }: RevealModalContentProps) {
         {/* Successful Reveal State */}
         {isApproved && lastResult && (
           <div className="space-y-4 py-2">
-            <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-4 space-y-3">
-              <div className="flex items-center gap-2 text-emerald-400 font-semibold text-sm">
+            <div className="rounded-lg border border-verified-emerald/40 bg-verified-emerald/10 p-4 space-y-3">
+              <div className="flex items-center gap-2 text-verified-emerald font-semibold text-sm">
                 <CheckCircle2 className="h-4 w-4 shrink-0" />
                 <span>Identity Attribute Successfully Unmasked</span>
               </div>
 
-              <div className="space-y-1 bg-surface-1/90 border border-emerald-500/20 rounded p-3">
+              <div className="space-y-1 bg-surface-1/90 border border-verified-emerald/20 rounded p-3">
                 <div className="flex items-center justify-between text-micro text-text-muted">
                   <span className="uppercase font-mono">{lastResult.identifierType} Plaintext:</span>
-                  <span className="text-emerald-400 font-mono flex items-center gap-1">
+                  <span className="text-verified-emerald font-mono flex items-center gap-1">
                     <Clock className="h-3 w-3" /> Shown for this session view only
                   </span>
                 </div>
@@ -166,7 +166,7 @@ function RevealModalContent({ modalTarget }: RevealModalContentProps) {
             </div>
 
             <div className="rounded-md border border-border-subtle bg-surface-2 p-3 text-xs text-text-muted flex items-start gap-2">
-              <ShieldCheck className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
+              <ShieldCheck className="h-4 w-4 text-verified-emerald shrink-0 mt-0.5" />
               <p className="leading-relaxed">
                 <span className="font-semibold text-text-secondary">Session-Only Disclosure:</span> Plaintext is active in your current browser memory and will not be persisted across reloads. You may revoke access immediately below.
               </p>
@@ -216,7 +216,7 @@ function RevealModalContent({ modalTarget }: RevealModalContentProps) {
               </div>
 
               {/* Masking Examples Notice */}
-              <div className="text-[11px] text-text-muted flex items-center gap-1.5 pt-0.5">
+              <div className="text-xs text-text-muted flex items-center gap-1.5 pt-0.5">
                 <HelpCircle className="h-3 w-3 text-text-muted shrink-0" />
                 <span>
                   Masked formats: <code className="text-text-secondary font-mono">+91-98*****210</code>, <code className="text-text-secondary font-mono">********6789</code>, <code className="text-text-secondary font-mono">3589******102</code>
@@ -247,7 +247,7 @@ function RevealModalContent({ modalTarget }: RevealModalContentProps) {
 
             {/* Local Validation Error */}
             {localValidation && (
-              <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-2.5 text-amber-400 flex items-center gap-2">
+              <div className="rounded-md border border-amber/40 bg-amber/10 p-2.5 text-amber-dim flex items-center gap-2">
                 <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
                 <span>{localValidation}</span>
               </div>

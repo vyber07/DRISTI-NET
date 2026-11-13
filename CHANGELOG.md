@@ -1,3 +1,24 @@
+# Unreleased — UI/UX audit and consistency pass (branch `worktree-auth-login-ratelimit`)
+- Audited every route as the role that uses it, at desktop and phone width (axe WCAG A/AA, H1, overflow, text size,
+  errors), plus a static scan for design-system drift (`frontend-audit/P21_UI_AUDIT.md`).
+- Before → after across 42 page views:
+  - axe violations: 8 → 0;
+  - pages without one H1: 6 → 0;
+  - visible text under 12 px: 8,624 → 0;
+  - palette colour classes: 47 → 0;
+  - `window.confirm`: 3 → 0.
+- Typography floor: the `text-micro` token goes from 11 to 12 px, and hard-coded 9–11 px sizes are removed.
+- Users, Case assignments and the global Audit log now use the shared page header, body and loading/error/empty
+  states.
+- The global Audit log is a semantic table: who acted is shown by username, role and office (was the internal key),
+  outcomes are words, and the filters are labelled.
+- Patterns: plain-language headings, a fixed type column (no overlap), tokens.
+- New `ConfirmDialog` replaces `window.confirm` for retiring a user ID, removing a case member and handing over a case.
+- All raw palette colours are replaced by design tokens. Page scroll areas are keyboard-focusable; the Organize button
+  is named; the in-text link on Decisions is underlined.
+- No API, permission or dependency change. Regression walkthroughs: graph 16/16, full screen 27/27, user ID 12/12,
+  case team 22/22.
+
 # Unreleased — graph full-screen mode (branch `worktree-auth-login-ratelimit`)
 - The relationship graph tab can go full screen: a **Full screen** button (`aria-pressed`), the **F** key, and Esc to
   leave. It uses the browser Fullscreen API (with the WebKit prefix) and falls back to a full-window mode where that

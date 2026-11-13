@@ -27,7 +27,8 @@ Shared components that pages are built from after the redesign. Use these before
 | `Badge` | Tones; amber and orange use their dark text colours for contrast |
 | `StatusBadge` | **The only place** that maps evidence and review state codes to a label, icon, tone and hint. The raw code is kept in `title` and `data-status` |
 | `ReasonDialog` | Every audited action that needs a reason (download original, review decision, reversal, claim decision). Minimum length checked with a visible error; the dialog stays open on a server error; the reason is never stored client-side |
-| `Dialog` (Radix) | Base for dialogs; sized to fit small screens |
+| `Dialog` (Radix) | Base for dialogs; sized to fit small screens. Portals into the full-screen element while one is active (`stores/portalStore.ts`) |
+| `ConfirmDialog` / `useConfirm()` | Confirmation for irreversible or access-removing actions without a reason; replaces `window.confirm` (P2.1) |
 
 ## Domain components
 | Component | File | Notes |

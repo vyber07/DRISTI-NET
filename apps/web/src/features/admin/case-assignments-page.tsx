@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useId, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { AlertTriangle, Crown, RefreshCw, UserMinus, UserPlus, Users } from "lucide-react";
+import { Briefcase, Crown, RefreshCw, UserMinus, UserPlus, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { DeniedState, Pager } from "@/components/layout/page";
+import { DeniedState, EmptyState, ErrorState, LoadingState, PageBody, PageHeader, Pager } from "@/components/layout/page";
+import { useConfirm } from "@/components/ui/confirm-dialog";
 import { useAuthStore } from "@/stores/authStore";
 import { can, deniedReason, roleLabel } from "@/lib/permissions";
 import { type AdminUser, listAllUsers } from "@/services/api/usersApi";
@@ -85,6 +86,7 @@ function TeamDialog({ caseId, onClose, onChanged }: { caseId: string | null; onC
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const { confirm, confirmDialog } = useConfirm();
 
   const load = useCallback(() => {
     if (!caseId) return;
@@ -117,9 +119,10 @@ function TeamDialog({ caseId, onClose, onChanged }: { caseId: string | null; onC
     } finally { setBusy(false); }
   };
 
-  const remove = (m: TeamMember) => {
+  const remove = async (m: TeamMember) => {
     if (!reasonOk) { setError("Enter a reason first (at least 5 characters)."); return; }
-    if (!window.confirm(`Remove ${who(m)} from ${caseId}? They lose access on their next request.`)) return;
+    if (!(await confirm({ title: `Remove ${who(m)} from ${caseId}?`, description: "They lose access to the case on their next request. The removal and your reason are recorded.",
+      confirmLabel: "Remove from case", destructive: true }))) return;
     void run(async () => {
       const r = await removeFromCase(caseId, m.user_id, reason.trim());
       if (r.access_remains_via_override) return `${who(m)} was removed, but an active permission override still lets them open the case.`;
@@ -221,8 +224,9 @@ function TeamDialog({ caseId, onClose, onChanged }: { caseId: string | null; onC
                     </div>
                   </div>
                   <Button variant="secondary" size="sm" className="gap-1.5" disabled={busy || !handTo || !reasonOk}
-                          onClick={() => {
-                            if (!window.confirm(`Hand ${caseId} over? ${keepPrevious ? "The current primary investigator stays on the case." : "The current primary investigator loses access."}`)) return;
+                          onClick={async () => {
+                            if (!(await confirm({ title: `Hand ${caseId} over?`, confirmLabel: "Hand over", destructive: !keepPrevious,
+                              description: keepPrevious ? "The current primary investigator stays on the case as a supporting member." : "The current primary investigator loses access to the case." }))) return;
                             void run(async () => { await changePrimary(caseId, { user_id: handTo, expected_primary_id: detail.primary?.user_id ?? null, reason: reason.trim(), previous: keepPrevious ? "KEEP" : "REMOVE" }); }, "Case handed over.");
                           }}>
                     <Crown className="h-3.5 w-3.5" aria-hidden="true" /> Hand over
@@ -234,7 +238,7 @@ function TeamDialog({ caseId, onClose, onChanged }: { caseId: string | null; onC
             )}
 
             <div className="border-t border-border-subtle pt-3">
-              <h3 className="text-xs font-semibold uppercase text-text-muted mb-2">History</h3>
+              <h3 className="text-sm font-semibold text-text-primary mb-2">History</h3>
               {detail.history.length === 0 ? <p className="text-sm text-text-secondary">No changes recorded since history was introduced.</p> : (
                 <ul className="space-y-1.5 max-h-56 overflow-y-auto" data-testid="assignment-history">
                   {detail.history.map((h) => (
@@ -251,6 +255,7 @@ function TeamDialog({ caseId, onClose, onChanged }: { caseId: string | null; onC
         <DialogFooter className="pt-1">
           <Button type="button" variant="secondary" onClick={onClose} disabled={busy}>Close</Button>
         </DialogFooter>
+        {confirmDialog}
       </DialogContent>
     </Dialog>
   );
@@ -284,15 +289,11 @@ function CaseAssignmentsContent() {
   };
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 bg-background overflow-hidden">
-      <div className="shrink-0 border-b border-border-subtle bg-surface-1 px-5 py-3.5 flex flex-wrap items-center justify-between gap-2">
-        <div className="flex items-center gap-2">
-          <h2 className="text-sm font-bold font-mono tracking-wide uppercase text-text-primary">Case assignments</h2>
-          {rows && <span className="text-xs text-text-muted">· {total} case{total === 1 ? "" : "s"}</span>}
-        </div>
-        <Button variant="ghost" size="sm" className="text-xs gap-1.5" onClick={load}><RefreshCw className="h-3.5 w-3.5" /> Refresh</Button>
-      </div>
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+    <div className="flex flex-col flex-1 min-h-0">
+      <PageHeader icon={<Briefcase className="h-5 w-5" />} title="Case assignments"
+        description={<>Who is on each case and whether they can actually open it.{rows ? ` ${total} case${total === 1 ? "" : "s"}.` : ""}</>}
+        actions={<Button variant="secondary" size="sm" className="gap-1.5" onClick={load}><RefreshCw className="h-3.5 w-3.5" aria-hidden="true" /> Refresh</Button>} />
+      <PageBody wide>
         <form className="flex flex-wrap items-end gap-3" onSubmit={(e) => { e.preventDefault(); setOffset(0); setQuery(q.trim()); }}>
           <div className="min-w-[16rem] flex-1">
             <label htmlFor={ids.q} className="text-xs font-medium text-text-secondary">Search case ID or title</label>
@@ -302,14 +303,10 @@ function CaseAssignmentsContent() {
           <label className="flex items-center gap-1.5 text-sm"><input type="checkbox" checked={attention} onChange={(e) => { setOffset(0); setAttention(e.target.checked); }} /> Needs attention</label>
           <label className="flex items-center gap-1.5 text-sm"><input type="checkbox" checked={unstaffed} onChange={(e) => { setOffset(0); setUnstaffed(e.target.checked); }} /> No supporting members</label>
         </form>
-        {error && (
-          <div className="rounded-lg border border-red-400/30 bg-red-400/5 p-4 text-xs text-red-400 flex items-center gap-2"><AlertTriangle className="h-4 w-4" /> {error}</div>
-        )}
-        {rows === null ? (
-          <div className="flex items-center justify-center py-16"><div className="h-7 w-7 animate-spin rounded-full border-2 border-electric-blue border-t-transparent" /></div>
-        ) : rows.length === 0 ? (
-          <p className="py-10 text-center text-sm text-text-secondary">No cases match.</p>
-        ) : (
+        {error ? <ErrorState message={error} onRetry={load} />
+        : rows === null ? <LoadingState label="Loading cases…" rows={5} />
+        : rows.length === 0 ? <EmptyState title="No cases match" />
+        : (
           <div className="overflow-x-auto rounded-lg border border-border-subtle">
             <table className="w-full text-sm">
               <thead className="bg-surface-2 text-xs text-text-muted uppercase">
@@ -334,7 +331,7 @@ function CaseAssignmentsContent() {
                       </div>
                     </td>
                     <td className="px-4 py-2.5 text-right">
-                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs gap-1" onClick={() => setOpen(c.case_id)}><Users className="h-3.5 w-3.5" aria-hidden="true" /> Team</Button>
+                      <Button variant="ghost" size="sm" className="h-7 px-2 text-xs gap-1" onClick={() => setOpen(c.case_id)} aria-label={`Team for ${c.case_id}`}><Users className="h-3.5 w-3.5" aria-hidden="true" /> Team</Button>
                     </td>
                   </tr>
                 ))}
@@ -343,7 +340,7 @@ function CaseAssignmentsContent() {
           </div>
         )}
         <Pager offset={offset} limit={PAGE} total={total} onChange={setOffset} label="cases" />
-      </div>
+      </PageBody>
       <TeamDialog caseId={openCase} onClose={() => setOpen(null)} onChanged={load} />
     </div>
   );

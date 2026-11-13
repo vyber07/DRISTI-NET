@@ -34,7 +34,7 @@ export function GraphFilterPanel() {
       <div className="flex items-center justify-between border-b border-border-subtle p-3 bg-surface-2/60">
         <div className="flex items-center gap-2">
           <SlidersHorizontal className="h-4 w-4 text-teal-primary" />
-          <h2 className="text-xs font-semibold uppercase tracking-wider text-text-primary">
+          <h2 className="text-sm font-semibold text-text-primary">
             Filter the graph
           </h2>
           {activeFilterCount > 0 && (

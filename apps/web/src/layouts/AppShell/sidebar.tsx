@@ -43,7 +43,7 @@ export function Sidebar() {
         )}
       </div>
       <nav aria-label="Main" className="flex-1 overflow-y-auto p-2">
-        {!collapsed && <p className="px-2.5 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wider text-[#8fa6b6]">Workspace</p>}
+        {!collapsed && <p className="px-2.5 pb-1 pt-2 text-xs font-semibold uppercase tracking-wider text-[#8fa6b6]">Workspace</p>}
         <ul className="flex flex-col gap-0.5">
           {items.map((item) => {
             const Icon = item.icon;

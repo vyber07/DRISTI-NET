@@ -74,7 +74,7 @@ export function NotificationsBell() {
         aria-label={unread ? `Notifications, ${unread} unread` : "Notifications"} onClick={() => setOpen((o) => !o)}>
         <Bell className="h-4 w-4" aria-hidden="true" />
         {unread > 0 && (
-          <span className="absolute -right-0.5 -top-0.5 min-w-[18px] rounded-full bg-critical-red px-1 text-center text-[10px] font-semibold leading-[18px] text-white" aria-hidden="true">
+          <span className="absolute -right-0.5 -top-0.5 min-w-[18px] rounded-full bg-critical-red px-1 text-center text-xs font-semibold leading-[18px] text-white" aria-hidden="true">
             {unread > 99 ? "99+" : unread}
           </span>
         )}
@@ -102,7 +102,7 @@ export function NotificationsBell() {
                           <span className="min-w-0">
                             <span className="block text-sm text-text-primary">{n.title}</span>
                             {n.body && <span className="mt-0.5 block text-xs text-text-secondary line-clamp-2">{n.body}</span>}
-                            <span className="mt-0.5 block text-[11px] text-text-muted">{ago(n.created_at)}</span>
+                            <span className="mt-0.5 block text-xs text-text-muted">{ago(n.created_at)}</span>
                           </span>
                         </span>
                       </button>

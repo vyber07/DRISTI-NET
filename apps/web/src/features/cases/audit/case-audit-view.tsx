@@ -60,7 +60,7 @@ export function CaseAuditView({ caseId }: CaseAuditViewProps) {
 
       {/* Statutory Legal Governance Notice */}
       <div className="rounded-lg border border-border-subtle bg-surface-1 px-4 py-3 text-xs text-text-muted flex items-start gap-3 shadow-xs">
-        <ShieldCheck className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
+        <ShieldCheck className="h-4 w-4 text-verified-emerald shrink-0 mt-0.5" />
         <div className="space-y-0.5 leading-relaxed">
           <span className="font-semibold text-text-secondary">
             Case audit log:

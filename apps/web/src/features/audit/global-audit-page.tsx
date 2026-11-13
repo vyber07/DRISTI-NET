@@ -1,151 +1,167 @@
-import { useEffect, useState } from "react";
-import { ShieldCheck, RefreshCw, AlertTriangle, Search, Filter } from "lucide-react";
+import { useEffect, useId, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { RefreshCw, ScrollText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { listGlobalAuditLogs } from "@/services/api/auditApi";
 import { useAuthStore } from "@/stores/authStore";
-import { can, deniedReason } from "@/lib/permissions";
-import { DeniedState } from "@/components/layout/page";
+import { can, deniedReason, roleLabel } from "@/lib/permissions";
+import { DeniedState, EmptyState, ErrorState, LoadingState, PageBody, PageHeader, Section } from "@/components/layout/page";
 
-const ACTION_TONES: Record<string, string> = {
-  LOGIN: "blue", LOGOUT: "neutral",
-  CASE_CREATE: "green", CASE_VIEW: "neutral", CASE_ASSIGN: "blue",
-  EVIDENCE_UPLOAD: "blue", EVIDENCE_DOWNLOAD: "neutral",
-  INTEGRITY_ANCHOR: "green", COURT_PDF_EXPORT: "amber",
-  REVIEW_DECISION: "purple", UNMASK: "red",
-  DEMO_TAMPER: "red", INTEGRITY_MISMATCH: "red",
-  EXPORT: "amber", HASH_VERIFY: "neutral",
-  GRAPH_VIEW: "neutral", AUDIT_VIEW: "neutral",
-};
+interface AuditRow {
+  audit_id: string;
+  action: string;
+  outcome: string;
+  failure_reason?: string | null;
+  actor_id: string | null;
+  actor_username?: string | null;
+  actor_role?: string | null;
+  office_id?: string | null;
+  resource_type?: string | null;
+  resource_id?: string | null;
+  target_id?: string | null;
+  case_id?: string | null;
+  created_at: string;
+  occurred_at_local?: string;
+  display_timezone?: string;
+  request_id?: string;
+}
 
+/** Outcome as words plus a tone; red only for a refused or failed action (design system §1: status is never colour alone). */
+function OutcomeBadge({ outcome }: { outcome: string }) {
+  if (outcome === "OK") return <Badge tone="emerald">Allowed</Badge>;
+  if (outcome === "DENIED") return <Badge tone="red">Denied</Badge>;
+  if (outcome === "ERROR") return <Badge tone="red">Error</Badge>;
+  return <Badge tone="amber">{outcome.charAt(0) + outcome.slice(1).toLowerCase()}</Badge>;
+}
+
+function when(r: AuditRow): string {
+  return (r.occurred_at_local || r.created_at || "").replace("T", " ").slice(0, 19);
+}
+
+/**
+ * Global audit log (AUDITOR, ADMIN), on the shared page layout (P2.1): a page heading, labelled filters, a semantic
+ * table that names people by username and role (not by internal USR- key), outcome as words, and the shared loading,
+ * error and empty states. Each case's own audit log (with signatures and full detail) stays on its Audit log tab.
+ */
 function GlobalAuditContent() {
-  const { user } = useAuthStore();
-  const [logs, setLogs] = useState<any[]>([]);
-  const [filtered, setFiltered] = useState<any[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState("");
+  const ids = { q: useId(), action: useId(), outcome: useId() };
+  const [logs, setLogs] = useState<AuditRow[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
   const [search, setSearch] = useState("");
-  const [actionFilter, setActionFilter] = useState("");
+  const [action, setAction] = useState("");
+  const [outcome, setOutcome] = useState("");
 
   const load = () => {
-    setIsLoading(true);
-    setError("");
+    setLoading(true);
+    setError(null);
     listGlobalAuditLogs(500)
-      .then((r) => { setLogs(r.data || []); setFiltered(r.data || []); })
-      .catch((e) => setError(e.message || "Failed to load audit logs"))
-      .finally(() => setIsLoading(false));
+      .then((r) => setLogs((r.data || []) as AuditRow[]))
+      .catch((e) => setError(e?.message || "The audit log could not be loaded."))
+      .finally(() => setLoading(false));
   };
-
   useEffect(() => { load(); }, []);
 
-  useEffect(() => {
-    let result = logs;
-    if (actionFilter) result = result.filter((l) => l.action === actionFilter);
-    if (search) {
-      const s = search.toLowerCase();
-      result = result.filter((l) =>
-        (l.action || "").toLowerCase().includes(s) ||
-        (l.actor_id || "").toLowerCase().includes(s) ||
-        (l.target_id || "").toLowerCase().includes(s) ||
-        (l.case_id || "").toLowerCase().includes(s)
-      );
-    }
-    setFiltered(result);
-  }, [logs, search, actionFilter]);
-
-  const uniqueActions = [...new Set(logs.map((l) => l.action))].sort();
-
-  if (user?.role !== "AUDITOR" && user?.role !== "ADMIN") {
-    return (
-      <div className="flex h-full items-center justify-center">
-        <div className="text-center space-y-2">
-          <AlertTriangle className="h-10 w-10 text-red-400 mx-auto" />
-          <p className="text-sm text-text-primary font-semibold">Access Denied</p>
-          <p className="text-xs text-text-muted">Only AUDITOR and ADMIN roles can view the global audit trail.</p>
-        </div>
-      </div>
-    );
-  }
+  const actions = useMemo(() => [...new Set((logs ?? []).map((l) => l.action))].sort(), [logs]);
+  const filtered = useMemo(() => {
+    const s = search.trim().toLowerCase();
+    return (logs ?? []).filter((l) =>
+      (!action || l.action === action) && (!outcome || l.outcome === outcome) &&
+      (!s || [l.action, l.actor_username, l.actor_id, l.target_id, l.resource_id, l.case_id, l.office_id]
+        .some((v) => (v || "").toLowerCase().includes(s))));
+  }, [logs, search, action, outcome]);
+  const tz = logs?.[0]?.display_timezone;
+  const field = "mt-1 block w-full rounded-md border border-border-strong bg-surface-1 px-2.5 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-electric-blue-soft";
 
   return (
-    <div className="flex flex-col flex-1 min-h-0 bg-background overflow-hidden">
-      {/* Header */}
-      <div className="shrink-0 border-b border-border-subtle bg-surface-1 px-5 py-3.5 flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <ShieldCheck className="h-4 w-4 text-electric-blue-soft" />
-          <h2 className="text-sm font-bold font-mono tracking-wide uppercase text-text-primary">Global Audit Trail</h2>
-          {!isLoading && <span className="text-xs text-text-muted">· {filtered.length} / {logs.length} events</span>}
-        </div>
-        <Button variant="ghost" size="sm" className="text-xs gap-1.5" onClick={load} disabled={isLoading}>
-          <RefreshCw className={`h-3.5 w-3.5 ${isLoading ? "animate-spin" : ""}`} /> Refresh
-        </Button>
-      </div>
+    <div className="flex flex-1 min-h-0 flex-col">
+      <PageHeader icon={<ScrollText className="h-5 w-5" />} title="Audit log"
+        description="Every recorded action across all cases, newest first (the latest 500). Each case's Audit log tab has the full record, including signatures."
+        actions={<Button variant="secondary" size="sm" className="gap-1.5" onClick={load} disabled={loading}>
+          <RefreshCw className={loading ? "h-3.5 w-3.5 motion-safe:animate-spin" : "h-3.5 w-3.5"} aria-hidden="true" /> Refresh
+        </Button>} />
+      <PageBody wide>
+        <form className="grid gap-3 sm:grid-cols-[1fr_14rem_10rem_auto] sm:items-end" role="search" onSubmit={(e) => e.preventDefault()}>
+          <div>
+            <label htmlFor={ids.q} className="text-xs font-medium text-text-secondary">Search</label>
+            <input id={ids.q} type="search" value={search} onChange={(e) => setSearch(e.target.value)} className={field}
+              placeholder="Action, person, office, target or case" />
+          </div>
+          <div>
+            <label htmlFor={ids.action} className="text-xs font-medium text-text-secondary">Action</label>
+            <select id={ids.action} value={action} onChange={(e) => setAction(e.target.value)} className={field}>
+              <option value="">All actions</option>
+              {actions.map((a) => <option key={a} value={a}>{a}</option>)}
+            </select>
+          </div>
+          <div>
+            <label htmlFor={ids.outcome} className="text-xs font-medium text-text-secondary">Outcome</label>
+            <select id={ids.outcome} value={outcome} onChange={(e) => setOutcome(e.target.value)} className={field}>
+              <option value="">Any outcome</option>
+              <option value="OK">Allowed</option>
+              <option value="DENIED">Denied</option>
+              <option value="ERROR">Error</option>
+            </select>
+          </div>
+          {(search || action || outcome) && (
+            <Button type="button" variant="ghost" size="sm" onClick={() => { setSearch(""); setAction(""); setOutcome(""); }}>Clear filters</Button>
+          )}
+        </form>
 
-      {/* Filters */}
-      <div className="shrink-0 border-b border-border-subtle bg-surface-2 px-5 py-2 flex items-center gap-3 flex-wrap">
-        <div className="relative flex-1 min-w-[180px] max-w-xs">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-text-muted" />
-          <input
-            type="text" value={search} onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by action, actor, target, case…"
-            className="w-full pl-8 pr-3 py-1.5 text-xs bg-surface-1 border border-border-subtle rounded-md text-text-primary placeholder:text-text-muted focus:outline-none focus:border-electric-blue"
-          />
-        </div>
-        <div className="flex items-center gap-1.5">
-          <Filter className="h-3.5 w-3.5 text-text-muted" />
-          <select
-            value={actionFilter} onChange={(e) => setActionFilter(e.target.value)}
-            className="text-xs bg-surface-1 border border-border-subtle rounded-md px-2 py-1.5 text-text-primary focus:outline-none"
-          >
-            <option value="">All Actions</option>
-            {uniqueActions.map((a) => <option key={a} value={a}>{a}</option>)}
-          </select>
-        </div>
-        {(search || actionFilter) && (
-          <Button variant="ghost" size="sm" className="text-xs h-7" onClick={() => { setSearch(""); setActionFilter(""); }}>
-            Clear
-          </Button>
-        )}
-      </div>
-
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-2">
-        {isLoading && (
-          <div className="flex items-center justify-center py-16">
-            <div className="h-7 w-7 animate-spin rounded-full border-2 border-electric-blue border-t-transparent" />
-          </div>
-        )}
-        {error && (
-          <div className="rounded-lg border border-red-400/30 bg-red-400/5 p-4 text-xs text-red-400 flex items-center gap-2">
-            <AlertTriangle className="h-4 w-4" /> {error}
-          </div>
-        )}
-        {!isLoading && !error && filtered.length === 0 && (
-          <div className="text-center py-16 text-xs text-text-muted">No audit events match your filters.</div>
-        )}
-        {!isLoading && !error && filtered.map((log: any) => (
-          <div key={log.audit_id} className="rounded-lg border border-border-subtle bg-surface-1 px-4 py-3 flex items-center gap-4 flex-wrap hover:bg-surface-2 transition-colors">
-            <Badge tone={(ACTION_TONES[log.action] || "neutral") as any} className="text-micro font-mono shrink-0 min-w-[120px] text-center">{log.action}</Badge>
-            <span className="font-mono text-xs text-text-muted shrink-0">{log.created_at?.substring(0, 19).replace("T", " ")}</span>
-            <span className="text-xs text-text-secondary shrink-0">
-              <span className="font-semibold text-text-primary">{log.actor_id || "—"}</span>
-            </span>
-            <span className="text-xs text-text-muted shrink-0">→</span>
-            <span className="font-mono text-xs text-text-secondary truncate flex-1 min-w-[80px]">{log.target_id || log.case_id || "—"}</span>
-            {log.case_id && <span className="text-[10px] font-mono text-electric-blue shrink-0">{log.case_id}</span>}
-            {log.outcome && log.outcome !== "OK" && (
-              <Badge tone="red" className="text-micro shrink-0">{log.outcome}</Badge>
-            )}
-          </div>
-        ))}
-      </div>
+        {error ? <ErrorState message={error} onRetry={load} />
+          : logs === null ? <LoadingState label="Loading the audit log…" rows={6} />
+          : filtered.length === 0 ? <EmptyState title={logs.length ? "No events match these filters" : "No audit events yet"} />
+          : (
+            <Section title={`${filtered.length} of ${logs.length} events`} description={tz ? `Times in ${tz}.` : undefined}>
+              <div className="-m-4 overflow-x-auto">
+                <table className="w-full text-sm">
+                  <caption className="sr-only">Audit events</caption>
+                  <thead className="sticky top-0 bg-surface-2 text-xs text-text-secondary">
+                    <tr>
+                      <th scope="col" className="px-4 py-2 text-left font-medium whitespace-nowrap">Time</th>
+                      <th scope="col" className="px-4 py-2 text-left font-medium">Action</th>
+                      <th scope="col" className="px-4 py-2 text-left font-medium">Outcome</th>
+                      <th scope="col" className="px-4 py-2 text-left font-medium">Who</th>
+                      <th scope="col" className="px-4 py-2 text-left font-medium">Target</th>
+                      <th scope="col" className="px-4 py-2 text-left font-medium">Case</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-border-subtle">
+                    {filtered.map((l) => (
+                      <tr key={l.audit_id} className="align-top hover:bg-surface-2">
+                        <td className="px-4 py-2 font-mono text-xs text-text-secondary whitespace-nowrap">{when(l)}</td>
+                        <td className="px-4 py-2 font-mono text-xs text-text-primary">{l.action}</td>
+                        <td className="px-4 py-2">
+                          <OutcomeBadge outcome={l.outcome} />
+                          {l.failure_reason && <span className="block mt-0.5 text-xs text-text-secondary">{l.failure_reason}</span>}
+                        </td>
+                        <td className="px-4 py-2">
+                          {l.actor_username || l.actor_id
+                            ? <>{l.actor_username || l.actor_id}<span className="block text-xs text-text-secondary">{[l.actor_role && roleLabel(l.actor_role), l.office_id].filter(Boolean).join(" · ")}</span></>
+                            : <span className="text-text-secondary">Not signed in</span>}
+                        </td>
+                        <td className="px-4 py-2 font-mono text-xs text-text-secondary break-all">
+                          {l.resource_type && <span className="font-sans">{l.resource_type.toLowerCase()} </span>}{l.resource_id || l.target_id || "—"}
+                        </td>
+                        <td className="px-4 py-2 whitespace-nowrap">
+                          {l.case_id ? <Link to={`/cases/${encodeURIComponent(l.case_id)}/audit`} className="font-mono text-xs text-electric-blue underline underline-offset-2">{l.case_id}</Link> : <span className="text-text-secondary">—</span>}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </Section>
+          )}
+      </PageBody>
     </div>
   );
 }
 
 /**
- * Global audit log (AUDITOR, ADMIN). The role check now happens before any request; the page used to fire
- * GET /audit (a guaranteed 403, itself audited as ACCESS_DENIED) for every other role before showing its notice.
+ * Global audit log (AUDITOR, ADMIN). The role check happens before any request; the page used to fire GET /audit (a
+ * guaranteed 403, itself audited as ACCESS_DENIED) for every other role before showing its notice.
  */
 export function GlobalAuditPage() {
   const role = useAuthStore((s) => s.user?.role);

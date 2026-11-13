@@ -112,7 +112,7 @@ export function RequestsPage() {
                 return (
                   <Button key={t.key} role="tab" aria-selected={tab === t.key} size="sm" variant={tab === t.key ? "secondary" : "ghost"}
                     className="h-8 gap-1.5 text-xs" onClick={() => setTab(t.key)}>
-                    {t.label}{n !== null && <span className="rounded bg-surface-2 px-1.5 text-[11px] text-text-secondary">{n}</span>}
+                    {t.label}{n !== null && <span className="rounded bg-surface-2 px-1.5 text-xs text-text-secondary">{n}</span>}
                   </Button>
                 );
               })}

@@ -131,6 +131,7 @@ export function GraphToolbar({
                 isLayoutRunning && "bg-teal-primary text-white",
               )}
               onClick={onToggleLayout}
+              aria-label={isLayoutRunning ? "Pause layout" : "Organize layout"}
             >
               {isLayoutRunning ? (
                 <>

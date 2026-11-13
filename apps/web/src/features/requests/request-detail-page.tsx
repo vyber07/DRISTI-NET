@@ -163,12 +163,12 @@ export function RequestDetailPage() {
               ...Object.entries(row.details).map(([k, v]) => ({ label: DETAIL_LABEL[k] ?? k.replace(/_/g, " "), value: k === "requested_role" ? roleLabel(String(v)) : String(v) })),
             ]} />
             <div>
-              <h3 className="text-xs font-medium uppercase text-text-muted">Why it is needed</h3>
+              <h3 className="text-sm font-semibold text-text-primary">Why it is needed</h3>
               <p className="mt-1 whitespace-pre-wrap text-sm">{row.justification}</p>
             </div>
             {row.decision_reason && (
               <div>
-                <h3 className="text-xs font-medium uppercase text-text-muted">Decision reason</h3>
+                <h3 className="text-sm font-semibold text-text-primary">Decision reason</h3>
                 <p className="mt-1 whitespace-pre-wrap text-sm">{row.decision_reason}</p>
               </div>
             )}

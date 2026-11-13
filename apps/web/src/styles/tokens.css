@@ -136,7 +136,8 @@
   --text-h3: 16px;
   --text-body: 14px;
   --text-small: 12px;
-  --text-micro: 11px;
+  /* P2.1: raised from 11px to the design system's 12px minimum (frontend-design/DESIGN_SYSTEM.md §3). */
+  --text-micro: 12px;
 
   /* ---------------------------------------------------------------------
      Motion (deliberate, non-decorative)

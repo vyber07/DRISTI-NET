@@ -3,7 +3,7 @@ import { AlertTriangle, Check, History, Plus, RefreshCw, ShieldOff, X } from "lu
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { DeniedState } from "@/components/layout/page";
+import { DeniedState, EmptyState, LoadingState } from "@/components/layout/page";
 import { useAuthStore } from "@/stores/authStore";
 import { ALL_ROLES, can, deniedReason, roleLabel } from "@/lib/permissions";
 import { type AdminUser, listAllUsers } from "@/services/api/usersApi";
@@ -298,14 +298,14 @@ function OverridesContent() {
 
       <div className="flex-1 overflow-y-auto p-4">
         {error && (
-          <div className="mb-3 flex items-center gap-2 rounded-lg border border-red-400/30 bg-red-400/5 p-4 text-xs text-red-400">
+          <div className="mb-3 flex items-center gap-2 rounded-lg border border-critical-red/30 bg-critical-red/5 p-4 text-xs text-critical-red">
             <AlertTriangle className="h-4 w-4" /> {error}
           </div>
         )}
         {rows === null ? (
-          <div className="flex items-center justify-center py-16"><div className="h-7 w-7 animate-spin rounded-full border-2 border-electric-blue border-t-transparent" /></div>
+          <LoadingState label="Loading overrides…" rows={4} />
         ) : rows.length === 0 ? (
-          <p className="py-12 text-center text-sm text-text-secondary">No {filter === "all" ? "" : filter} overrides.</p>
+          <EmptyState icon={ShieldOff} title={`No ${filter === "all" ? "" : filter + " "}overrides`}>Overrides are time-limited exceptions to role-based access. They appear here once an administrator creates one.</EmptyState>
         ) : (
           <div className="overflow-x-auto rounded-lg border border-border-subtle">
             <table className="w-full text-sm" data-testid="overrides-table">

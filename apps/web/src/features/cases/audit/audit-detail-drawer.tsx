@@ -71,7 +71,7 @@ export function AuditDetailDrawer() {
       >
         <div className="flex items-center justify-between border-b border-border-subtle px-4 py-3 shrink-0 bg-surface-2/50">
           <div className="flex items-center gap-2">
-            <ShieldCheck className="h-4 w-4 text-emerald-400" />
+            <ShieldCheck className="h-4 w-4 text-verified-emerald" />
             <h2 className="text-sm font-semibold text-text-primary tracking-tight">
               Audit Record Inspection
             </h2>
@@ -155,11 +155,11 @@ export function AuditDetailDrawer() {
             {selectedLog.detail && Object.keys(selectedLog.detail).length > 0 && (
               <div className="space-y-3">
                 <h4 className="text-xs font-semibold text-text-primary uppercase tracking-wider flex items-center gap-2">
-                  <Code className="h-3.5 w-3.5 text-purple-400" />
+                  <Code className="h-3.5 w-3.5 text-court-purple" />
                   Telemetry &amp; State Diff
                 </h4>
                 <div className="bg-surface-2 rounded-md border border-border-subtle p-3 text-xs overflow-x-auto">
-                  <pre className="font-mono text-[10px] text-text-secondary leading-relaxed">
+                  <pre className="font-mono text-xs text-text-secondary leading-relaxed">
                     {JSON.stringify(selectedLog.detail, null, 2)}
                   </pre>
                 </div>
@@ -168,23 +168,23 @@ export function AuditDetailDrawer() {
 
             <div className="space-y-3">
               <h4 className="text-xs font-semibold text-text-primary uppercase tracking-wider flex items-center gap-2">
-                <ShieldCheck className="h-3.5 w-3.5 text-emerald-400" />
+                <ShieldCheck className="h-3.5 w-3.5 text-verified-emerald" />
                 Trace Reference
               </h4>
-              <div className="bg-surface-2 rounded-md border border-emerald-500/30 p-3 space-y-3 shadow-[0_0_10px_rgba(16,185,129,0.05)_inset]">
+              <div className="bg-surface-2 rounded-md border border-verified-emerald/30 p-3 space-y-3 shadow-[0_0_10px_rgba(16,185,129,0.05)_inset]">
                 <div className="space-y-1">
                   <span className="text-micro font-mono text-text-muted uppercase tracking-wider">
                     Trace ID (Session/Context)
                   </span>
                   <div className="flex items-center justify-between gap-2 bg-background border border-border-subtle rounded px-2 py-1.5">
-                    <code className="text-[10px] font-mono text-text-secondary truncate">
+                    <code className="text-xs font-mono text-text-secondary truncate">
                       {selectedLog.trace_id}
                     </code>
                     <button
                       onClick={() => handleCopy(selectedLog.trace_id, "trace")}
                       className="text-text-muted hover:text-electric-blue shrink-0"
                     >
-                      {copiedState["trace"] ? <Check className="h-3 w-3 text-emerald-400" /> : <Copy className="h-3 w-3" />}
+                      {copiedState["trace"] ? <Check className="h-3 w-3 text-verified-emerald" /> : <Copy className="h-3 w-3" />}
                     </button>
                   </div>
                 </div>
