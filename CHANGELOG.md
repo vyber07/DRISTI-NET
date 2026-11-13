@@ -1,3 +1,17 @@
+# Unreleased — graph full-screen mode (branch `worktree-auth-login-ratelimit`)
+- The relationship graph tab can go full screen: a **Full screen** button (`aria-pressed`), the **F** key, and Esc to
+  leave. It uses the browser Fullscreen API (with the WebKit prefix) and falls back to a full-window mode where that
+  is unavailable (iPhone Safari, iframes).
+- Full screen covers the whole graph workspace as the same DOM element. Zoom, pan, selection, filters and time
+  position are kept; nothing remounts or reloads.
+- Dialogs and tooltips now portal into the full-screen element while it is active (`stores/portalStore.ts`). Before,
+  the reveal-reason dialog would have been invisible in full screen.
+- The graph no longer re-fits the camera on every resize, so zoom survives full screen, window resizes and tablet
+  rotation. "Fit graph to view" has its own icon (it used the Maximize icon).
+- Frontend only. Docs: `docs/GRAPH_FULLSCREEN.md`. Browser verification 27 of 27
+  (`scripts/reliability/verify_graph_fullscreen.mjs`); graph, user-ID and case-team walkthroughs re-run (16, 12 and 21
+  of each passed).
+
 # Unreleased — graph loading and rendering (branch `worktree-auth-login-ratelimit`)
 - Root cause: with Neo4j configured, every graph, analysis, report and integrity request rewrote the whole case into
   Neo4j.

@@ -2,6 +2,7 @@ import * as React from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { usePortalStore } from "@/stores/portalStore";
 
 const Dialog = DialogPrimitive.Root;
 const DialogTrigger = DialogPrimitive.Trigger;
@@ -27,7 +28,8 @@ const DialogContent = React.forwardRef<
   React.ComponentRef<typeof DialogPrimitive.Content>,
   React.ComponentPropsWithoutRef<typeof DialogPrimitive.Content>
 >(({ className, children, ...props }, ref) => (
-  <DialogPortal>
+  // Inside the full-screen element while a page is in full screen (stores/portalStore.ts), otherwise <body>.
+  <DialogPortal container={usePortalStore((s) => s.container) ?? undefined}>
     <DialogOverlay />
     <DialogPrimitive.Content
       ref={ref}

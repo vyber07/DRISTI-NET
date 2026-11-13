@@ -309,10 +309,13 @@ export class GraphEngine {
       this.drawCustomOverlay();
 
       if (this.resizeDebounceTimer) window.clearTimeout(this.resizeDebounceTimer);
+      // P1.5: keep the camera (zoom, pan) across resizes -- entering or leaving full screen, rotating a tablet, opening
+      // the details panel. It used to refit on every resize, throwing away where the investigator had zoomed to. The
+      // custom bounding box is unchanged, so an un-zoomed view still fits the new size by itself.
       this.resizeDebounceTimer = window.setTimeout(() => {
         this.sigma?.resize();
         this.sigma?.refresh();
-        this.updateCustomBBoxAndFit(true);
+        this.drawCustomOverlay();
       }, 200);
     });
     this.resizeObserver.observe(this.container);

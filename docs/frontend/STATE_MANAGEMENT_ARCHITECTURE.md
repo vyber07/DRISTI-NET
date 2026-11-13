@@ -28,6 +28,7 @@
 | `revealStore.ts` | PII reveal workflow state | UI workflow | Good — focused scope |
 | `provenanceStore.ts` | Provenance viewer data | Server | Good |
 | `uiStore.ts` | Sidebar open/closed, theme | UI | Good — pure UI state |
+| `portalStore.ts` | Where Radix dialogs/tooltips portal: `<body>`, or the element shown full screen (P1.5) | UI | Set only by `lib/fullscreen.useElementFullscreen`; `null` outside full screen |
 
 ---
 

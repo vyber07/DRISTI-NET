@@ -10,6 +10,9 @@ Sigma/graphology for the graph). Redesigned 2026-11-04. The full design is in `f
 - `src/features/`: `command-center` (Home), `cases` (layout, overview, evidence, graph tab, timeline, map, analysis, decisions, audit),
   `review` (review queue), `reports`, `audit` (global), `profile` (Account), `auth`, `not-found`.
 - `src/lib/permissions.ts`: role → capability hints, mirroring the backend's `require_roles`. The server always decides.
+- `src/lib/fullscreen.ts`: `useElementFullscreen` (browser Fullscreen API with a full-window fallback) used by the graph tab;
+  while active, `stores/portalStore.ts` makes `ui/dialog.tsx` and `ui/tooltip.tsx` portal into the full-screen element so they stay
+  visible (docs/GRAPH_FULLSCREEN.md).
 - `src/services/api/`: the API client (`real_client.ts`: bearer token; a 401 sends you to sign-in and back) and per-domain calls.
 
 Build for tests with `npx vite build --outDir <dir>` and serve it with `DRISHTI_WEB_DIST=<dir>`. `make build-web` writes `apps/web/dist`,

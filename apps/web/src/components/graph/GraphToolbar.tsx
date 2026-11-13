@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ZoomIn, ZoomOut, Maximize2, Play, Pause, Search, SlidersHorizontal, User, Building2, MapPin, CalendarClock, Landmark, ShieldHalf } from "lucide-react";
+import { ZoomIn, ZoomOut, Focus, Play, Pause, Search, SlidersHorizontal, User, Building2, MapPin, CalendarClock, Landmark, ShieldHalf } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -110,12 +110,13 @@ export function GraphToolbar({
               size="icon"
               className="h-7 w-7 text-text-secondary hover:text-text-primary shrink-0"
               onClick={onReset}
-              aria-label="Fit to Screen"
+              aria-label="Fit graph to view"
             >
-              <Maximize2 className="h-3.5 w-3.5" />
+              {/* Not Maximize: that icon means full screen (P1.5). This only re-fits the camera. */}
+              <Focus className="h-3.5 w-3.5" />
             </Button>
           </TooltipTrigger>
-          <TooltipContent side="bottom">Fit to Screen</TooltipContent>
+          <TooltipContent side="bottom">Fit graph to view</TooltipContent>
         </Tooltip>
 
         <div className="mx-0.5 h-4 w-px bg-border-subtle shrink-0" />

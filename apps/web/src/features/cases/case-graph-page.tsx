@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { Network, PanelRightClose, PanelRightOpen } from "lucide-react";
+import { Maximize, Minimize, Network, PanelRightClose, PanelRightOpen } from "lucide-react";
+import { dialogOpen, useElementFullscreen } from "@/lib/fullscreen";
 import { GraphCanvas } from "@/components/graph/GraphCanvas";
 import { GraphListView } from "@/components/graph/GraphListView";
 import { GraphCanvasBoundary } from "@/components/graph/GraphCanvasBoundary";
@@ -37,6 +38,24 @@ export function CaseGraphPage() {
   const showPanel = panelOpen;
   // P1.4: a case with nothing projected yet used to show a blank canvas and a time slider blaming "undated" relationships.
   const empty = !isLoading && !error && nodes.length === 0;
+  // P1.5: full screen for the whole graph workspace (counts, view switch, canvas, details, time slider) -- the same DOM
+  // element, so the engine, its camera, the selection and the filters carry over and nothing is fetched again.
+  const workspaceRef = useRef<HTMLDivElement>(null);
+  const fs = useElementFullscreen(workspaceRef);
+
+  // "F" toggles full screen (not while typing, not with modifiers, not while a dialog is open).
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "f" && e.key !== "F") return;
+      if (e.ctrlKey || e.metaKey || e.altKey || e.defaultPrevented || dialogOpen()) return;
+      const t = e.target as HTMLElement | null;
+      if (t && (t.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(t.tagName))) return;
+      e.preventDefault();
+      fs.toggle();
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [fs.toggle]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     loadGraph(caseId);
@@ -50,7 +69,10 @@ export function CaseGraphPage() {
   }, [isLoading, focusEntity, nodes, selectNode]);
 
   return (
-    <div className="flex flex-1 min-h-0 flex-col">
+    <div ref={workspaceRef} data-testid="graph-workspace" data-fullscreen={fs.mode ?? "off"}
+      className={cn("flex flex-1 min-h-0 flex-col bg-background",
+        fs.mode === "window" && "fixed inset-0 z-[60] h-[100dvh] w-screen")}>
+      <p className="sr-only" aria-live="polite">{fs.isFullscreen ? "Graph shown full screen. Press Escape or F to leave." : ""}</p>
       <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border-subtle bg-surface-1 px-4 sm:px-6 py-2">
         <p className="text-sm text-text-secondary">
           <span className="font-semibold text-text-primary" data-testid="graph-counts">{isLoading ? "Loading…" : `${nodes.length} entities · ${edges.length} relationships`}</span>
@@ -69,6 +91,12 @@ export function CaseGraphPage() {
         <Button variant="ghost" size="sm" className="gap-1.5" onClick={() => setPanelOpen(!showPanel)} aria-expanded={showPanel} aria-controls="graph-detail">
           {showPanel ? <PanelRightClose className="h-4 w-4" aria-hidden="true" /> : <PanelRightOpen className="h-4 w-4" aria-hidden="true" />}
           {showPanel ? "Hide details" : "Show details"}
+        </Button>
+        <Button variant="ghost" size="sm" className="gap-1.5" onClick={fs.toggle} aria-pressed={fs.isFullscreen}
+          aria-label={fs.isFullscreen ? "Exit full screen" : "Full screen"} title={fs.isFullscreen ? "Exit full screen (Esc or F)" : "Full screen (F)"}
+          data-testid="graph-fullscreen-toggle">
+          {fs.isFullscreen ? <Minimize className="h-4 w-4" aria-hidden="true" /> : <Maximize className="h-4 w-4" aria-hidden="true" />}
+          <span className="hidden sm:inline">{fs.isFullscreen ? "Exit full screen" : "Full screen"}</span>
         </Button>
         </div>
       </div>
