@@ -55,8 +55,10 @@ table headers, never for sentences.
 ## 4. Layout
 - **App shell**:
   - top bar (40px): signed-in user, role, jurisdiction, masking state, Sign out;
-  - sidebar (240px, collapses to 56px);
-  - below 1024px the sidebar becomes an overlay drawer opened from a menu button.
+  - sidebar (224px, collapses to 56px; the choice is remembered), grouped into Workspace / Oversight / Administration
+    with only the sections a role may open; collapsed icons name themselves in a tooltip on hover and keyboard focus;
+  - below 1024px the sidebar becomes a modal drawer (focus trapped, Esc closes, focus returns to the menu button) opened
+    from a menu button (`docs/frontend/NAVIGATION.md`).
 - **Page**: `PageHeader` (breadcrumb, H1, one-line description, actions on the right), then content in a centred
   column (`max-w-6xl`, 24px padding, 16px on small screens).
 - **Case workspace**:

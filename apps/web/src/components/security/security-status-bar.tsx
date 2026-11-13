@@ -15,16 +15,17 @@ import { NotificationsBell } from "@/components/layout/notifications-bell";
  */
 export function SecurityStatusBar() {
   const { user, logout } = useAuthStore();
-  const { setMobileNavOpen } = useUIStore();
+  const { mobileNavOpen, setMobileNavOpen } = useUIStore();
   const { pathname } = useLocation();
   useEffect(() => { setMobileNavOpen(false); }, [pathname, setMobileNavOpen]);
   if (!user) return null;
 
   return (
     <header className="flex h-12 items-center gap-3 border-b border-border-subtle bg-surface-1 px-3 sm:px-4 shrink-0 min-w-0">
-      <button type="button" className="lg:hidden rounded-md p-1.5 text-text-secondary hover:bg-surface-2" aria-label="Open navigation"
+      <button type="button" id="mobile-nav-trigger" className="lg:hidden rounded-md p-1.5 text-text-secondary hover:bg-surface-2" aria-label="Open navigation"
+        aria-haspopup="dialog" aria-expanded={mobileNavOpen} aria-controls="mobile-nav"
         onClick={() => setMobileNavOpen(true)}>
-        <Menu className="h-5 w-5" />
+        <Menu className="h-5 w-5" aria-hidden="true" />
       </button>
       <div className="flex min-w-0 flex-1 items-center gap-x-3 text-sm">
         <span className="font-semibold text-text-primary truncate" data-testid="current-user">{user.display_name}</span>

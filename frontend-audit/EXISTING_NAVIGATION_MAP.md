@@ -1,5 +1,7 @@
 # Existing navigation map
 
+> **Historical** (pre-redesign audit). The current navigation is documented in `docs/frontend/NAVIGATION.md` (P2.2, 2026-11-13).
+
 Audited read-only against commit `817bfd0` and the working tree as it stood at the start of the audit. Page IDs (P-xx, O-xx) refer to `FRONTEND_PAGE_INVENTORY.md`.
 
 ## 1. Global chrome (every authenticated route, via `AppShell`)

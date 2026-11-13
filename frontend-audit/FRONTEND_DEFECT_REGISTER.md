@@ -600,3 +600,15 @@ Browser sweep of 21 routes × 2 widths (axe-core 4.10.2) plus a static scan; all
 | FE-068 | P3 | 47 Tailwind palette colour classes instead of tokens (low contrast `emerald-400`/`amber-400` on white) | Fixed: 0 left |
 | FE-069 | P3 | Ad-hoc spinners and plain-text empty states on newer pages | Fixed: `LoadingState`/`EmptyState`/`ErrorState` |
 
+## P2.2 sidebar (2026-11-13, `docs/frontend/NAVIGATION.md`)
+
+`scripts/reliability/verify_sidebar.mjs`: 28/43 on the previous build, 44/44 after.
+
+| ID | Severity | Finding | Status |
+|---|---|---|---|
+| FE-070 | P2 | Mobile navigation drawer declared `role=dialog aria-modal` but focus was not moved in or trapped, Esc did not close it and focus was not returned | Fixed: Radix dialog; focus returned to the menu button explicitly |
+| FE-071 | P3 | All items, including administration, in one "Workspace" section | Fixed: Workspace / Oversight / Administration, hidden when empty |
+| FE-072 | P3 | Collapsed sidebar not remembered across reloads; collapsed icons named only by `title` (not shown to keyboard users) | Fixed: remembered per browser; tooltip on focus |
+| FE-073 | P3 | Menu button did not report the drawer state (`aria-expanded`/`aria-controls`) | Fixed |
+| FE-074 | P2 | (introduced and fixed during P2.2) collapsed icons dark-on-dark after wrapping links in a tooltip trigger | Fixed: `useMatch` class; contrast check added to the walkthrough |
+

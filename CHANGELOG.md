@@ -1,3 +1,18 @@
+# Unreleased — sidebar navigation (branch `worktree-auth-login-ratelimit`)
+- The sidebar is grouped into Workspace, Oversight and Administration, showing only the sections a role may open.
+  Every item is an implemented route, checked per role.
+- Collapsing to icons is remembered across reloads. Collapsed icons show their name in a tooltip on hover and keyboard
+  focus.
+- On phones and tablets the navigation drawer is a real modal dialog:
+  - focus moves in and is trapped;
+  - Esc, the close button or the backdrop close it;
+  - focus returns to the menu button;
+  - following a link closes it.
+- The menu button reports its state (`aria-expanded`, `aria-controls`).
+- Fixed during the work: collapsed icons rendered dark on dark (tooltip wrapper dropped `NavLink`'s class function).
+- Docs: `docs/frontend/NAVIGATION.md`. Verification `scripts/reliability/verify_sidebar.mjs` 44/44 (baseline 28/43).
+  Regressions: audit sweep clean, graph 16/16, full screen 27/27, user ID 12/12, case team 22/22.
+
 # Unreleased — UI/UX audit and consistency pass (branch `worktree-auth-login-ratelimit`)
 - Audited every route as the role that uses it, at desktop and phone width (axe WCAG A/AA, H1, overflow, text size,
   errors), plus a static scan for design-system drift (`frontend-audit/P21_UI_AUDIT.md`).
