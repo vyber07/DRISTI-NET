@@ -54,7 +54,7 @@ class User(Base):
     # SEC-02: bumped on every password change so tokens issued before it stop working immediately
     # (checked against the JWT's own "tv" claim in auth.current_user), instead of staying valid
     # until their natural TOKEN_TTL_SECONDS expiry.
-    token_version: Mapped[int] = mapped_column(Integer, default=0)
+    token_version: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
     # Verified organisational office (e.g. "OFF-DDA"). Assigned by an administrator and read from this row for every
     # audit event. It is never taken from request headers, IP geolocation or the client.
     office_id: Mapped[str | None] = mapped_column(String, nullable=True, index=True)

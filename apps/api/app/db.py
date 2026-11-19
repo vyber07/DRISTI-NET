@@ -55,6 +55,7 @@ def init_db() -> None:
     Any other backend (PostgreSQL in the target architecture): migrations must be run explicitly
     via `python3 -m apps.api.app.migrations` rather than on API startup.
     """
+    from . import models  # noqa: F401 (ensure all declarative models are registered in Base.metadata)
     if config.DATABASE_URL.startswith("sqlite"):
         Base.metadata.create_all(engine)
         _sqlite_add_missing_columns()
