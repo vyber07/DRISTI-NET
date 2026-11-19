@@ -217,5 +217,19 @@ class OrgUserIdRetireIn(BaseModel):
     reason: str = Field(max_length=500)
 
 
+class ProfileUpdateIn(BaseModel):
+    """PATCH /auth/me (P2.3): the only field a user may change about themselves. Anything else (role, office,
+    jurisdiction, user ID, username, status) is refused with 422 -- those are administrator-controlled."""
+    model_config = ConfigDict(extra="forbid")
+    display_name: str = Field(max_length=200)
+
+
+class PasswordChangeIn(BaseModel):
+    """POST /auth/me/password (P2.3)."""
+    model_config = ConfigDict(extra="forbid")
+    current_password: str = Field(min_length=1, max_length=200)
+    new_password: str = Field(min_length=8, max_length=200)
+
+
 class PasswordResetIn(BaseModel):
     new_password: str = Field(min_length=8, max_length=200)
