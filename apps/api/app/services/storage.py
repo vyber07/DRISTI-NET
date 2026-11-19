@@ -53,6 +53,16 @@ def _local_read(rel: str) -> bytes:
     return _abs(rel).read_bytes()
 
 
+def _local_iter(rel: str, chunk_size: int = 1 << 20):
+    p = _abs(rel)
+    with open(p, "rb") as f:
+        while True:
+            chunk = f.read(chunk_size)
+            if not chunk:
+                break
+            yield chunk
+
+
 def _local_exists(rel: str) -> bool:
     return _abs(rel).exists()
 
@@ -109,6 +119,11 @@ def _s3_write(rel: str, data: bytes) -> None:
 
 def _s3_read(rel: str) -> bytes:
     return _client().get_object(Bucket=config.S3_BUCKET, Key=rel)["Body"].read()
+
+
+def _s3_iter(rel: str, chunk_size: int = 1 << 20):
+    body = _client().get_object(Bucket=config.S3_BUCKET, Key=rel)["Body"]
+    yield from body.iter_chunks(chunk_size=chunk_size)
 
 
 def _s3_exists(rel: str) -> bool:
@@ -176,6 +191,11 @@ def promote_to_accepted(rel: str) -> str:
 
 def read_bytes(rel: str) -> bytes:
     return (_s3_read if _using_s3() else _local_read)(rel)
+
+
+def iter_bytes(rel: str, chunk_size: int = 1 << 20):
+    """Yield chunks of object bytes without loading the entire file into memory (e.g. for streaming downloads)."""
+    return (_s3_iter if _using_s3() else _local_iter)(rel, chunk_size=chunk_size)
 
 
 def exists(rel: str) -> bool:

@@ -35,7 +35,7 @@ export interface AuthState {
   
   login: (username: string, password?: string) => Promise<{ success: boolean; error?: string }>;
   /** expired: the session was rejected by the server; the login page then returns the officer to this page. */
-  logout: (opts?: { expired?: boolean }) => void;
+  logout: (opts?: { expired?: boolean }) => void | Promise<void>;
   setPiiMasked: (masked: boolean) => void;
   restoreSession: () => Promise<void>;
 }
@@ -139,15 +139,24 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     }
   },
 
-  logout: (opts) => {
+  logout: async (opts) => {
+    try {
+      if (!opts?.expired) {
+        const { post } = await import("../services/api/real_client");
+        await post("/auth/logout").catch(() => {});
+      }
+    } catch {
+      // Best-effort server session revocation
+    }
+
     try {
       if (typeof window !== "undefined") {
         localStorage.removeItem(STORAGE_KEY);
       }
-      import("../services/api/real_client").then(({ clearSession }) => {
-        clearSession();  // was setSession("", undefined): wrote an empty token and the string "undefined"
-      });
-      void import("./permissionsStore").then(({ usePermissionsStore }) => usePermissionsStore.getState().clear());
+      const { clearSession } = await import("../services/api/real_client");
+      clearSession();  // was setSession("", undefined): wrote an empty token and the string "undefined"
+      const { usePermissionsStore } = await import("./permissionsStore");
+      usePermissionsStore.getState().clear();
     } catch {
       // Storage fallback
     }

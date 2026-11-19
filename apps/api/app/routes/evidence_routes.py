@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Query, Request, UploadFile
-from fastapi.responses import Response
+from fastapi.responses import Response, StreamingResponse
 from fastapi import Response as FastAPIResponse
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
@@ -288,11 +288,20 @@ def download(evidence_id: str, body: DownloadIn, request: Request, user: User = 
     masking_policy.authorize_reveal(db, user, "RAW_FILE", ev.case_id, request, "EVIDENCE", evidence_id, body.reason)
     if ev.status in ("QUARANTINED", "MALWARE_SCANNING", "INFECTED", "SCAN_FAILED", "SCAN_TIMEOUT", "SCANNER_UNAVAILABLE", "INTEGRITY_MISMATCH"):
         raise HTTPException(409, "file is still in quarantine")
-    data = storage.read_bytes(ev.storage_path)
     record_audit(db, request.state.trace_id, user.user_id, "EVIDENCE_DOWNLOAD", "EVIDENCE", evidence_id, ev.case_id,
                  detail={"reason": body.reason, "unmasked": True, "sha256": ev.sha256})
     db.commit()
-    return Response(content=data, media_type=ev.detected_type, headers={"Content-Disposition": f'attachment; filename="{ev.filename}"', "X-Evidence-SHA256": ev.sha256})
+    headers = {
+        "Content-Disposition": f'attachment; filename="{ev.filename}"',
+        "X-Evidence-SHA256": ev.sha256,
+    }
+    if ev.size_bytes is not None:
+        headers["Content-Length"] = str(ev.size_bytes)
+    return StreamingResponse(
+        storage.iter_bytes(ev.storage_path),
+        media_type=ev.detected_type or "application/octet-stream",
+        headers=headers,
+    )
 
 
 @router.get("/evidence/{evidence_id}/claims")
