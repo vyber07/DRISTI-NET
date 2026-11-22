@@ -1,0 +1,380 @@
+{
+ "anon /login @1440": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 1440,
+  "small": 0,
+  "samples": [],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /command-center @1440": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 1440,
+  "small": 0,
+  "samples": [],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /cases @1440": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 1440,
+  "small": 0,
+  "samples": [],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /cases/CASE-0001 @1440": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 1440,
+  "small": 0,
+  "samples": [],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /cases/CASE-0001/evidence @1440": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 1440,
+  "small": 0,
+  "samples": [],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /cases/CASE-0001/review @1440": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 1440,
+  "small": 0,
+  "samples": [],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /cases/CASE-0001/graph @1440": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 1440,
+  "small": 0,
+  "samples": [],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /cases/CASE-0001/timeline @1440": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 1440,
+  "small": 0,
+  "samples": [],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /cases/CASE-0001/locations @1440": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 1440,
+  "small": 0,
+  "samples": [],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /cases/CASE-0001/analysis @1440": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 1440,
+  "small": 0,
+  "samples": [],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /cases/CASE-0001/decisions @1440": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 1440,
+  "small": 0,
+  "samples": [],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /cases/CASE-0001/reports @1440": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 1440,
+  "small": 0,
+  "samples": [],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /cases/CASE-0001/audit @1440": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 1440,
+  "small": 0,
+  "samples": [],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /profile @1440": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 1440,
+  "small": 0,
+  "samples": [],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /requests @1440": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 1440,
+  "small": 0,
+  "samples": [],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /requests/1 @1440": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 1440,
+  "small": 0,
+  "samples": [],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /nope @1440": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 1440,
+  "small": 0,
+  "samples": [],
+  "axe": [],
+  "logs": []
+ },
+ "admin /admin/users @1440": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 1440,
+  "small": 0,
+  "samples": [],
+  "axe": [],
+  "logs": []
+ },
+ "admin /admin/overrides @1440": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 1440,
+  "small": 0,
+  "samples": [],
+  "axe": [],
+  "logs": []
+ },
+ "admin /admin/case-assignments @1440": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 1440,
+  "small": 0,
+  "samples": [],
+  "axe": [],
+  "logs": []
+ },
+ "admin /audit @1440": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 1440,
+  "small": 0,
+  "samples": [],
+  "axe": [],
+  "logs": []
+ },
+ "anon /login @390": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 390,
+  "small": 0,
+  "samples": [],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /command-center @390": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 390,
+  "small": 0,
+  "samples": [],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /cases @390": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 390,
+  "small": 0,
+  "samples": [],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /cases/CASE-0001 @390": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 390,
+  "small": 0,
+  "samples": [],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /cases/CASE-0001/evidence @390": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 390,
+  "small": 0,
+  "samples": [],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /cases/CASE-0001/review @390": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 390,
+  "small": 0,
+  "samples": [],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /cases/CASE-0001/graph @390": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 390,
+  "small": 0,
+  "samples": [],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /cases/CASE-0001/timeline @390": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 390,
+  "small": 0,
+  "samples": [],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /cases/CASE-0001/locations @390": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 390,
+  "small": 0,
+  "samples": [],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /cases/CASE-0001/analysis @390": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 390,
+  "small": 0,
+  "samples": [],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /cases/CASE-0001/decisions @390": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 390,
+  "small": 0,
+  "samples": [],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /cases/CASE-0001/reports @390": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 390,
+  "small": 0,
+  "samples": [],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /cases/CASE-0001/audit @390": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 390,
+  "small": 0,
+  "samples": [],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /profile @390": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 390,
+  "small": 0,
+  "samples": [],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /requests @390": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 390,
+  "small": 0,
+  "samples": [],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /requests/1 @390": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 390,
+  "small": 0,
+  "samples": [],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /nope @390": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 390,
+  "small": 0,
+  "samples": [],
+  "axe": [],
+  "logs": []
+ },
+ "admin /admin/users @390": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 390,
+  "small": 0,
+  "samples": [],
+  "axe": [],
+  "logs": []
+ },
+ "admin /admin/overrides @390": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 390,
+  "small": 0,
+  "samples": [],
+  "axe": [],
+  "logs": []
+ },
+ "admin /admin/case-assignments @390": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 765,
+  "small": 0,
+  "samples": [],
+  "axe": [],
+  "logs": []
+ },
+ "admin /audit @390": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 390,
+  "small": 0,
+  "samples": [],
+  "axe": [],
+  "logs": []
+ }
+}

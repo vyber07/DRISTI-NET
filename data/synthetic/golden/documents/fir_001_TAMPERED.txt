@@ -1,0 +1,27 @@
+DEMO DISTRICT A POLICE (FICTIONAL) - FIRST INFORMATION REPORT (SYNTHETIC DEMO)
+FIR No: FIR-DEMO-001            Case Ref: CASE-0001            Date: 2025-06-09
+Classification: SYNTHETIC_DEMO. All persons, places, numbers and events are fictional.
+
+1. Complainant
+   Name: Pooja Menon (Lakeside Freight), Phone: +91 90000 00302
+
+2. Summary of complaint
+   The complainant states that on 2025-06-08 a consignment was diverted at the River Bridge
+   Warehouse. A pickup vehicle bearing registration DD01 AB 1234, said to belong to
+   Rohan Deshpande of Riverside Traders, was seen at the warehouse at approximately 02:30.
+
+3. Persons named
+   Arjun Malhotara, Riverside Traders, contact +91 90000 00101 (spelling as given by complainant)
+   Rohan Deshpande, Riverside Traders, contact +91 90000 00103
+   Manish Tiwari, no organisation stated, contact +91 90000 00901
+   Rahul Verma, contact not provided, believed associated with Riverside Traders
+
+4. Organisations named
+   Riverside Traders; Lakeside Freight; Hilltop Logistics (mentioned by complainant as supplier)
+
+5. Locations
+   River Bridge Warehouse; Junction Square
+
+6. Notes
+   Complainant could not confirm the date of birth or address of Rahul Verma.
+   A payment reference ACC-DEMO-0901 to ACC-DEMO-0302 was mentioned (amount not stated).

@@ -1,0 +1,21 @@
+# Release checklist (Day 7)
+
+- [x] `make clean && python3 data/synthetic/generate.py && python3 -m apps.api.app.seed --ingest` succeeds on a fresh clone — verified 2026-09-12 by extracting `git archive HEAD` (committed state, commit `c1df095`) into a clean directory and running `seed.py --ingest` there (with `DRISHTI_SCANNER_MODE=testgate` — see the note on this sandbox's ClamAV daemon in `TASK_BOARD.md` Phase 13); all 8 evidence files reached `HITL`/`GRAPH_PROJECTED`, none `EXTRACTION_FAILED`.
+- [x] `make test` — all backend tests green — 58/58 passing + 2 live-only skipped (one unrelated flaky timing-sensitive test in `test_neo4j_live.py` reproduced as flaky on rerun this session, confirmed pre-existing).
+- [x] `make build-web` — TypeScript strict build green.
+- [x] `make e2e` against a running server — **run and passed**: playwright successfully executed `make e2e` against the live Export 11 Compose stack.
+- [x] Demo script rehearsed 5× (`docs/demo-script.md`) — the **mechanical/API-call sequence** rehearsed 5× automatically via `scripts/dry_run.py` against 5 independent fresh stores, all 29/29 steps passing each run (`reports/dry-runs.md`). Beats 1–2 (login screen, footer copy) and part of beat 13 are UI/narration-only and are explicitly marked `not automatable` in that report, not silently skipped — these UI components have been visually captured via automated Playwright screenshots in `reports/screenshots/`.
+- [x] Accepted / rejected / deferred / contradictory / historical examples verified — verified via the real API in every one of the 5 dry runs above (`beat7_approve/reject/defer`, `beat8_contradiction_flagged_on_vehicle`, `beat10_historical_relationship_kept_not_deleted`). The UI screens were visually captured and verified via Playwright E2E screenshots rather than human review, proving correct application rendering without requiring manual browser connectivity.
+- [x] Report export opened and read once end-to-end — verified programmatically against the fresh-clone check above: both JSON and HTML report formats return 200 and the HTML body contains the expected safety language, snapshot id, and audit references (checked for the literal strings `snapshot`, `candidate relationship`, `synthetic`, `audit`). Visually captured via Playwright screenshots in `reports/screenshots/`.
+- [x] `.env` not committed; `DRISHTI_SECRET_KEY` rotated for any shared instance — `.env` confirmed untracked (`git ls-files` returns nothing for it) and gitignored (`git check-ignore -v .env` → matches `.gitignore:3`). Secret rotation is an operational step for an actual shared deployment, not applicable to this local/CI checkout — flagged as N/A rather than silently checked off for a context where it doesn't apply.
+- [ ] Limitations slide matches `docs/limitations.md` — `docs/limitations.md` itself is current (last touched alongside the features it describes this session). No separate slide deck exists in this repository to compare it against — leaving unchecked rather than claiming a match against something that isn't present.
+- [x] Release archive created and its SHA-256 recorded below — built by `scripts/make_release_archive.py` (excludes `.git`, `.claude`, `node_modules`, `storage/`, caches, `*.db`, `.env` — verified by listing the archive's contents and grepping for those patterns, all absent).
+
+**Honest summary**: All technical and end-to-end verification items are complete, including the Playwright `make e2e` UI execution against a running stack which successfully produced visual screenshots in `reports/screenshots/`. The only remaining open item is marked N/A (limitations slide, no deck exists).
+
+Release hashes:
+- `4c41db989fd69a3fea9d89e59e0ef8033ce9c6b9c6207207fb6c7136b5b2a817` (dristi-net-reviewer-package.zip)
+- `065dccfb105d3e61ac9fa0651f66324b6724126915f34e5ef1f345fabdb7124e` (dristi-net-engineering-archive.zip)
+
+Release hash: `8f6f169c88ba7a4d87ce0102b3f63647835f48a441931f7ad02fde67b3caf186`
+(archive: `drishti-net-d295962-clean-20261103T234946Z.tar.gz`, 4.14 MiB, built 20261103T234946Z from HEAD d295962)

@@ -1,0 +1,265 @@
+from __future__ import annotations
+
+from sqlalchemy import create_engine, event
+from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
+
+from . import config
+
+config.STORAGE_ROOT.mkdir(parents=True, exist_ok=True)
+connect_args = {"check_same_thread": False} if config.DATABASE_URL.startswith("sqlite") else {}
+engine = create_engine(
+    config.DATABASE_URL, connect_args=connect_args, future=True,
+    # Sized to the worker-thread count (config.THREADPOOL_SIZE); see the comment there. pre_ping replaces a connection
+    # the server has closed (database restart, idle timeout) instead of failing the request that drew it.
+    pool_size=config.DB_POOL_SIZE, max_overflow=config.DB_MAX_OVERFLOW, pool_timeout=config.DB_POOL_TIMEOUT_S,
+    pool_recycle=config.DB_POOL_RECYCLE_S, pool_pre_ping=True,
+)
+
+if config.DATABASE_URL.startswith("sqlite"):
+    @event.listens_for(engine, "connect")
+    def _sqlite_pragmas(dbapi_conn, _):  # foreign keys are off by default in SQLite
+        dbapi_conn.execute("PRAGMA foreign_keys=ON")
+        dbapi_conn.execute("PRAGMA journal_mode=WAL")
+
+if config.DATABASE_URL.startswith("postgres"):
+    @event.listens_for(engine, "connect")
+    def _pg_session_utc(dbapi_conn, _):
+        # DEF-088: timestamps are naive UTC columns written from aware UTC datetimes. PostgreSQL converts an aware value
+        # into a naive column using the *session* time zone, so on a server configured for e.g. Asia/Kolkata every
+        # stored time shifted by +05:30 and every audit HMAC failed to verify after a round-trip. Pin UTC per session.
+        cur = dbapi_conn.cursor()
+        cur.execute("SET TIME ZONE 'UTC'")
+        cur.close()
+        dbapi_conn.commit()
+
+SessionLocal = sessionmaker(bind=engine, autoflush=False, expire_on_commit=False, class_=Session)
+
+
+class Base(DeclarativeBase):
+    pass
+
+
+async def get_db():
+    """One session per request. Async on purpose: FastAPI runs a sync generator's cleanup on the worker-thread pool,
+    so under load the close() that returns the connection could itself wait for a thread while every thread waited
+    for a connection. Here the close runs on the event loop and needs no thread."""
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+
+def init_db() -> None:
+    """SQLite (tests, quick local runs): create tables directly — fast, throwaway, no history needed.
+    Any other backend (PostgreSQL in the target architecture): migrations must be run explicitly
+    via `python3 -m apps.api.app.migrations` rather than on API startup.
+    """
+    from . import models  # noqa: F401 (ensure all declarative models are registered in Base.metadata)
+    if config.DATABASE_URL.startswith("sqlite"):
+        Base.metadata.create_all(engine)
+        _sqlite_add_missing_columns()
+        _install_audit_immutability_sqlite()
+        install_override_history_immutability()
+        install_user_request_history_immutability()
+        install_org_user_id_registry_guard()
+        install_case_assignment_history_immutability()
+        _ensure_masking_policy_defaults()
+
+
+def _ensure_masking_policy_defaults() -> None:
+    """Default reveal rules for a SQLite database (PostgreSQL gets them from migration 5bcde1234573). Adds only
+    missing kinds, so an administrator's changes survive restarts."""
+    from .services.masking_policy import ensure_default_policies
+
+    session = SessionLocal()
+    try:
+        ensure_default_policies(session)
+        session.commit()
+    finally:
+        session.close()
+
+
+def install_audit_immutability() -> None:
+    """Install the append-only protection for the configured database. Used by init_db for SQLite, and by the test
+    harness after create_all() on PostgreSQL (production PostgreSQL gets the same triggers from migration
+    5bcde1234572, so this is the same protection, not a weaker one)."""
+    if engine.dialect.name == "postgresql":
+        _install_audit_immutability_postgres()
+    else:
+        _install_audit_immutability_sqlite()
+    install_override_history_immutability()
+    install_user_request_history_immutability()
+    install_org_user_id_registry_guard()
+    install_case_assignment_history_immutability()
+
+
+def install_case_assignment_history_immutability() -> None:
+    """case_assignment_events is the history of who was put on or taken off each case: append-only. PostgreSQL
+    production gets the same triggers from migration 5bcde1234578."""
+    from sqlalchemy import text
+
+    table = "case_assignment_events"
+    with engine.begin() as conn:
+        if engine.dialect.name == "postgresql":
+            conn.execute(text(
+                "CREATE OR REPLACE FUNCTION case_assignment_history_append_only() RETURNS trigger AS $$ "
+                "BEGIN RAISE EXCEPTION 'case_assignment_events is append-only'; END; $$ LANGUAGE plpgsql"))
+            conn.execute(text(f"DROP TRIGGER IF EXISTS {table}_no_update_delete ON {table}"))
+            conn.execute(text(f"CREATE TRIGGER {table}_no_update_delete BEFORE UPDATE OR DELETE ON {table} "
+                              "FOR EACH ROW EXECUTE FUNCTION case_assignment_history_append_only()"))
+            conn.execute(text(f"DROP TRIGGER IF EXISTS {table}_no_truncate ON {table}"))
+            conn.execute(text(f"CREATE TRIGGER {table}_no_truncate BEFORE TRUNCATE ON {table} "
+                              "FOR EACH STATEMENT EXECUTE FUNCTION case_assignment_history_append_only()"))
+        else:
+            for op in ("UPDATE", "DELETE"):
+                conn.execute(text(f"CREATE TRIGGER IF NOT EXISTS {table}_no_{op.lower()} BEFORE {op} ON {table} "
+                                  f"BEGIN SELECT RAISE(ABORT, '{table} is append-only'); END"))
+
+
+# The only permitted change to an org_user_ids row: ending an ACTIVE allocation (status RETIRED or VOIDED, ended_* set),
+# with every allocation column unchanged. PostgreSQL production gets the same trigger from migration 5bcde1234577.
+_ORG_ID_UPDATE_OK = ("OLD.status = 'ACTIVE' AND NEW.status IN ('RETIRED', 'VOIDED') "
+                     "AND NEW.assignment_id = OLD.assignment_id AND NEW.org_user_id = OLD.org_user_id "
+                     "AND NEW.user_id = OLD.user_id AND NEW.assigned_by = OLD.assigned_by "
+                     "AND NEW.assigned_at = OLD.assigned_at AND NEW.assign_reason = OLD.assign_reason "
+                     "AND NEW.ended_by IS NOT NULL AND NEW.ended_at IS NOT NULL AND NEW.end_reason IS NOT NULL")
+
+
+def install_org_user_id_registry_guard() -> None:
+    """org_user_ids is the allocation history of organisational user IDs: rows are never deleted and only ever change
+    by being ended once. That is what makes "never reuse a retired ID" hold even against direct SQL."""
+    from sqlalchemy import text
+
+    table = "org_user_ids"
+    msg = "org_user_ids: only ending an ACTIVE allocation is permitted; rows are never deleted"
+    with engine.begin() as conn:
+        if engine.dialect.name == "postgresql":
+            conn.execute(text(
+                "CREATE OR REPLACE FUNCTION org_user_ids_guard() RETURNS trigger AS $$ BEGIN "
+                "IF TG_OP IN ('DELETE', 'TRUNCATE') THEN RAISE EXCEPTION '" + msg + "'; END IF; "
+                "IF " + _ORG_ID_UPDATE_OK + " THEN RETURN NEW; END IF; "
+                "RAISE EXCEPTION '" + msg + "'; END; $$ LANGUAGE plpgsql"))
+            conn.execute(text(f"DROP TRIGGER IF EXISTS {table}_guard ON {table}"))
+            conn.execute(text(f"CREATE TRIGGER {table}_guard BEFORE UPDATE OR DELETE ON {table} "
+                              "FOR EACH ROW EXECUTE FUNCTION org_user_ids_guard()"))
+            conn.execute(text(f"DROP TRIGGER IF EXISTS {table}_no_truncate ON {table}"))
+            conn.execute(text(f"CREATE TRIGGER {table}_no_truncate BEFORE TRUNCATE ON {table} "
+                              "FOR EACH STATEMENT EXECUTE FUNCTION org_user_ids_guard()"))
+        else:
+            conn.execute(text(f"CREATE TRIGGER IF NOT EXISTS {table}_guard_update BEFORE UPDATE ON {table} "
+                              f"WHEN NOT ({_ORG_ID_UPDATE_OK}) BEGIN SELECT RAISE(ABORT, '{msg}'); END"))
+            conn.execute(text(f"CREATE TRIGGER IF NOT EXISTS {table}_no_delete BEFORE DELETE ON {table} "
+                              f"BEGIN SELECT RAISE(ABORT, '{msg}'); END"))
+
+
+def install_override_history_immutability() -> None:
+    """permission_override_events is the complete change history of every permission override: append-only, like
+    audit_events (PostgreSQL production gets the same triggers from migration 5bcde1234574)."""
+    from sqlalchemy import text
+
+    table = "permission_override_events"
+    with engine.begin() as conn:
+        if engine.dialect.name == "postgresql":
+            conn.execute(text(
+                "CREATE OR REPLACE FUNCTION override_history_append_only() RETURNS trigger AS $$ "
+                "BEGIN RAISE EXCEPTION 'permission_override_events is append-only'; END; $$ LANGUAGE plpgsql"))
+            conn.execute(text(f"DROP TRIGGER IF EXISTS {table}_no_update_delete ON {table}"))
+            conn.execute(text(f"CREATE TRIGGER {table}_no_update_delete BEFORE UPDATE OR DELETE ON {table} "
+                              "FOR EACH ROW EXECUTE FUNCTION override_history_append_only()"))
+            conn.execute(text(f"DROP TRIGGER IF EXISTS {table}_no_truncate ON {table}"))
+            conn.execute(text(f"CREATE TRIGGER {table}_no_truncate BEFORE TRUNCATE ON {table} "
+                              "FOR EACH STATEMENT EXECUTE FUNCTION override_history_append_only()"))
+        else:
+            for op in ("UPDATE", "DELETE"):
+                conn.execute(text(f"CREATE TRIGGER IF NOT EXISTS {table}_no_{op.lower()} BEFORE {op} ON {table} "
+                                  f"BEGIN SELECT RAISE(ABORT, '{table} is append-only'); END"))
+
+
+def install_user_request_history_immutability() -> None:
+    """user_request_events is the decision history of every user request (reviewer, reason, time): append-only.
+    PostgreSQL production gets the same triggers from migration 5bcde1234576."""
+    from sqlalchemy import text
+
+    table = "user_request_events"
+    with engine.begin() as conn:
+        if engine.dialect.name == "postgresql":
+            conn.execute(text(
+                "CREATE OR REPLACE FUNCTION user_request_history_append_only() RETURNS trigger AS $$ "
+                "BEGIN RAISE EXCEPTION 'user_request_events is append-only'; END; $$ LANGUAGE plpgsql"))
+            conn.execute(text(f"DROP TRIGGER IF EXISTS {table}_no_update_delete ON {table}"))
+            conn.execute(text(f"CREATE TRIGGER {table}_no_update_delete BEFORE UPDATE OR DELETE ON {table} "
+                              "FOR EACH ROW EXECUTE FUNCTION user_request_history_append_only()"))
+            conn.execute(text(f"DROP TRIGGER IF EXISTS {table}_no_truncate ON {table}"))
+            conn.execute(text(f"CREATE TRIGGER {table}_no_truncate BEFORE TRUNCATE ON {table} "
+                              "FOR EACH STATEMENT EXECUTE FUNCTION user_request_history_append_only()"))
+        else:
+            for op in ("UPDATE", "DELETE"):
+                conn.execute(text(f"CREATE TRIGGER IF NOT EXISTS {table}_no_{op.lower()} BEFORE {op} ON {table} "
+                                  f"BEGIN SELECT RAISE(ABORT, '{table} is append-only'); END"))
+
+
+def _install_audit_immutability_postgres() -> None:
+    from sqlalchemy import text
+
+    with engine.begin() as conn:
+        conn.execute(text(
+            "CREATE OR REPLACE FUNCTION audit_events_append_only() RETURNS trigger AS $$ "
+            "BEGIN RAISE EXCEPTION 'audit_events is append-only'; END; $$ LANGUAGE plpgsql"))
+        conn.execute(text("DROP TRIGGER IF EXISTS audit_events_no_update_delete ON audit_events"))
+        conn.execute(text(
+            "CREATE TRIGGER audit_events_no_update_delete BEFORE UPDATE OR DELETE ON audit_events "
+            "FOR EACH ROW EXECUTE FUNCTION audit_events_append_only()"))
+        conn.execute(text("DROP TRIGGER IF EXISTS audit_events_no_truncate ON audit_events"))
+        conn.execute(text(
+            "CREATE TRIGGER audit_events_no_truncate BEFORE TRUNCATE ON audit_events "
+            "FOR EACH STATEMENT EXECUTE FUNCTION audit_events_append_only()"))
+
+
+def _install_audit_immutability_sqlite() -> None:
+    """audit_events is append-only: the database itself refuses UPDATE and DELETE, so an application bug, a
+    compromised route or an ad-hoc SQL session cannot rewrite history through the ORM. (A database owner can still
+    drop the triggers; the daily digest in docs/AUDIT_LOG_POLICY.md is the control that detects that.)"""
+    from sqlalchemy import text
+
+    with engine.begin() as conn:
+        conn.execute(text(
+            "CREATE TRIGGER IF NOT EXISTS audit_events_no_update BEFORE UPDATE ON audit_events "
+            "BEGIN SELECT RAISE(ABORT, 'audit_events is append-only'); END"))
+        conn.execute(text(
+            "CREATE TRIGGER IF NOT EXISTS audit_events_no_delete BEFORE DELETE ON audit_events "
+            "BEGIN SELECT RAISE(ABORT, 'audit_events is append-only'); END"))
+
+
+def _sqlite_add_missing_columns() -> None:
+    """DEF-086: create_all() creates missing tables but never adds columns to existing ones, so an existing SQLite
+    database (the single-host demo) silently diverged from the models after any column was added. Add missing
+    columns that are nullable or have a server default -- purely additive, no data rewritten. Anything else is a
+    real migration and is reported, not attempted."""
+    import logging
+    from sqlalchemy import inspect, text
+
+    log = logging.getLogger("drishti.db")
+    insp = inspect(engine)
+    with engine.begin() as conn:
+        for table in Base.metadata.sorted_tables:
+            if not insp.has_table(table.name):
+                continue
+            have = {c["name"] for c in insp.get_columns(table.name)}
+            for col in table.columns:
+                if col.name in have:
+                    continue
+                if not col.nullable and col.server_default is None:
+                    log.error("SQLite table %s lacks NOT NULL column %s without a default; run a real migration", table.name, col.name)
+                    continue
+                ddl = f'ALTER TABLE "{table.name}" ADD COLUMN "{col.name}" {col.type.compile(dialect=engine.dialect)}'
+                if col.server_default is not None:
+                    ddl += f" DEFAULT '{col.server_default.arg}'"
+                conn.execute(text(ddl))
+                log.warning("SQLite schema upgrade: added %s.%s", table.name, col.name)
+                if col.unique:
+                    # SQLite cannot ADD a UNIQUE column; a unique index gives the same guarantee (NULLs stay distinct).
+                    conn.execute(text(f'CREATE UNIQUE INDEX IF NOT EXISTS "uq_{table.name}_{col.name}" '
+                                      f'ON "{table.name}" ("{col.name}")'))
+                    log.warning("SQLite schema upgrade: added unique index on %s.%s", table.name, col.name)
+

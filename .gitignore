@@ -1,0 +1,40 @@
+# Secrets and Environment
+.env*
+
+# Python bytecode & cache
+*.pyc
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.venv*/
+
+# Node & Frontend Build
+node_modules/
+dist/
+build/
+
+# Storage & Local Databases
+storage/
+*.db
+*.sqlite
+*.sqlite3
+
+# Release Archives & Binaries
+releases/
+*.zip
+*.tar.gz
+*.tgz
+
+# IDE & Assistant Runtime State
+.vscode/
+.idea/
+.claude/
+CLAUDE.md
+AGENTS.md
+
+# Reports media & artifacts
+reports/screenshots/
+*.log
+
+# Local session tracker
+/CONTINUATION_STATE.md

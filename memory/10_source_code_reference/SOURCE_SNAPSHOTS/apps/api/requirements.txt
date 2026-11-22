@@ -1,0 +1,19 @@
+# Core runtime (S4-07). Optional features live in their own files; every optional import is lazy and falls back
+# safely when the package is absent (NER -> no model candidates, OCR -> pypdf text, Kafka -> direct pipeline,
+# ledger -> local Merkle anchor only).
+fastapi>=0.110
+uvicorn[standard]>=0.27
+sqlalchemy>=2.0
+alembic>=1.13
+psycopg2-binary>=2.9
+neo4j>=5.20
+pydantic>=2.5
+python-multipart>=0.0.9
+pypdf>=4.0
+reportlab>=4.0
+networkx>=3.2
+PyJWT>=2.8
+redis>=5.0
+boto3>=1.34
+# httpx: FastAPI's TestClient, used by runtime commands (`python -m apps.api.app.seed --ingest`), not only tests
+httpx>=0.27

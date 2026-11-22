@@ -1,0 +1,215 @@
+"""Evidence processing pipeline (runs in-process for the prototype; each stage is a Job row so it can be
+moved behind Kafka/Redpanda workers later without changing the state machine).
+
+UPLOADED → HASHED → QUARANTINED → MALWARE_SCANNING → CLEAN → ACCEPTED → PROCESSING → EXTRACTED
+         → ENTITY_CANDIDATES → HITL (if any match candidates) → GRAPH_PROJECTED → ACTIVE
+
+Any non-CLEAN scan result leaves the file in quarantine (status = the scan result, path unchanged).
+"""
+from __future__ import annotations
+
+import logging
+
+from sqlalchemy.orm import Session
+
+from ..models import BLOCKED_STATES, Evidence, Job, MatchCandidate
+
+
+
+class IntegrityMismatch(RuntimeError):
+    pass
+from .. import config
+from . import extract as extract_svc
+from . import resolution, scanner, storage, upload_policy
+from . import kafka_bus
+from .audit import record_audit
+
+logger = logging.getLogger("drishti.pipeline")
+
+
+def _job(db: Session, ev: Evidence, kind: str, trace_id: str) -> Job:
+    key = f"{ev.evidence_id}:{kind}"
+    # Use with_for_update to serialize concurrent worker attempts
+    job = db.query(Job).filter_by(idempotency_key=key).with_for_update().first()
+    if job is None:
+        job = Job(evidence_id=ev.evidence_id, case_id=ev.case_id, kind=kind, trace_id=trace_id, idempotency_key=key, attempts=0, metrics={})
+        db.add(job)
+    elif job.status == "SUCCEEDED":
+        raise ValueError(f"Job {key} already succeeded")
+    elif job.status == "RUNNING":
+        # DEF-098: refuse while a worker may still hold the job; reclaim it once its lease has expired (the process
+        # that held it died -- otherwise the job and its evidence stayed stuck forever).
+        import datetime
+        from .. import config
+        last = job.updated_at.replace(tzinfo=None) if job.updated_at else None
+        now = datetime.datetime.now(datetime.UTC).replace(tzinfo=None)
+        if last is not None and (now - last).total_seconds() < config.JOB_LEASE_S:
+            raise ValueError(f"Job {key} is already running in another worker")
+        logger.warning("reclaiming abandoned job %s (last update %s)", key, last)
+        record_audit(db, trace_id, None, "JOB_LEASE_RECLAIMED", "JOB", job.job_id, ev.case_id, outcome="ERROR",
+                     detail={"kind": kind, "last_update": last.isoformat() if last else None, "lease_s": config.JOB_LEASE_S})
+
+    job.attempts += 1
+    job.status = "RUNNING"
+    job.error = None
+    job.trace_id = trace_id
+    db.flush()
+    return job
+
+
+def run_scan(db: Session, ev: Evidence, trace_id: str, actor_id: str | None) -> bool:
+    job = _job(db, ev, "SCAN", trace_id)
+    ev.status = "MALWARE_SCANNING"
+    db.commit()
+    scan_limit = config.SCAN_MAX_MB * 1024 * 1024
+    try:
+        if ev.size_bytes and ev.size_bytes > scan_limit:
+            # The scanner would refuse the stream (clamd StreamMaxLength) and the file would look like a scan error.
+            # Say so plainly instead: the evidence is kept, hashed and quarantined; it is not promoted unscanned.
+            outcome = scanner.ScanOutcome(
+                "SCAN_FAILED", "policy",
+                f"file is {ev.size_bytes // (1024 * 1024)} MB, above the scanner limit of {config.SCAN_MAX_MB} MB; raise clamd "
+                f"StreamMaxLength and DRISHTI_SCAN_MAX_MB, then reprocess. The file stays in quarantine until scanned.")
+        else:
+            with storage.local_copy(ev.storage_path) as local_path:
+                outcome = scanner.scan_file(local_path)
+    except Exception as exc:
+        # DEF-083: a storage error here escaped and left the item in MALWARE_SCANNING with a RUNNING job, which
+        # /process rejects -- stuck for good. Record it as a failed scan: still quarantined, never clean, retryable.
+        logger.warning("scan of %s could not read the stored object", ev.evidence_id, exc_info=True)
+        outcome = scanner.ScanOutcome("SCAN_FAILED", "storage", f"stored object could not be read for scanning: {type(exc).__name__}")
+    ev.scan_engine, ev.scan_result = outcome.engine, outcome.result
+    ev.status = outcome.result
+    job.metrics = {"engine": outcome.engine, "detail": outcome.detail}
+    record_audit(db, trace_id, actor_id, "SCAN_RESULT", "EVIDENCE", ev.evidence_id, ev.case_id,
+                 outcome="OK" if outcome.is_clean else "BLOCKED", detail={"result": outcome.result, "engine": outcome.engine, "detail": outcome.detail})
+    if not outcome.is_clean:
+        job.status = "FAILED" if outcome.result != "INFECTED" else "SUCCEEDED"  # the scan itself worked when INFECTED
+        job.error = f"{outcome.result}: {outcome.detail}"
+        ev.error = f"file remains in quarantine: {outcome.result}"
+        db.commit()
+        return False
+    try:
+        ev.storage_path = storage.promote_to_accepted(ev.storage_path)
+    except Exception as exc:  # DEF-083: same stuck state if promotion failed after a clean scan
+        logger.warning("promotion of %s failed after a clean scan", ev.evidence_id, exc_info=True)
+        ev.status, ev.scan_result = "SCAN_FAILED", "SCAN_FAILED"
+        job.status, job.error = "FAILED", f"promotion to accepted storage failed: {type(exc).__name__}"
+        ev.error = "file remains in quarantine: promotion failed; retry processing"
+        db.commit()
+        return False
+    job.status = "SUCCEEDED"
+    ev.status = "ACCEPTED"
+    ev.error = None
+    db.commit()
+    return True
+
+
+def run_extract(db: Session, ev: Evidence, trace_id: str, actor_id: str | None) -> bool:
+    if ev.status not in ("ACCEPTED", "EXTRACTION_FAILED", "PROCESSING"):
+        raise ValueError(f"evidence {ev.evidence_id} is {ev.status}; extraction requires ACCEPTED")
+    job = _job(db, ev, "EXTRACT", trace_id)
+    ev.status = "PROCESSING"
+    db.commit()
+    try:
+        ok, actual = storage.verify_hash(ev.storage_path, ev.sha256)  # streamed for every backend
+        if not ok:
+            raise IntegrityMismatch(f"hash mismatch before extraction: manifest {ev.sha256[:12]}… actual {actual[:12]}…")
+        if ev.record_type in upload_policy.BINARY_RECORD_TYPES:
+            # Media and forensic evidence: stored, hashed, scanned and integrity-checked, but its content is never
+            # loaded or parsed here (a multi-gigabyte video must not be read into memory).
+            stats = extract_svc.ExtractionStats(warnings=[f"{ev.record_type} evidence is stored and integrity-checked; "
+                                                          "no content extraction for this type"])
+        else:
+            data = storage.read_bytes(ev.storage_path)
+            stats = extract_svc.extract(db, ev, data)
+        job.metrics = stats.__dict__
+        job.status = "SUCCEEDED"
+        ev.status = "EXTRACTED"
+        record_audit(db, trace_id, actor_id, "EXTRACTED", "EVIDENCE", ev.evidence_id, ev.case_id, detail=stats.__dict__)
+        db.commit()
+        return True
+    except Exception as exc:  # parser failure must be visible, never silent
+        db.rollback()
+        job = db.query(Job).filter_by(idempotency_key=f"{ev.evidence_id}:EXTRACT").first()
+        if job:
+            job.status = "FAILED"
+            # DEF-074: the traceback (server paths) goes to the server log, not into an API-visible field.
+            logger.warning("extraction failed for %s", ev.evidence_id, exc_info=True)
+            job.error = f"{type(exc).__name__}: {exc}"[:500]
+        
+        mismatch = isinstance(exc, IntegrityMismatch)
+        ev = db.get(Evidence, ev.evidence_id) # reload evidence after rollback
+        ev.status = "INTEGRITY_MISMATCH" if mismatch else "EXTRACTION_FAILED"
+        ev.error = f"{type(exc).__name__}: {exc}"
+        record_audit(db, trace_id, actor_id, "INTEGRITY_MISMATCH" if mismatch else "EXTRACTION_FAILED", "EVIDENCE", ev.evidence_id, ev.case_id, outcome="ERROR", detail={"error": str(exc)})
+        db.commit()
+        return False
+
+
+def run_resolve(db: Session, ev: Evidence, trace_id: str, actor_id: str | None) -> int:
+    job = _job(db, ev, "RESOLVE", trace_id)
+    ev.status = "ENTITY_CANDIDATES"
+    db.commit()
+    try:
+        created = resolution.generate_candidates(db, ev.case_id)
+    except Exception as exc:
+        # DEF-084: no handler here left ENTITY_CANDIDATES + a RUNNING job (not retryable) and a 500. Keep the
+        # extracted claims, mark the job failed, return to EXTRACTED so /process can retry resolution.
+        db.rollback()
+        logger.warning("resolution failed for %s", ev.evidence_id, exc_info=True)
+        job = db.query(Job).filter_by(idempotency_key=f"{ev.evidence_id}:RESOLVE").first()
+        if job:
+            job.status, job.error = "FAILED", f"{type(exc).__name__}: {exc}"[:500]
+        ev = db.get(Evidence, ev.evidence_id)
+        ev.status, ev.error = "EXTRACTED", f"candidate generation failed: {type(exc).__name__}; retry processing"
+        record_audit(db, trace_id, actor_id, "RESOLUTION_FAILED", "EVIDENCE", ev.evidence_id, ev.case_id, outcome="ERROR",
+                     detail={"error": type(exc).__name__})
+        db.commit()
+        return 0
+    job.metrics = {"candidates_created": len(created)}
+    job.status = "SUCCEEDED"
+    pending = db.query(MatchCandidate).filter_by(case_id=ev.case_id, state="REVIEW_REQUIRED").count()
+    ev.status = "HITL" if pending else "GRAPH_PROJECTED"
+    record_audit(db, trace_id, actor_id, "CANDIDATES_GENERATED", "EVIDENCE", ev.evidence_id, ev.case_id, detail={"created": len(created), "pending_review": pending})
+    db.commit()
+    return len(created)
+
+
+def process_evidence(db: Session, evidence_id: str, trace_id: str, actor_id: str | None, async_allowed: bool = True) -> Evidence:
+    ev = db.get(Evidence, evidence_id)
+    if ev is None:
+        raise ValueError("unknown evidence")
+    if ev.status in BLOCKED_STATES:
+        raise ValueError(f"evidence {evidence_id} is {ev.status}; it cannot re-enter processing")
+
+    # When Kafka is configured and async processing is allowed (e.g. from API), 
+    # publish the job and return immediately.
+    # The worker process will call process_evidence(async_allowed=False) to run the direct path.
+    # This explicit boolean avoids implicit environment assumptions.
+    if async_allowed and kafka_bus.kafka_enabled():
+        published = kafka_bus.publish(evidence_id, ev.case_id, trace_id, actor_id)
+        if published:
+            record_audit(db, trace_id, actor_id, "EVIDENCE_QUEUED_KAFKA", "EVIDENCE", evidence_id, ev.case_id,
+                         detail={"topic": kafka_bus.TOPIC})
+            db.commit()
+            return ev  # worker will process asynchronously
+
+    # MALWARE_SCANNING / PROCESSING / ENTITY_CANDIDATES are only re-entered after a job lease expired (DEF-098);
+    # _job() refuses them while the job is still held.
+    if ev.status in ("QUARANTINED", "SCAN_FAILED", "SCAN_TIMEOUT", "SCANNER_UNAVAILABLE", "MALWARE_SCANNING"):
+        if not run_scan(db, ev, trace_id, actor_id):
+            return ev
+    if ev.status in ("ACCEPTED", "EXTRACTION_FAILED", "PROCESSING"):
+        if not run_extract(db, ev, trace_id, actor_id):
+            return ev
+    if ev.status in ("EXTRACTED", "ENTITY_CANDIDATES"):
+        run_resolve(db, ev, trace_id, actor_id)
+    return ev
+
+
+def mark_active(db: Session, case_id: str) -> None:
+    """Once no candidates are pending, extracted evidence in the case becomes ACTIVE in the projection."""
+    pending = db.query(MatchCandidate).filter_by(case_id=case_id, state="REVIEW_REQUIRED").count()
+    for ev in db.query(Evidence).filter(Evidence.case_id == case_id, Evidence.status.in_(["HITL", "GRAPH_PROJECTED", "ACTIVE"])).all():
+        ev.status = "HITL" if pending else "ACTIVE"

@@ -1,0 +1,4 @@
+vehicle_id,registration,owner_person_id,owner_name,type
+VH-001,DD01 AB 1234,P-A2,Kavya Iyer,pickup
+VH-002,DD02 CD 5678,P-B2,Sameer Qureshi,truck
+VH-003,DD01 EF 9012,P-BR,Manish Tiwari,van

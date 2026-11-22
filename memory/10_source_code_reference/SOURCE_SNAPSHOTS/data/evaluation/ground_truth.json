@@ -1,0 +1,13 @@
+{
+  "docs": [
+    {
+      "id": "doc1",
+      "text": "Name: Rajesh Kumar\nLocation: Mumbai\nOrganization: ABC Corp",
+      "entities": [
+        {"type": "PERSON", "text": "Rajesh Kumar"},
+        {"type": "LOCATION", "text": "Mumbai"},
+        {"type": "ORGANIZATION", "text": "ABC Corp"}
+      ]
+    }
+  ]
+}

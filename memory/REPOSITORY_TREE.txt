@@ -1,0 +1,705 @@
+.
+├── apps
+│   ├── api
+│   │   ├── app
+│   │   │   ├── core
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── exceptions.py
+│   │   │   │   └── logging.py
+│   │   │   ├── routes
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── audit_routes.py
+│   │   │   │   ├── auth_routes.py
+│   │   │   │   ├── case_routes.py
+│   │   │   │   ├── demo_routes.py
+│   │   │   │   ├── evidence_routes.py
+│   │   │   │   ├── graph_routes.py
+│   │   │   │   ├── integrity_routes.py
+│   │   │   │   ├── listing.py
+│   │   │   │   ├── report_routes.py
+│   │   │   │   └── review_routes.py
+│   │   │   ├── services
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── audit.py
+│   │   │   │   ├── court_pdf.py
+│   │   │   │   ├── evidence_service.py
+│   │   │   │   ├── extract.py
+│   │   │   │   ├── extract_common.py
+│   │   │   │   ├── extract_document.py
+│   │   │   │   ├── extract_structured.py
+│   │   │   │   ├── graph.py
+│   │   │   │   ├── graph_analytics.py
+│   │   │   │   ├── integrity.py
+│   │   │   │   ├── kafka_bus.py
+│   │   │   │   ├── masking.py
+│   │   │   │   ├── neo4j_store.py
+│   │   │   │   ├── nlp_adapter.py
+│   │   │   │   ├── ocr_adapter.py
+│   │   │   │   ├── pipeline.py
+│   │   │   │   ├── ratelimit.py
+│   │   │   │   ├── report.py
+│   │   │   │   ├── resolution.py
+│   │   │   │   ├── scanner.py
+│   │   │   │   └── storage.py
+│   │   │   ├── tests
+│   │   │   │   ├── __init__.py
+│   │   │   │   ├── conftest.py
+│   │   │   │   ├── test_archive_uploads.py
+│   │   │   │   ├── test_case_create_assign.py
+│   │   │   │   ├── test_case_people.py
+│   │   │   │   ├── test_clamav_live.py
+│   │   │   │   ├── test_cross_case_and_exports.py
+│   │   │   │   ├── test_extraction_failures.py
+│   │   │   │   ├── test_graph_analysis.py
+│   │   │   │   ├── test_kafka_path.py
+│   │   │   │   ├── test_listing_search.py
+│   │   │   │   ├── test_merkle_rfc6962.py
+│   │   │   │   ├── test_migrations.py
+│   │   │   │   ├── test_neo4j_live.py
+│   │   │   │   ├── test_ner_real_model.py
+│   │   │   │   ├── test_new_components.py
+│   │   │   │   ├── test_provenance_and_decisions.py
+│   │   │   │   ├── test_ratelimit.py
+│   │   │   │   ├── test_scanner_parsing.py
+│   │   │   │   ├── test_security.py
+│   │   │   │   ├── test_storage_s3.py
+│   │   │   │   ├── test_user_management.py
+│   │   │   │   ├── test_workflow.py
+│   │   │   │   └── test_workflow_restored.py
+│   │   │   ├── __init__.py
+│   │   │   ├── auth.py
+│   │   │   ├── config.py
+│   │   │   ├── db.py
+│   │   │   ├── main.py
+│   │   │   ├── migrations.py
+│   │   │   ├── models.py
+│   │   │   ├── schemas.py
+│   │   │   └── seed.py
+│   │   ├── migrations
+│   │   │   ├── versions
+│   │   │   │   ├── 39486e0cbb1c_add_authority_reference_to_cases_and_.py
+│   │   │   │   ├── 5bcde1234567_add_audit_signature.py
+│   │   │   │   ├── 5bcde1234568_uix_evidence_case_sha.py
+│   │   │   │   ├── 5bcde1234569_add_ledger_anchors_and_mc_assignment.py
+│   │   │   │   ├── 5bcde1234570_ledger_anchor_merkle_scheme.py
+│   │   │   │   ├── 96ad003ca363_initial_schema.py
+│   │   │   │   └── b9b204cf821f_add_classification_jurisdiction_purpose_.py
+│   │   │   ├── README
+│   │   │   ├── env.py
+│   │   │   └── script.py.mako
+│   │   ├── __init__.py
+│   │   ├── alembic.ini
+│   │   ├── constraints.txt
+│   │   ├── requirements-dev.txt
+│   │   ├── requirements-kafka.txt
+│   │   ├── requirements-ledger.txt
+│   │   ├── requirements-ml.txt
+│   │   └── requirements.txt
+│   ├── web
+│   │   ├── public
+│   │   │   └── favicon.svg
+│   │   ├── src
+│   │   │   ├── app
+│   │   │   │   ├── providers
+│   │   │   │   │   └── app-providers.tsx
+│   │   │   │   └── router
+│   │   │   │       └── router.tsx
+│   │   │   ├── components
+│   │   │   │   ├── auth
+│   │   │   │   │   └── protected-route.tsx
+│   │   │   │   ├── evidence
+│   │   │   │   │   ├── ProvenanceViewer.tsx
+│   │   │   │   │   └── SvgBoundingBoxOverlay.tsx
+│   │   │   │   ├── graph
+│   │   │   │   │   ├── drawers
+│   │   │   │   │   │   ├── EdgeDrawer.tsx
+│   │   │   │   │   │   ├── EmptyDrawer.tsx
+│   │   │   │   │   │   └── EntityDrawer.tsx
+│   │   │   │   │   ├── engine
+│   │   │   │   │   │   └── GraphEngine.ts
+│   │   │   │   │   ├── filters
+│   │   │   │   │   │   ├── ConfidenceRangeFilter.tsx
+│   │   │   │   │   │   ├── DateRangeFilter.tsx
+│   │   │   │   │   │   ├── EntityTypeFilter.tsx
+│   │   │   │   │   │   ├── GraphFilterPanel.tsx
+│   │   │   │   │   │   ├── RelationshipTypeFilter.tsx
+│   │   │   │   │   │   └── TierFilter.tsx
+│   │   │   │   │   ├── GraphCanvas.tsx
+│   │   │   │   │   ├── GraphCanvasBoundary.tsx
+│   │   │   │   │   ├── GraphLegend.tsx
+│   │   │   │   │   ├── GraphListView.tsx
+│   │   │   │   │   ├── GraphToolbar.tsx
+│   │   │   │   │   └── TemporalSlider.tsx
+│   │   │   │   ├── intelligence
+│   │   │   │   │   ├── confidence-meter.tsx
+│   │   │   │   │   ├── entity-badge.tsx
+│   │   │   │   │   ├── evidence-tier-badge.tsx
+│   │   │   │   │   ├── pii-field.tsx
+│   │   │   │   │   ├── relationship-badge.tsx
+│   │   │   │   │   └── reveal-identity-modal.tsx
+│   │   │   │   ├── layout
+│   │   │   │   │   └── page.tsx
+│   │   │   │   ├── security
+│   │   │   │   │   └── security-status-bar.tsx
+│   │   │   │   └── ui
+│   │   │   │       ├── badge.tsx
+│   │   │   │       ├── button.tsx
+│   │   │   │       ├── charts.tsx
+│   │   │   │       ├── checkbox.tsx
+│   │   │   │       ├── dialog.tsx
+│   │   │   │       ├── reason-dialog.tsx
+│   │   │   │       ├── separator.tsx
+│   │   │   │       ├── status-badge.tsx
+│   │   │   │       ├── status-dot.tsx
+│   │   │   │       ├── tabs.tsx
+│   │   │   │       └── tooltip.tsx
+│   │   │   ├── constants
+│   │   │   │   ├── evidenceTiers.ts
+│   │   │   │   └── navigation.ts
+│   │   │   ├── features
+│   │   │   │   ├── admin
+│   │   │   │   │   └── user-management-page.tsx
+│   │   │   │   ├── audit
+│   │   │   │   │   └── global-audit-page.tsx
+│   │   │   │   ├── auth
+│   │   │   │   │   └── login-page.tsx
+│   │   │   │   ├── cases
+│   │   │   │   │   ├── analysis
+│   │   │   │   │   │   └── case-analysis-page.tsx
+│   │   │   │   │   ├── audit
+│   │   │   │   │   │   ├── audit-detail-drawer.tsx
+│   │   │   │   │   │   ├── audit-event-card.tsx
+│   │   │   │   │   │   ├── audit-filter-bar.tsx
+│   │   │   │   │   │   ├── audit-integrity-header.tsx
+│   │   │   │   │   │   └── case-audit-view.tsx
+│   │   │   │   │   ├── components
+│   │   │   │   │   │   ├── assign-person-dialog.tsx
+│   │   │   │   │   │   └── case-overview-view.tsx
+│   │   │   │   │   ├── evidence
+│   │   │   │   │   │   ├── case-evidence-view.tsx
+│   │   │   │   │   │   ├── evidence-detail-drawer.tsx
+│   │   │   │   │   │   └── evidence-format.ts
+│   │   │   │   │   ├── map
+│   │   │   │   │   │   └── investigation-map-view.tsx
+│   │   │   │   │   ├── reviews
+│   │   │   │   │   │   └── case-reviews-view.tsx
+│   │   │   │   │   ├── timeline
+│   │   │   │   │   │   ├── case-timeline.tsx
+│   │   │   │   │   │   ├── timeline-event-icon.tsx
+│   │   │   │   │   │   ├── timeline-event-row.tsx
+│   │   │   │   │   │   └── timeline-filter-bar.tsx
+│   │   │   │   │   ├── case-context.tsx
+│   │   │   │   │   ├── case-graph-page.tsx
+│   │   │   │   │   ├── case-layout.tsx
+│   │   │   │   │   ├── case-table.tsx
+│   │   │   │   │   └── cases-directory-page.tsx
+│   │   │   │   ├── command-center
+│   │   │   │   │   └── command-center-page.tsx
+│   │   │   │   ├── not-found
+│   │   │   │   │   ├── not-found-page.tsx
+│   │   │   │   │   └── route-error-page.tsx
+│   │   │   │   ├── profile
+│   │   │   │   │   └── profile-page.tsx
+│   │   │   │   ├── reports
+│   │   │   │   │   └── reports-page.tsx
+│   │   │   │   └── review
+│   │   │   │       ├── review-api.ts
+│   │   │   │       ├── review-page.tsx
+│   │   │   │       └── source-pane.tsx
+│   │   │   ├── layouts
+│   │   │   │   └── AppShell
+│   │   │   │       ├── app-shell.tsx
+│   │   │   │       └── sidebar.tsx
+│   │   │   ├── lib
+│   │   │   │   ├── formatters.ts
+│   │   │   │   ├── graphFilters.ts
+│   │   │   │   ├── permissions.ts
+│   │   │   │   ├── pii.ts
+│   │   │   │   ├── test-hooks.ts
+│   │   │   │   ├── use-debounced.ts
+│   │   │   │   ├── utils.ts
+│   │   │   │   └── webgl.ts
+│   │   │   ├── services
+│   │   │   │   └── api
+│   │   │   │       ├── auditApi.ts
+│   │   │   │       ├── casesApi.ts
+│   │   │   │       ├── claimsApi.ts
+│   │   │   │       ├── demoApi.ts
+│   │   │   │       ├── entityApi.ts
+│   │   │   │       ├── evidenceApi.ts
+│   │   │   │       ├── graphApi.ts
+│   │   │   │       ├── integrityApi.ts
+│   │   │   │       ├── real_client.ts
+│   │   │   │       ├── reportApi.ts
+│   │   │   │       ├── revealApi.ts
+│   │   │   │       ├── timelineApi.ts
+│   │   │   │       └── usersApi.ts
+│   │   │   ├── stores
+│   │   │   │   ├── auditStore.ts
+│   │   │   │   ├── authStore.ts
+│   │   │   │   ├── graphStore.ts
+│   │   │   │   ├── provenanceStore.ts
+│   │   │   │   ├── revealStore.ts
+│   │   │   │   ├── timelineStore.ts
+│   │   │   │   └── uiStore.ts
+│   │   │   ├── styles
+│   │   │   │   ├── tokens.css
+│   │   │   │   └── typography.css
+│   │   │   ├── types
+│   │   │   │   ├── alert.ts
+│   │   │   │   ├── audit.ts
+│   │   │   │   ├── case.ts
+│   │   │   │   ├── entity.ts
+│   │   │   │   ├── evidence.ts
+│   │   │   │   ├── note.ts
+│   │   │   │   ├── reveal.ts
+│   │   │   │   └── timeline.ts
+│   │   │   ├── App.tsx
+│   │   │   ├── index.css
+│   │   │   └── main.tsx
+│   │   ├── .env.example
+│   │   ├── .gitignore
+│   │   ├── .oxlintrc.json
+│   │   ├── README.md
+│   │   ├── index.html
+│   │   ├── package-lock.json
+│   │   ├── package.json
+│   │   ├── tsconfig.app.json
+│   │   ├── tsconfig.json
+│   │   ├── tsconfig.node.json
+│   │   ├── vercel.json
+│   │   └── vite.config.ts
+│   └── __init__.py
+├── audit
+│   ├── browser
+│   │   └── screenshots
+│   │       ├── cases.png
+│   │       ├── cases_CASE-0001.png
+│   │       ├── cases_CASE-0001_analysis.png
+│   │       ├── cases_CASE-0001_audit.png
+│   │       ├── cases_CASE-0001_evidence.png
+│   │       ├── cases_CASE-0001_graph.png
+│   │       ├── cases_CASE-0001_hitl.png
+│   │       ├── cases_CASE-0001_map.png
+│   │       ├── cases_CASE-0001_report.png
+│   │       ├── cases_CASE-0001_reviews.png
+│   │       ├── cases_CASE-0001_timeline.png
+│   │       ├── command-center.png
+│   │       ├── profile.png
+│   │       ├── settings.png
+│   │       └── unassigned_case0001_graph.png
+│   ├── BUG_AND_DEFECT_REGISTER.md
+│   ├── CLAIM_REGISTER.md
+│   ├── FRONTEND_BACKEND_CONTRACT.md
+│   ├── FRONTEND_MERGE_MANIFEST.md
+│   ├── FRONTEND_REPAIR_LOG.md
+│   ├── FRONTEND_SECURITY_REVIEW.md
+│   ├── FRONTEND_VERIFICATION.md
+│   ├── IMPLEMENTATION_EVIDENCE.md
+│   ├── PROJECT_SNAPSHOT_COMPARISON.md
+│   ├── PROJECT_SOURCE_RECONCILIATION.md
+│   ├── RELEASE_READINESS_REPORT.md
+│   ├── REPOSITORY_INVENTORY.md
+│   ├── SESSION_4_COMPLETE_WORK_LOG.md
+│   ├── SOURCE_OF_TRUTH.md
+│   ├── TECHNICAL_AUDIT_REPORT.md
+│   └── TEST_RESULTS.md
+├── data
+│   ├── evaluation
+│   │   ├── ground_truth.json
+│   │   └── ner_synthetic_v1.json
+│   └── synthetic
+│       ├── corrupt
+│       │   ├── calls_corrupt.csv
+│       │   └── fir_001_truncated.pdf
+│       ├── documents
+│       │   ├── eicar_test.txt
+│       │   ├── fir_001.pdf
+│       │   ├── fir_001.txt
+│       │   └── fir_001_TAMPERED.txt
+│       ├── golden
+│       │   ├── corrupt
+│       │   │   ├── calls_corrupt.csv
+│       │   │   └── fir_001_truncated.pdf
+│       │   ├── documents
+│       │   │   ├── eicar_test.txt
+│       │   │   ├── fir_001.pdf
+│       │   │   ├── fir_001.txt
+│       │   │   └── fir_001_TAMPERED.txt
+│       │   ├── aliases.json
+│       │   ├── calls.csv
+│       │   ├── cases.json
+│       │   ├── locations.csv
+│       │   ├── people.json
+│       │   ├── transactions.csv
+│       │   ├── transactions_case2.csv
+│       │   ├── truth-labels.json
+│       │   └── vehicles.csv
+│       ├── scale
+│       │   ├── documents
+│       │   │   ├── eicar_test.txt
+│       │   │   ├── fir_001.pdf
+│       │   │   ├── fir_001.txt
+│       │   │   └── fir_001_TAMPERED.txt
+│       │   ├── aliases.json
+│       │   ├── calls.csv
+│       │   ├── cases.json
+│       │   ├── locations.csv
+│       │   ├── people.json
+│       │   ├── transactions.csv
+│       │   ├── transactions_case2.csv
+│       │   ├── truth-labels.json
+│       │   └── vehicles.csv
+│       ├── aliases.json
+│       ├── calls.csv
+│       ├── cases.json
+│       ├── generate.py
+│       ├── locations.csv
+│       ├── people.json
+│       ├── transactions.csv
+│       ├── transactions_case2.csv
+│       ├── truth-labels.json
+│       └── vehicles.csv
+├── docs
+│   ├── adr
+│   │   ├── 001-relational-database.md
+│   │   ├── 002-graph-store.md
+│   │   ├── 003-object-storage.md
+│   │   ├── 004-async-queue.md
+│   │   ├── 005-redis-scope.md
+│   │   ├── 006-graph-renderer.md
+│   │   ├── 007-authentication.md
+│   │   ├── 008-masking-and-provenance.md
+│   │   ├── 009-temporal-decay.md
+│   │   ├── 010-integrity-mechanism.md
+│   │   ├── 011-deployment-model.md
+│   │   ├── 012-nlp-adapter.md
+│   │   ├── 013-kafka-event-bus.md
+│   │   ├── 014-merkle-besu-anchor.md
+│   │   └── README.md
+│   ├── architecture
+│   │   ├── BASELINE_ARCHITECTURE.md
+│   │   └── SYSTEM_ARCHITECTURE.md
+│   ├── engineering
+│   │   ├── deployment
+│   │   │   └── INFRASTRUCTURE_BASELINE.md
+│   │   ├── CODE_CLEANUP_REGISTER.md
+│   │   ├── CODING_STANDARDS.md
+│   │   ├── ERROR_HANDLING_STANDARD.md
+│   │   ├── REFACTORING_PLAN.md
+│   │   ├── REFACTORING_PROGRESS.md
+│   │   └── TECHNICAL_DEBT_REGISTER.md
+│   ├── frontend
+│   │   └── STATE_MANAGEMENT_ARCHITECTURE.md
+│   ├── API_ARCHITECTURE.md
+│   ├── ARCHITECTURE_DECISIONS.md
+│   ├── ARCHITECTURE_OVERVIEW.md
+│   ├── DATABASE_ARCHITECTURE.md
+│   ├── DATA_FLOW.md
+│   ├── DEPLOYMENT_ARCHITECTURE.md
+│   ├── FRONTEND_API_MAP.md
+│   ├── FRONTEND_ARCHITECTURE.md
+│   ├── MASTER_INTEGRATION_MATRIX.md
+│   ├── SECURITY_ARCHITECTURE.md
+│   ├── SYSTEM_COMPONENTS.md
+│   ├── architecture.md
+│   ├── context.md
+│   ├── contracts.md
+│   ├── data-dictionary.md
+│   ├── demo-script.md
+│   ├── limitations.md
+│   ├── project-overview.md
+│   ├── responsible-ai.md
+│   ├── security.md
+│   ├── sih_presentation_map.md
+│   ├── status.md
+│   └── workflow.md
+├── frontend-audit
+│   ├── screenshots
+│   │   ├── after
+│   │   │   ├── capture_log.json
+│   │   │   ├── desktop_admin_audit.png
+│   │   │   ├── desktop_admin_cases.png
+│   │   │   ├── desktop_admin_settings.png
+│   │   │   ├── desktop_analyst_cases_CASE-0001_reports.png
+│   │   │   ├── desktop_analyst_cases_CASE-0001_review.png
+│   │   │   ├── desktop_auditor_audit.png
+│   │   │   ├── desktop_auditor_cases_CASE-0001.png
+│   │   │   ├── desktop_auditor_command-center.png
+│   │   │   ├── desktop_investigator_audit.png
+│   │   │   ├── desktop_investigator_cases.png
+│   │   │   ├── desktop_investigator_cases_CASE-0001.png
+│   │   │   ├── desktop_investigator_cases_CASE-0001_analysis.png
+│   │   │   ├── desktop_investigator_cases_CASE-0001_audit.png
+│   │   │   ├── desktop_investigator_cases_CASE-0001_decisions.png
+│   │   │   ├── desktop_investigator_cases_CASE-0001_evidence.png
+│   │   │   ├── desktop_investigator_cases_CASE-0001_graph.png
+│   │   │   ├── desktop_investigator_cases_CASE-0001_hitl.png
+│   │   │   ├── desktop_investigator_cases_CASE-0001_locations.png
+│   │   │   ├── desktop_investigator_cases_CASE-0001_map.png
+│   │   │   ├── desktop_investigator_cases_CASE-0001_notes.png
+│   │   │   ├── desktop_investigator_cases_CASE-0001_overview.png
+│   │   │   ├── desktop_investigator_cases_CASE-0001_report.png
+│   │   │   ├── desktop_investigator_cases_CASE-0001_reports.png
+│   │   │   ├── desktop_investigator_cases_CASE-0001_review.png
+│   │   │   ├── desktop_investigator_cases_CASE-0001_reviews.png
+│   │   │   ├── desktop_investigator_cases_CASE-0001_timeline.png
+│   │   │   ├── desktop_investigator_command-center.png
+│   │   │   ├── desktop_investigator_home.png
+│   │   │   ├── desktop_investigator_no-such-page.png
+│   │   │   ├── desktop_investigator_profile.png
+│   │   │   ├── desktop_investigator_settings.png
+│   │   │   ├── desktop_officer_cases_CASE-0001_evidence.png
+│   │   │   ├── desktop_officer_cases_CASE-0001_reports.png
+│   │   │   ├── desktop_reviewer_cases_CASE-0001_review.png
+│   │   │   ├── desktop_reviewer_command-center.png
+│   │   │   ├── desktop_unassigned_cases.png
+│   │   │   ├── desktop_unassigned_cases_CASE-0001.png
+│   │   │   ├── phone_investigator_cases.png
+│   │   │   ├── phone_investigator_cases_CASE-0001.png
+│   │   │   ├── phone_investigator_cases_CASE-0001_analysis.png
+│   │   │   ├── phone_investigator_cases_CASE-0001_audit.png
+│   │   │   ├── phone_investigator_cases_CASE-0001_decisions.png
+│   │   │   ├── phone_investigator_cases_CASE-0001_evidence.png
+│   │   │   ├── phone_investigator_cases_CASE-0001_graph.png
+│   │   │   ├── phone_investigator_cases_CASE-0001_locations.png
+│   │   │   ├── phone_investigator_cases_CASE-0001_reports.png
+│   │   │   ├── phone_investigator_cases_CASE-0001_review.png
+│   │   │   ├── phone_investigator_cases_CASE-0001_timeline.png
+│   │   │   ├── phone_investigator_command-center.png
+│   │   │   ├── public-test-url-source.png
+│   │   │   ├── tablet_investigator_cases.png
+│   │   │   ├── tablet_investigator_cases_CASE-0001.png
+│   │   │   ├── tablet_investigator_cases_CASE-0001_analysis.png
+│   │   │   ├── tablet_investigator_cases_CASE-0001_audit.png
+│   │   │   ├── tablet_investigator_cases_CASE-0001_decisions.png
+│   │   │   ├── tablet_investigator_cases_CASE-0001_evidence.png
+│   │   │   ├── tablet_investigator_cases_CASE-0001_graph.png
+│   │   │   ├── tablet_investigator_cases_CASE-0001_locations.png
+│   │   │   ├── tablet_investigator_cases_CASE-0001_reports.png
+│   │   │   ├── tablet_investigator_cases_CASE-0001_review.png
+│   │   │   ├── tablet_investigator_cases_CASE-0001_timeline.png
+│   │   │   ├── tablet_investigator_command-center.png
+│   │   │   ├── x_evidence_drawer.png
+│   │   │   ├── x_phone_nav_open.png
+│   │   │   ├── x_phone_review.png
+│   │   │   ├── x_review_candidate.png
+│   │   │   ├── x_review_candidate_full.png
+│   │   │   ├── x_review_reason_dialog.png
+│   │   │   ├── x_source_viewer.png
+│   │   │   └── x_tablet_graph_entity.png
+│   │   ├── before
+│   │   │   ├── capture_log.json
+│   │   │   ├── desktop_admin_audit.png
+│   │   │   ├── desktop_admin_cases.png
+│   │   │   ├── desktop_admin_settings.png
+│   │   │   ├── desktop_auditor_audit.png
+│   │   │   ├── desktop_auditor_cases_CASE-0001.png
+│   │   │   ├── desktop_auditor_command-center.png
+│   │   │   ├── desktop_investigator_audit.png
+│   │   │   ├── desktop_investigator_cases.png
+│   │   │   ├── desktop_investigator_cases_CASE-0001.png
+│   │   │   ├── desktop_investigator_cases_CASE-0001_analysis.png
+│   │   │   ├── desktop_investigator_cases_CASE-0001_audit.png
+│   │   │   ├── desktop_investigator_cases_CASE-0001_evidence.png
+│   │   │   ├── desktop_investigator_cases_CASE-0001_graph.png
+│   │   │   ├── desktop_investigator_cases_CASE-0001_hitl.png
+│   │   │   ├── desktop_investigator_cases_CASE-0001_map.png
+│   │   │   ├── desktop_investigator_cases_CASE-0001_notes.png
+│   │   │   ├── desktop_investigator_cases_CASE-0001_reports.png
+│   │   │   ├── desktop_investigator_cases_CASE-0001_reviews.png
+│   │   │   ├── desktop_investigator_cases_CASE-0001_timeline.png
+│   │   │   ├── desktop_investigator_command-center.png
+│   │   │   ├── desktop_investigator_evidence.png
+│   │   │   ├── desktop_investigator_home.png
+│   │   │   ├── desktop_investigator_profile.png
+│   │   │   ├── desktop_investigator_reports.png
+│   │   │   ├── desktop_investigator_review.png
+│   │   │   ├── desktop_investigator_settings.png
+│   │   │   ├── desktop_reviewer_cases_CASE-0001_hitl.png
+│   │   │   ├── desktop_reviewer_command-center.png
+│   │   │   ├── desktop_unassigned_cases.png
+│   │   │   ├── desktop_unassigned_cases_CASE-0001.png
+│   │   │   ├── phone_investigator_audit.png
+│   │   │   ├── phone_investigator_cases.png
+│   │   │   ├── phone_investigator_cases_CASE-0001.png
+│   │   │   ├── phone_investigator_cases_CASE-0001_analysis.png
+│   │   │   ├── phone_investigator_cases_CASE-0001_audit.png
+│   │   │   ├── phone_investigator_cases_CASE-0001_evidence.png
+│   │   │   ├── phone_investigator_cases_CASE-0001_graph.png
+│   │   │   ├── phone_investigator_cases_CASE-0001_hitl.png
+│   │   │   ├── phone_investigator_cases_CASE-0001_map.png
+│   │   │   ├── phone_investigator_cases_CASE-0001_reports.png
+│   │   │   ├── phone_investigator_cases_CASE-0001_reviews.png
+│   │   │   ├── phone_investigator_cases_CASE-0001_timeline.png
+│   │   │   ├── phone_investigator_command-center.png
+│   │   │   ├── tablet_investigator_audit.png
+│   │   │   ├── tablet_investigator_cases.png
+│   │   │   ├── tablet_investigator_cases_CASE-0001.png
+│   │   │   ├── tablet_investigator_cases_CASE-0001_analysis.png
+│   │   │   ├── tablet_investigator_cases_CASE-0001_audit.png
+│   │   │   ├── tablet_investigator_cases_CASE-0001_evidence.png
+│   │   │   ├── tablet_investigator_cases_CASE-0001_graph.png
+│   │   │   ├── tablet_investigator_cases_CASE-0001_hitl.png
+│   │   │   ├── tablet_investigator_cases_CASE-0001_map.png
+│   │   │   ├── tablet_investigator_cases_CASE-0001_reports.png
+│   │   │   ├── tablet_investigator_cases_CASE-0001_reviews.png
+│   │   │   ├── tablet_investigator_cases_CASE-0001_timeline.png
+│   │   │   └── tablet_investigator_command-center.png
+│   │   ├── obscura
+│   │   │   ├── cases.png
+│   │   │   ├── evidence.png
+│   │   │   ├── graph-list.png
+│   │   │   ├── home-FAILED.png
+│   │   │   ├── home.png
+│   │   │   ├── login.png
+│   │   │   ├── overview.png
+│   │   │   ├── reports.png
+│   │   │   ├── review.png
+│   │   │   └── timeline.png
+│   │   └── obscura-live
+│   │       ├── cases.png
+│   │       ├── evidence.png
+│   │       ├── graph-list.png
+│   │       ├── home.png
+│   │       ├── login.png
+│   │       ├── overview.png
+│   │       ├── reports.png
+│   │       ├── review.png
+│   │       └── timeline.png
+│   ├── EXISTING_NAVIGATION_MAP.md
+│   ├── FRONTEND_ACCESSIBILITY_REPORT.md
+│   ├── FRONTEND_API_MAPPING.md
+│   ├── FRONTEND_BROWSER_TEST_REPORT.md
+│   ├── FRONTEND_CHANGELOG.md
+│   ├── FRONTEND_CONTINUATION_STATE.md
+│   ├── FRONTEND_DATA_DICTIONARY.md
+│   ├── FRONTEND_DEFECT_REGISTER.md
+│   ├── FRONTEND_IMPLEMENTATION_REPORT.md
+│   ├── FRONTEND_KNOWN_LIMITATIONS.md
+│   ├── FRONTEND_PAGE_INVENTORY.md
+│   ├── FRONTEND_REGRESSION_REPORT.md
+│   ├── FRONTEND_RESPONSIVE_REPORT.md
+│   ├── FRONTEND_SOURCE_INVENTORY.md
+│   ├── FRONTEND_USABILITY_COMPARISON.md
+│   ├── INTERACTION_REGISTER.md
+│   ├── a11y-after.json
+│   ├── a11y-before.json
+│   ├── keyboard-audit.json
+│   └── usability-measurements.json
+├── frontend-design
+│   ├── DESIGN_SYSTEM.md
+│   ├── FRONTEND_COMPONENT_CATALOG.md
+│   ├── OFFICER_WORKFLOW_MAP.md
+│   ├── PAGE_BY_PAGE_REDESIGN_SPEC.md
+│   └── PROPOSED_INFORMATION_ARCHITECTURE.md
+├── government
+│   └── GOVERNMENT_READINESS_MATRIX.md
+├── graph
+│   ├── README.md
+│   └── constraints.cypher
+├── infrastructure
+│   ├── nginx
+│   │   └── nginx.conf
+│   ├── dristinet-api.service
+│   └── dristinet.service
+├── operations
+│   ├── BACKUP_POLICY.md
+│   ├── DISASTER_RECOVERY_PLAN.md
+│   └── RESTORE_TEST_REPORT.md
+├── packages
+│   └── schemas
+│       └── openapi.json
+├── policy
+│   └── authorization
+│       └── README.md
+├── reports
+│   ├── screenshots
+│   │   ├── 01-denied.png
+│   │   ├── 02-evidence-quarantine.png
+│   │   ├── 02b-evidence-drawer-source.png
+│   │   ├── 03-review-candidate.png
+│   │   ├── 04-graph.png
+│   │   ├── 05-edge-source-context.png
+│   │   ├── 05-evidence-drawer.png
+│   │   ├── 06-timeline-historical.png
+│   │   ├── 07-analysis.png
+│   │   ├── 08-report.png
+│   │   ├── 09-audit.png
+│   │   └── error.png
+│   ├── ai-evaluation.md
+│   ├── dry-runs.md
+│   ├── entity-resolution-evaluation.md
+│   ├── extraction-evaluation.md
+│   ├── graph-evaluation.md
+│   ├── ner-evaluation.md
+│   ├── performance.md
+│   ├── release-checklist.md
+│   └── security-gate.md
+├── scripts
+│   ├── backup_restore_drill.py
+│   ├── dry_run.py
+│   ├── env.sh
+│   ├── evaluate.py
+│   ├── evaluate_ai.py
+│   ├── evaluate_ner.py
+│   ├── export_openapi.py
+│   ├── make_ner_eval_set.py
+│   ├── make_packages.py
+│   ├── make_release_archive.py
+│   ├── migrate_evidence_to_minio.py
+│   ├── migrate_sqlite_to_postgres.py
+│   ├── perf_test.py
+│   ├── validate_besu.py
+│   └── verify_pg_minio_migration.py
+├── security
+│   ├── SECURITY_ASSESSMENT.md
+│   └── THREAT_MODEL.md
+├── tests
+│   ├── e2e
+│   │   └── test_ui_demo.py
+│   ├── infrastructure
+│   │   └── test_infrastructure.py
+│   └── ui-evaluation
+│       ├── README.md
+│       ├── axe_scan.py
+│       ├── capture_routes.py
+│       ├── keyboard_audit.py
+│       ├── obscura_pages.py
+│       └── task_comparison.py
+├── workers
+│   ├── README.md
+│   └── worker.py
+├── .dockerignore
+├── .env.example
+├── .gitignore
+├── AGENTS.md
+├── CHANGELOG.md
+├── CLAUDE.md
+├── CONTINUATION_STATE.md
+├── DRISTI_NET_ARCHITECTURE_GAP_ANALYSIS.md
+├── DRISTI_NET_BUG_AND_ERROR_REGISTER.md
+├── DRISTI_NET_INTEGRATION_VERIFICATION.md
+├── DRISTI_NET_MASTER_IMPLEMENTATION_CHECKLIST.md
+├── DRISTI_NET_PARTIALLY_IMPLEMENTED_FEATURES.md
+├── DRISTI_NET_PENDING_FEATURES.md
+├── DRISTI_NET_PRIORITIZED_IMPLEMENTATION_ROADMAP.md
+├── DRISTI_NET_PRODUCTION_READINESS_REPORT.md
+├── DRISTI_NET_REPOSITORY_MAP.md
+├── DRISTI_NET_SECURITY_AUDIT.md
+├── DRISTI_NET_TEST_EXECUTION_REPORT.md
+├── DRISTI_NET_VERIFIED_COMPLETED_FEATURES.md
+├── Dockerfile
+├── MODULE_STATUS.md
+├── Makefile
+├── PROJECT_BLOCKERS.md
+├── PROJECT_DECISION_LOG.md
+├── PROJECT_PROGRESS.md
+├── PROJECT_RISK_REGISTER.md
+├── PROJECT_TASK_BOARD.md
+├── README.md
+├── REQUIREMENTS_MATRIX.md
+├── STATUS.md
+├── docker-compose.override.yml
+├── docker-compose.yml
+└── pyproject.toml

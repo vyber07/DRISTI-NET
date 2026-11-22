@@ -1,0 +1,5 @@
+Change ID,Target Component,Files Affected,Change Description,Refactoring Rationale,Risk Level,Test Verification Method,User Decision,Implementation Status
+CHG-01,Backend Extraction,apps/api/app/services/extract.py,Unify extract public facade with typed docstrings and re-exports,Eliminate fragmented parser logic and provide authoritative facade,Low,pytest apps/api/app/tests/test_archive_uploads.py,Approved by User,Implemented
+CHG-02,Backend Governance,apps/api/app/routes/override_routes.py apps/api/app/routes/user_request_routes.py,Extract shared supervisor approval dependency,Eliminate duplicate auth checks and audit serializations,Low,pytest apps/api/app/tests/test_security.py,Deferred,Deferred to Phase 3
+CHG-03,Frontend API Transport,apps/web/src/services/api/client.ts,Create standard client.ts typed export facade,Establish clean standard import path for API client,Low,npm run typecheck && npm run build,Approved by User,Implemented
+CHG-04,Frontend Presentation,apps/web/src/components/graph/drawers/*.tsx,Separate inline mutation logic into useNodeDetails hook,Keep UI components focused strictly on presentation,Low,npm run build,Deferred,Deferred to Phase 3

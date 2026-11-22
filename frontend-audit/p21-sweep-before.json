@@ -1,0 +1,587 @@
+{
+ "anon /login @1440": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 1440,
+  "small": 0,
+  "samples": [],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /command-center @1440": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 1440,
+  "small": 2,
+  "samples": [
+   "11px:Workspace",
+   "10px:1"
+  ],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /cases @1440": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 1440,
+  "small": 2,
+  "samples": [
+   "11px:Workspace",
+   "10px:1"
+  ],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /cases/CASE-0001 @1440": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 1440,
+  "small": 9,
+  "samples": [
+   "11px:Workspace",
+   "10px:1",
+   "11px:2019",
+   "11px:2020"
+  ],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /cases/CASE-0001/evidence @1440": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 1440,
+  "small": 2,
+  "samples": [
+   "11px:Workspace",
+   "10px:1"
+  ],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /cases/CASE-0001/review @1440": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 1440,
+  "small": 2,
+  "samples": [
+   "11px:Workspace",
+   "10px:1"
+  ],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /cases/CASE-0001/graph @1440": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 1440,
+  "small": 6,
+  "samples": [
+   "11px:Workspace",
+   "10px:1",
+   "11px:04 Mar 2019",
+   "11px:25 Jul 2025"
+  ],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /cases/CASE-0001/timeline @1440": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 1440,
+  "small": 1571,
+  "samples": [
+   "11px:Workspace",
+   "10px:1",
+   "11px:→",
+   "11px:Showing 217 of 217 events"
+  ],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /cases/CASE-0001/locations @1440": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 1440,
+  "small": 7,
+  "samples": [
+   "11px:Workspace",
+   "10px:1",
+   "10px:18.5601, 73.9010",
+   "10px:18.5305, 73.8650"
+  ],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /cases/CASE-0001/analysis @1440": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 1440,
+  "small": 45,
+  "samples": [
+   "11px:Workspace",
+   "10px:1",
+   "10.5px:PHONE",
+   "10.5px:PHONE"
+  ],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /cases/CASE-0001/decisions @1440": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 1440,
+  "small": 2,
+  "samples": [
+   "11px:Workspace",
+   "10px:1"
+  ],
+  "axe": [
+   {
+    "id": "link-in-text-block",
+    "impact": "serious",
+    "nodes": 1,
+    "target": [
+     ".text-electric-blue.hover\\:underline[href$=\"review\"]"
+    ]
+   }
+  ],
+  "logs": []
+ },
+ "investigator /cases/CASE-0001/reports @1440": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 1440,
+  "small": 2,
+  "samples": [
+   "11px:Workspace",
+   "10px:1"
+  ],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /cases/CASE-0001/audit @1440": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 1440,
+  "small": 1773,
+  "samples": [
+   "11px:Workspace",
+   "10px:1",
+   "11px:Total Records",
+   "11px:Showing 200 of 200 events"
+  ],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /profile @1440": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 1440,
+  "small": 2,
+  "samples": [
+   "11px:Workspace",
+   "10px:1"
+  ],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /requests @1440": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 1440,
+  "small": 8,
+  "samples": [
+   "11px:Workspace",
+   "10px:1",
+   "11px:1",
+   "11px:1"
+  ],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /requests/1 @1440": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 1440,
+  "small": 2,
+  "samples": [
+   "11px:Workspace",
+   "10px:1"
+  ],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /nope @1440": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 1440,
+  "small": 2,
+  "samples": [
+   "11px:Workspace",
+   "10px:1"
+  ],
+  "axe": [],
+  "logs": []
+ },
+ "admin /admin/users @1440": {
+  "h1": 0,
+  "overflowX": false,
+  "scrollW": 1440,
+  "small": 2,
+  "samples": [
+   "11px:Workspace",
+   "10px:1"
+  ],
+  "axe": [],
+  "logs": []
+ },
+ "admin /admin/overrides @1440": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 1440,
+  "small": 2,
+  "samples": [
+   "11px:Workspace",
+   "10px:1"
+  ],
+  "axe": [],
+  "logs": []
+ },
+ "admin /admin/case-assignments @1440": {
+  "h1": 0,
+  "overflowX": false,
+  "scrollW": 1440,
+  "small": 2,
+  "samples": [
+   "11px:Workspace",
+   "10px:1"
+  ],
+  "axe": [],
+  "logs": []
+ },
+ "admin /audit @1440": {
+  "h1": 0,
+  "overflowX": false,
+  "scrollW": 1440,
+  "small": 885,
+  "samples": [
+   "11px:Workspace",
+   "10px:1",
+   "11px:CASE_ASSIGNMENTS_LIST",
+   "11px:OVERRIDE_VIEW"
+  ],
+  "axe": [
+   {
+    "id": "scrollable-region-focusable",
+    "impact": "serious",
+    "nodes": 1,
+    "target": [
+     ".p-4"
+    ]
+   },
+   {
+    "id": "select-name",
+    "impact": "critical",
+    "nodes": 1,
+    "target": [
+     "select"
+    ]
+   }
+  ],
+  "logs": []
+ },
+ "anon /login @390": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 390,
+  "small": 0,
+  "samples": [],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /command-center @390": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 390,
+  "small": 1,
+  "samples": [
+   "10px:1"
+  ],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /cases @390": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 390,
+  "small": 1,
+  "samples": [
+   "10px:1"
+  ],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /cases/CASE-0001 @390": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 390,
+  "small": 8,
+  "samples": [
+   "10px:1",
+   "11px:2019",
+   "11px:2020",
+   "11px:2021"
+  ],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /cases/CASE-0001/evidence @390": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 390,
+  "small": 1,
+  "samples": [
+   "10px:1"
+  ],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /cases/CASE-0001/review @390": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 390,
+  "small": 1,
+  "samples": [
+   "10px:1"
+  ],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /cases/CASE-0001/graph @390": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 390,
+  "small": 1,
+  "samples": [
+   "10px:1"
+  ],
+  "axe": [
+   {
+    "id": "button-name",
+    "impact": "critical",
+    "nodes": 1,
+    "target": [
+     ".p-1.bg-surface-1\\/95.backdrop-blur:nth-child(1) > .sm\\:px-2.px-1\\.5.h-7"
+    ]
+   }
+  ],
+  "logs": []
+ },
+ "investigator /cases/CASE-0001/timeline @390": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 390,
+  "small": 1570,
+  "samples": [
+   "10px:1",
+   "11px:→",
+   "11px:Showing 217 of 217 events",
+   "11px:217"
+  ],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /cases/CASE-0001/locations @390": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 390,
+  "small": 6,
+  "samples": [
+   "10px:1",
+   "10px:18.5601, 73.9010",
+   "10px:18.5305, 73.8650",
+   "10px:18.5201, 73.8563"
+  ],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /cases/CASE-0001/analysis @390": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 390,
+  "small": 44,
+  "samples": [
+   "10px:1",
+   "10.5px:PHONE",
+   "10.5px:PHONE",
+   "10.5px:ORGANIZATION"
+  ],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /cases/CASE-0001/decisions @390": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 390,
+  "small": 1,
+  "samples": [
+   "10px:1"
+  ],
+  "axe": [
+   {
+    "id": "link-in-text-block",
+    "impact": "serious",
+    "nodes": 1,
+    "target": [
+     ".text-electric-blue.hover\\:underline[href$=\"review\"]"
+    ]
+   }
+  ],
+  "logs": []
+ },
+ "investigator /cases/CASE-0001/reports @390": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 390,
+  "small": 1,
+  "samples": [
+   "10px:1"
+  ],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /cases/CASE-0001/audit @390": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 390,
+  "small": 1739,
+  "samples": [
+   "10px:1",
+   "11px:Total Records",
+   "11px:Showing 200 of 200 events",
+   "10px:AUD-bc5424df8b7e"
+  ],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /profile @390": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 390,
+  "small": 1,
+  "samples": [
+   "10px:1"
+  ],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /requests @390": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 390,
+  "small": 7,
+  "samples": [
+   "10px:1",
+   "11px:1",
+   "11px:1",
+   "11px:0"
+  ],
+  "axe": [],
+  "logs": []
+ },
+ "investigator /requests/1 @390": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 390,
+  "small": 1,
+  "samples": [
+   "10px:1"
+  ],
+  "axe": [
+   {
+    "id": "scrollable-region-focusable",
+    "impact": "serious",
+    "nodes": 1,
+    "target": [
+     ".min-h-0.overflow-y-auto.flex-1"
+    ]
+   }
+  ],
+  "logs": []
+ },
+ "investigator /nope @390": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 390,
+  "small": 1,
+  "samples": [
+   "10px:1"
+  ],
+  "axe": [],
+  "logs": []
+ },
+ "admin /admin/users @390": {
+  "h1": 0,
+  "overflowX": false,
+  "scrollW": 390,
+  "small": 1,
+  "samples": [
+   "10px:1"
+  ],
+  "axe": [],
+  "logs": []
+ },
+ "admin /admin/overrides @390": {
+  "h1": 1,
+  "overflowX": false,
+  "scrollW": 390,
+  "small": 1,
+  "samples": [
+   "10px:1"
+  ],
+  "axe": [],
+  "logs": []
+ },
+ "admin /admin/case-assignments @390": {
+  "h1": 0,
+  "overflowX": false,
+  "scrollW": 765,
+  "small": 1,
+  "samples": [
+   "10px:1"
+  ],
+  "axe": [],
+  "logs": []
+ },
+ "admin /audit @390": {
+  "h1": 0,
+  "overflowX": false,
+  "scrollW": 390,
+  "small": 909,
+  "samples": [
+   "10px:1",
+   "11px:CASE_ASSIGNMENTS_LIST",
+   "11px:USER_LIST",
+   "11px:OVERRIDE_VIEW"
+  ],
+  "axe": [
+   {
+    "id": "scrollable-region-focusable",
+    "impact": "serious",
+    "nodes": 1,
+    "target": [
+     ".p-4"
+    ]
+   },
+   {
+    "id": "select-name",
+    "impact": "critical",
+    "nodes": 1,
+    "target": [
+     "select"
+    ]
+   }
+  ],
+  "logs": []
+ }
+}
